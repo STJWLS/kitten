@@ -199,6 +199,14 @@ var VenueEditor = (function(){
     vmap.on("click", onMapClick);
   }
 
+  /* 更新结果区内容，并在地图尺寸变化后触发重绘 */
+  function setResults(html, bind){
+    var box = el("vq-results");
+    box.innerHTML = html;
+    if (bind) bind(box);
+    setTimeout(function(){ if (vmap) vmap.invalidateSize(); }, 60);
+  }
+
   function showStage(n){
     el("vstage1").style.display = n === 1 ? "" : "none";
     el("vstage2").style.display = n === 2 ? "" : "none";
@@ -231,29 +239,25 @@ var VenueEditor = (function(){
     var g = VenueStore.wgs2gcj(lat, lng);
     setMarker(lat, lng);
     select({name:"", address:"", lat:lat, lng:lng});   // 先确定坐标
-    var box = el("vq-results");
-    box.innerHTML = '<div class="mylist-empty">正在逆地理编码…</div>';
+    setResults('<div class="mylist-empty">正在逆地理编码…</div>');
     VenueStore.regeo(g.lng, g.lat).then(function(r){
-      box.innerHTML = r.pois.length
+      setResults(r.pois.length
         ? '<div class="vqtitle">距离最近的几个地点（单击选中 / 双击确认）：</div>' + renderItems(r.pois)
-        : '<div class="mylist-empty">附近没有找到地点，可点确认后手动填写名称</div>';
-      bindItems(box);
+        : '<div class="mylist-empty">附近没有找到地点，可点确认后手动填写名称</div>', bindItems);
       if (r.addr && !sel.address) sel.address = r.addr;
     }).catch(function(err){
-      box.innerHTML = '<div class="mylist-empty">逆地理编码失败：' + (err.message||err) + '（可点确认后手动填写名称）</div>';
+      setResults('<div class="mylist-empty">逆地理编码失败：' + (err.message||err) + '（可点确认后手动填写名称）</div>');
     });
   }
 
   function runSearch(){
     var q = el("vq").value.trim();
     if (!q) return;
-    var box = el("vq-results");
-    box.innerHTML = '<div class="mylist-empty">搜索中…</div>';
+    setResults('<div class="mylist-empty">搜索中…</div>');
     VenueStore.search(q, "上海").then(function(pois){
-      box.innerHTML = pois.length ? renderItems(pois) : '<div class="mylist-empty">没有找到相关地点</div>';
-      bindItems(box);
+      setResults(pois.length ? renderItems(pois) : '<div class="mylist-empty">没有找到相关地点</div>', bindItems);
     }).catch(function(err){
-      box.innerHTML = '<div class="mylist-empty">搜索失败：' + (err.message||err) + '</div>';
+      setResults('<div class="mylist-empty">搜索失败：' + (err.message||err) + '</div>');
     });
   }
 
@@ -352,7 +356,7 @@ var VenueEditor = (function(){
     el("vn-note").value = "";
     el("vn-lat").value = "";
     el("vn-lng").value = "";
-    el("vq-results").innerHTML = '<div class="mylist-empty">搜索地点，或直接点击上方地图选点</div>';
+    setResults('<div class="mylist-empty">搜索地点，或直接点击上方地图选点</div>');
     el("vn-confirm").disabled = true;
     el("vconfirm-hint").textContent = "单击结果或点击地图选点，再点确认；双击结果直接确认";
     sel = null;
