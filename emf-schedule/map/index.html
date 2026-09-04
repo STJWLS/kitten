@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="../assets/dashboard.css">
+<title>地点地图 · EMF 26R</title>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>EMF 26R 课程看板 <small>Venue Map · Fall 2026</small></h1>
+    <div class="meta">
+      <span class="chip">学期 <b id="term"></b></span>
+      <span class="chip">数据更新 <b id="updated"></b></span>
+    </div>
+  </div>
+  <div class="countbar"><i style="width:100%"></i></div>
+</header>
+<div class="nav">
+  <a href="../">📅 周课表</a>
+  <a class="active" href="./">🗺 地点地图</a>
+</div>
+<main>
+  <section>
+    <h2>地点地图 <span class="hint" id="map-hint"></span></h2>
+    <div class="mapgrid">
+      <div class="mapbox"><div id="map"></div></div>
+      <div><div id="venue-cards"></div></div>
+    </div>
+    <div class="arrange" id="arrange"></div>
+  </section>
+
+  <div class="foot">
+    底图：天地图（key 复用论文项目）｜ 标记坐标为近似值，可在 schedule.json 的 venues 中修改
+    ｜ <a href="https://github.com/STJWLS/kitten" target="_blank">仓库</a>
+  </div>
+</main>
+
+<script>
+const DAY_CN = ["周一","周二","周三","周四","周五","周六","周日"];
+const DATA_V = "v20260904e";
+// 天地图瓦片 key（来自论文项目 P08/TianDiTuFetch 的公开 key；如需更换在天地图官网免费申请）
+const TDT_KEY = "34383a232f417400f8338b624f99510c";
+let DATA = null, mapObj = null, venueData = [];
+
+async function init(){
+  const r = await fetch("../schedule.json?v=" + DATA_V);
+  DATA = await r.json();
+  document.getElementById("term").textContent =
+    DATA.meta.termStart.slice(5).replace("-","/") + " ~ " + DATA.meta.termEnd.slice(5).replace("-","/");
+  document.getElementById("updated").textContent = DATA.meta.updated;
+
+  // 地点卡片：两个真实地点 + 线上/待定桶
+  venueData = (DATA.venues || []).map(v=>({...v, count: countSessions(v.code)}));
+  venueData.push({code:"", name:"线上 / 待定（LIVE · ELP · CARE EN 等）", short:"线上/待定",
+                  address:"无固定教室", note:"直播课与英语课等", count: countSessions(""),
+                  virtual:true});
+  buildVenueCards();
+  initMap();
+  selectVenue(venueData[0] ? venueData[0].code : "");
+}
+
+function countSessions(code){
+  let n = 0;
+  for (const w of DATA.weeks) for (const d of w.days) for (const s of d.sessions)
+    if (s.v === code) n++;
+  return n;
+}
+
+function initMap(){
+  if (mapObj){ mapObj.invalidateSize(); return; }
+  const c = DATA.meta.mapCenter || [31.2995, 121.5020];
+  mapObj = L.map("map", {center: c, zoom: 15});
+  // 天地图矢量底图 + 中文注记（国内访问快，无需海外瓦片）
+  L.tileLayer("https://t{s}.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk=" + TDT_KEY,
+    {subdomains:["0","1","2","3","4","5","6","7"], maxZoom:18, attribution:"© 天地图"}).addTo(mapObj);
+  L.tileLayer("https://t{s}.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=" + TDT_KEY,
+    {subdomains:["0","1","2","3","4","5","6","7"], maxZoom:18}).addTo(mapObj);
+
+  (DATA.venues || []).forEach(v=>{
+    const isGate = !!v.ref;
+    const icon = L.divIcon({
+      className: "tdt-pin" + (isGate ? " gate" : ""),
+      html: `<div class="pin"><em>${isGate ? "门" : "🏛"}</em></div><div class="pin-tip">${v.short}</div>`,
+      iconSize: [30, 44], iconAnchor: [15, 42]
+    });
+    const pop = L.popup().setContent(
+      `<b>${v.name}</b><br>${v.address}` +
+      (v.approx ? `<br><i style="font-size:11px">坐标近似，可在地图上校正</i>` : "") +
+      (v.note ? `<br><span style="font-size:11px;color:#8a7f6d">${v.note}</span>` : "") +
+      `<br><a href="javascript:;" class="pop-sel">查看该地点安排 →</a>`
+    );
+    L.marker([v.lat, v.lng], {icon}).addTo(mapObj).bindPopup(pop)
+      .on("popupopen", e=>{
+        e.popup.getElement().querySelector(".pop-sel").addEventListener("click", ()=>{
+          selectVenue(v.code); mapObj.closePopup();
+        });
+      });
+  });
+  document.getElementById("map-hint").textContent = "天地图底图 · 点击标记或右侧卡片查看该地点安排";
+}
+
+function buildVenueCards(){
+  const el = document.getElementById("venue-cards");
+  el.innerHTML = venueData.map(v=>{
+    const dotColor = v.virtual ? "#d3c39c" : (v.ref ? "#8a7f6d" : "#003da5");
+    return `<div class="vcard" data-code="${v.code}">
+      <div class="n"><span class="dot" style="background:${dotColor}"></span>${v.short}${v.approx?'<span class="apx">坐标近似</span>':""}</div>
+      <div class="a">${v.address}</div>
+      <div class="c">安排 ${v.count} 节 ${v.note?("· "+v.note):""}</div>
+    </div>`;
+  }).join("");
+  el.querySelectorAll(".vcard").forEach(c=>c.addEventListener("click",()=>selectVenue(c.dataset.code)));
+}
+
+function selectVenue(code){
+  const v = venueData.find(x=>x.code===code);
+  if (!v) return;
+  document.querySelectorAll(".vcard").forEach(c=>c.classList.toggle("active", c.dataset.code===code));
+  renderArrange(v);
+  if (!v.virtual && v.lat !== undefined && mapObj){
+    mapObj.setView([v.lat, v.lng], 16);
+  }
+}
+
+function renderArrange(v){
+  const rows = [];
+  for (const w of DATA.weeks) for (const d of w.days) for (const s of d.sessions){
+    if (s.v === v.code){
+      const c = DATA.courses.find(x=>x.code===s.c);
+      const end = DATA.slots[s.s + s.n - 1].label.split("-")[1];
+      rows.push({
+        date: d.date, wk: w.no, day: DAY_CN[w.days.indexOf(d)],
+        time: DATA.slots[s.s].label.split("-")[0] + "~" + end,
+        course: (c ? c.cn : "") + (s.note ? " " + s.note : ""),
+        color: c ? c.color : "#d3c39c"
+      });
+    }
+  }
+  rows.sort((a,b)=>a.date<b.date?-1:1);
+  const el = document.getElementById("arrange");
+  el.innerHTML = `<h3>${v.short} · 安排（${rows.length} 节）</h3>` + (rows.length ?
+    `<div class="table-wrap"><table class="list">
+       <tr><th>日期</th><th>时间</th><th>内容</th></tr>` +
+    rows.map(r=>`<tr>
+      <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap">${r.date}（W${r.wk} ${r.day}）</td>
+      <td style="font-family:var(--mono);font-size:11.5px;white-space:nowrap">${r.time}</td>
+      <td><span class="codechip" style="background:${r.color}">${r.course}</span></td>
+    </tr>`).join("") + `</table></div>` :
+    `<div class="mylist-empty">该地点暂无安排</div>`);
+}
+
+init();
+</script>
+</body>
+</html>
