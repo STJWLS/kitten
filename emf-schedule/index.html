@@ -466,6 +466,12 @@ function timeToSlot(hhmm){
     const [ah,am] = a.split(":").map(Number), [bh,bm] = b.split(":").map(Number);
     if (mins >= ah*60+am && mins < bh*60+bm) return i;
   }
+  // 恰好落在某节课的结束边界 → 归入该节（导入的结束时间常用整点边界）
+  for (let i=0; i<DATA.slots.length; i++){
+    const b = DATA.slots[i].label.split("-")[1];
+    const [bh,bm] = b.split(":").map(Number);
+    if (mins === bh*60+bm) return i;
+  }
   return mins < 9*60+55 ? 0 : DATA.slots.length - 1;
 }
 function parseIcs(text){
