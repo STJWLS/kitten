@@ -270,3 +270,20 @@ table.list tr:hover td{background:rgba(236,159,190,.07);}
 .tdt-pin.custom .pin{background:linear-gradient(135deg,#ec9fbe,#c96a5a);}
 .mini-add{font-size:11px;background:linear-gradient(135deg,var(--pink),#f2a7c3);border:none;color:#fff;
   border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600;white-space:nowrap;}
+
+/* 新建地点统一弹窗（搜索栏 + 矢量小地图 + 备选结果 + 日程绑定） */
+.modal-lg{width:min(680px,94vw);max-height:92vh;overflow-y:auto;}
+.vmapbox{position:relative;margin:10px 0 8px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg2);}
+#vmap{width:100%;height:240px;}
+.vmap-tip{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
+  background:rgba(0,61,165,.82);color:#fff;font-size:11px;border-radius:999px;
+  padding:2px 12px;pointer-events:none;font-family:var(--mono);}
+.vqitem .coords{font-family:var(--mono);font-size:10.5px;color:var(--accent);margin-top:1px;}
+.vbind-lab{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;}
+.vbind{border:1px solid var(--line);border-radius:10px;background:var(--bg0);
+  max-height:130px;overflow-y:auto;padding:4px 8px;}
+.vbind-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);
+  padding:5px 4px;cursor:pointer;border-top:1px solid var(--line);}
+.vbind-item:first-child{border-top:none;}
+.vbind-item:hover{background:rgba(236,159,190,.08);}
+.vbind-item input{width:auto;flex-shrink:0;}
