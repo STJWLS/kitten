@@ -45,6 +45,16 @@ code{background:#f2ecdf;border-radius:5px;padding:1px 7px;font-family:monospace;
   const path = pathname.replace(/^\/kitten\/emf-schedule\/map/, "/map/")
                       .replace(/^\/kitten\/emf-schedule/, "");
   const status = function(t){ document.getElementById("status").textContent = t; };
+  // iframe 内看板导航到子页面时：同步地址栏（replaceState 不刷新不跳转，刷新后仍回到该子页面）
+  window.addEventListener("message", function(e){
+    const p = e.data && e.data.dashPath;
+    if (typeof p === "string" && (p === "/" || p.indexOf("/") === 0)){
+      const want = "/kitten/emf-schedule" + p;
+      if (location.pathname !== want){
+        history.replaceState(null, "", want);
+      }
+    }
+  });
   fetch(rel + "?ts=" + Date.now(), {cache:"no-store"})
     .then(function(r){ return r.json(); })
     .then(function(d){
