@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="assets/leaflet/leaflet.css">
 <script src="assets/leaflet/leaflet.js"></script>
 <script src="assets/coord.js?v=g"></script>
-<script src="assets/venues.js?v=i"></script>
-<link rel="stylesheet" href="assets/dashboard.css?v=h">
+<script src="assets/venues.js?v=j"></script>
+<link rel="stylesheet" href="assets/dashboard.css?v=i">
 <title>EMF 26R 课程看板</title>
 </head>
 <body>
@@ -148,6 +148,8 @@ async function init(){
   bindVenueModal();
   selectWeek(wk || 1);
   setInterval(()=>{ refreshCountdown(now); }, 1000);
+  // 本机存储探测完成后刷新状态提示
+  setTimeout(renderMylist, 2500);
 }
 function daysUntil(d){ return Math.ceil((d - new Date()) / 864e5); }
 function pad(n){ return String(n).padStart(2,"0"); }
@@ -340,6 +342,7 @@ function openEvtModal(date, slot, id){
   s1.value = evt ? (evt.s1 ?? evt.s0) : slot;
   document.getElementById("evt-title").value = evt ? evt.title : "";
   document.getElementById("evt-place").value = evt ? (evt.place||"") : "";
+  document.getElementById("evt-place").dataset.placeCode = evt && evt.placeCode ? evt.placeCode : "";
   document.getElementById("evt-note").value = evt ? (evt.note||"") : "";
   document.getElementById("evt-del").style.display = evt ? "" : "none";
   document.getElementById("evt-modal").style.display = "flex";
@@ -357,10 +360,12 @@ function saveEvt(){
   let s1 = +document.getElementById("evt-s1").value;
   if (s1 < s0) s1 = s0;
   const arr = getEvents();
+  const placeEl = document.getElementById("evt-place");
   const obj = {id: editingEvtId || ("e" + Date.now().toString(36) + Math.floor(Math.random()*46656).toString(36)),
                date, s0, s1, title,
-               place: document.getElementById("evt-place").value.trim(),
+               place: placeEl.value.trim(),
                note: document.getElementById("evt-note").value.trim()};
+  if (placeEl.dataset.placeCode) obj.placeCode = placeEl.dataset.placeCode;   // 结构化地点绑定
   if (editingEvtId){
     const i = arr.findIndex(e=>e.id===editingEvtId);
     if (i>=0) arr[i] = obj;
@@ -397,9 +402,8 @@ function bindModal(){
 
 /* ============ 地点选择 + 新建（统一组件，见 assets/venues.js） ============ */
 function refreshPlaceList(){
-  const dl = document.getElementById("place-list");
-  dl.innerHTML = VenueStore.allVenues()
-    .map(v=>`<option value="${(v.name||"").replace(/"/g,'&quot;')}"></option>`).join("");
+  // 自定义下拉：点击显示全部地点，与新建地点的搜索结果同格式（名称+经纬度+地址）
+  PlacePicker.attach(document.getElementById("evt-place"));
 }
 function bindVenueModal(){
   document.getElementById("evt-newplace").addEventListener("click", function(){
@@ -422,25 +426,112 @@ function importEvents(){
   const rd = new FileReader();
   rd.onload = ()=>{
     try {
-      const arr = JSON.parse(rd.result);
-      if (!Array.isArray(arr)) throw 0;
+      const text = String(rd.result || "");
+      const name = (f.name || "").toLowerCase();
+      let arr;
+      // 多模板自动识别：ICS 日历 / CSV 表格 / 看板 JSON
+      if (name.endsWith(".ics") || /^BEGIN:VCALENDAR/m.test(text)) arr = parseIcs(text);
+      else if (name.endsWith(".csv")) arr = parseCsv(text);
+      else {
+        const t = text.trim();
+        arr = t.startsWith("[") ? JSON.parse(t) : parseCsv(t);
+      }
+      if (!Array.isArray(arr) || !arr.length) throw new Error("no rows");
+      let added = 0, skipped = 0;
       const cur = getEvents();
       const ids = new Set(cur.map(e=>e.id));
-      for (const e of arr) if (e && e.id && e.date && !ids.has(e.id)) cur.push(e);
+      for (const e of arr){
+        if (e && e.id && e.date && !ids.has(e.id)){ cur.push(e); ids.add(e.id); added++; }
+        else skipped++;
+      }
       saveEvents(cur);
       selectWeek(curWeek || 1);
       renderMylist();
       buildCards();
-      alert("已导入 " + arr.length + " 条（跳过重复）");
-    } catch(e) { alert("文件格式不正确"); }
+      alert("导入完成：新增 " + added + " 条，跳过 " + skipped + " 条");
+    } catch(e) { alert("文件解析失败（支持 .json / .ics / .csv）：" + (e.message||e)); }
     document.getElementById("evt-import-file").value = "";
   };
   rd.readAsText(f, "utf-8");
 }
+function newEvtId(seed){
+  return "i" + Math.abs(seed.split("").reduce((a,c)=>(a*31 + c.charCodeAt(0))|0, 0)).toString(36) + Math.floor(Math.random()*46656).toString(36);
+}
+function timeToSlot(hhmm){
+  if (!hhmm) return null;
+  const [h,m] = hhmm.split(":").map(Number);
+  const mins = h*60 + m;
+  for (let i=0; i<DATA.slots.length; i++){
+    const [a,b] = DATA.slots[i].label.split("-");
+    const [ah,am] = a.split(":").map(Number), [bh,bm] = b.split(":").map(Number);
+    if (mins >= ah*60+am && mins < bh*60+bm) return i;
+  }
+  return mins < 9*60+55 ? 0 : DATA.slots.length - 1;
+}
+function parseIcs(text){
+  const out = [];
+  const blocks = text.split(/BEGIN:VEVENT/).slice(1);
+  for (const b of blocks){
+    const grab = (k)=>{ const m = b.match(new RegExp("^" + k + "[^:\\n]*:([^\\n]+)", "m")); return m ? m[1].trim() : ""; };
+    let dt = grab("DTSTART").replace(/^.*:/, "");   // 去掉 TZID=xxx: 前缀
+    if (/^VALUE=DATE/.test(grab("DTSTART"))) dt = b.match(/VALUE=DATE:(\d{8})/)?.[1] || dt;
+    if (!dt) continue;
+    const date = dt.slice(0,4) + "-" + dt.slice(4,6) + "-" + dt.slice(6,8);
+    let t0 = dt.includes("T") ? dt.slice(9,13) : "";
+    let tend = grab("DTEND").replace(/^.*:/, "");
+    let t1 = tend.includes("T") ? tend.slice(9,13) : "";
+    const s0 = timeToSlot(t0.slice(0,2) + ":" + t0.slice(2));
+    const s1 = timeToSlot(t1.slice(0,2) + ":" + t1.slice(2));
+    out.push({
+      id: "i" + Math.abs(hash(date + dt + (grab("SUMMARY")||""))).toString(36) + Math.floor(Math.random()*46656).toString(36),
+      date, s0: s0 ?? 0, s1: (s1 != null && s1 >= (s0 ?? 0)) ? s1 : (s0 ?? 0),
+      title: grab("SUMMARY") || "导入日程",
+      place: grab("LOCATION") || "",
+      note: grab("DESCRIPTION") || ""
+    });
+  }
+  return out;
+}
+function hash(s){ let h = 0; for (let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i))|0; } return h; }
+function parseCsv(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim());
+  if (!lines.length) return [];
+  const sep = lines[0].includes(",") ? "," : (lines[0].includes(";") ? ";" : "\t");
+  const head = lines[0].split(sep).map(h=>h.trim());
+  const idx = {};
+  head.forEach((h,i)=>{
+    if (/^(date|日期)$/i.test(h)) idx.date = i;
+    else if (/^(start|开始|starttime|start_time)$/i.test(h)) idx.s0 = i;
+    else if (/^(end|结束|endtime|end_time)$/i.test(h)) idx.s1 = i;
+    else if (/^(title|标题|summary|主题)$/i.test(h)) idx.title = i;
+    else if (/^(place|地点|location)$/i.test(h)) idx.place = i;
+    else if (/^(note|备注|desc|description)$/i.test(h)) idx.note = i;
+  });
+  if (idx.date === undefined) throw new Error("CSV 缺少日期列");
+  const out = [];
+  for (let li=1; li<lines.length; li++){
+    const c = lines[li].split(sep).map(x=>x.trim().replace(/^"|"$/g,""));
+    if (!c[idx.date]) continue;
+    const d = c[idx.date].replace(/[./年]/g,"-").replace(/月/g,"-").replace(/日/g,"");
+    const dparts = d.split("-").map(Number);
+    const date = dparts[0] >= 1000 ? dparts[0] + "-" + String(dparts[1]).padStart(2,"0") + "-" + String(dparts[2]).padStart(2,"0") : d;
+    const s0 = idx.s0 !== undefined ? timeToSlot(c[idx.s0]) : null;
+    const s1 = idx.s1 !== undefined ? timeToSlot(c[idx.s1]) : null;
+    out.push({
+      id: "i" + Math.abs(hash(lines[li])).toString(36) + Math.floor(Math.random()*46656).toString(36),
+      date, s0: s0 ?? 0, s1: (s1 != null && s1 >= (s0 ?? 0)) ? s1 : (s0 ?? 0),
+      title: (idx.title !== undefined && c[idx.title]) ? c[idx.title] : "导入日程",
+      place: idx.place !== undefined ? c[idx.place] : "",
+      note: idx.note !== undefined ? c[idx.note] : ""
+    });
+  }
+  return out;
+}
 function renderMylist(){
   const evts = getEvents().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.s0-b.s0);
   const hint = document.getElementById("mylist-hint");
-  hint.textContent = evts.length ? ("共 " + evts.length + " 条 · 本机保存") : "点击周课表空格添加";
+  const backend = (typeof LocalBackend !== "undefined" && LocalBackend.online()) ? " · 本机存储已连接" : " · 本机存储未连接";
+  hint.textContent = (evts.length ? ("共 " + evts.length + " 条") : "点击周课表空格添加") + backend;
   const el = document.getElementById("mylist");
   if (!evts.length){
     el.innerHTML = `<div class="mylist-empty">还没有个人日程 — 点击上方周课表里的空白格子即可添加（时间 / 地点 / 备注）</div>`;
