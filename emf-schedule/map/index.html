@@ -96,6 +96,9 @@ let provider = "tdt";   // 当前底图服务商：tdt（天地图）| amap（�
 let DATA = null, mapObj = null, venueData = [], baseLayers = {};
 let proxyBase = null;   // 本机天地图瓦片代理（Cloudflare 隧道）地址，来自 tile-proxy.json
 let markerLayer = null, pickMarker = null;   // 地点标记层 / 地图选点临时标记
+// 个人日程（与主页共用同一个 localStorage key，用于自定义地点的日程统计）
+const EVT_KEY = "emf_schedule_events_v1";
+function getEvents(){ try { return JSON.parse(localStorage.getItem(EVT_KEY) || "[]"); } catch(e){ return []; } }
 
 async function init(){
   const r = await fetch("../schedule.json?v=" + DATA_V);
