@@ -31,20 +31,24 @@ code{background:#f2ecdf;border-radius:5px;padding:1px 7px;font-family:monospace;
   </p>
 </div>
 <script>
-const path = location.pathname.replace(/^\/kitten\/emf-schedule/, "");
-(async function(){
-  try {
-    const r = await fetch("entry.json?ts=" + Date.now(), {cache:"no-store"});
-    const d = await r.json();
-    if (d && d.url){
-      document.getElementById("status").textContent = "已连接本机看板服务器，正在进入…";
-      location.replace(d.url.replace(/\/+$/, "") + (path || "/"));
-    } else {
-      document.getElementById("status").textContent = "看板服务器未运行（入口配置为空）";
-    }
-  } catch(e){
-    document.getElementById("status").textContent = "无法读取入口配置：" + e.message;
-  }
+(function(){
+  const pathname = location.pathname;
+  const rel = pathname.includes("/map/") ? "../entry.json" : "entry.json";
+  const path = pathname.replace(/^\/kitten\/emf-schedule\/map/, "/map/")
+                      .replace(/^\/kitten\/emf-schedule/, "");
+  fetch(rel + "?ts=" + Date.now(), {cache:"no-store"})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d && d.url){
+        document.getElementById("status").textContent = "已连接本机看板服务器，正在进入…";
+        location.replace(d.url.replace(/\/+$/, "") + (path || "/"));
+      } else {
+        document.getElementById("status").textContent = "看板服务器未运行（入口配置为空）";
+      }
+    })
+    .catch(function(e){
+      document.getElementById("status").textContent = "无法读取入口配置：" + e.message;
+    });
 })();
 </script>
 </body>
