@@ -393,10 +393,14 @@ function bindModal(){
     document.getElementById("evt-import-file").click();
   });
   document.getElementById("evt-import-file").addEventListener("change", importEvents);
-  document.getElementById("evt-newplace").addEventListener("click", openVenueModal);
 }
 
 /* ============ 地点选择 + 新建（统一组件，见 assets/venues.js） ============ */
+function refreshPlaceList(){
+  const dl = document.getElementById("place-list");
+  dl.innerHTML = VenueStore.allVenues()
+    .map(v=>`<option value="${(v.name||"").replace(/"/g,'&quot;')}"></option>`).join("");
+}
 function bindVenueModal(){
   document.getElementById("evt-newplace").addEventListener("click", function(){
     VenueEditor.open({onSaved: function(v){
