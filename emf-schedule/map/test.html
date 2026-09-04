@@ -31,8 +31,19 @@ th{background:#f2ecdf;font-family:monospace;font-size:11px;color:#8a7f6d;}
   <div id="results" style="margin-top:16px">测试进行中…</div>
 </main>
 <script>
-const KEY = "34383a232f417400f8338b624f99510c";
+// key 从 schedule.json 读取（浏览器端 key 直连 / 服务端 key 供代理）
+let KEY = "";
 const X = 27443, Y = 13376, Z = 15;
+
+async function loadKey(){
+  try {
+    const r = await fetch("../schedule.json?v=v20260904f", {cache:"no-store"});
+    if (r.ok){
+      const d = await r.json();
+      KEY = (d.meta && d.meta.tdtKey) || "";
+    }
+  } catch(e){}
+}
 
 async function testFetch(sub){
   const url = `https://t${sub}.tianditu.gov.cn/DataServer?T=vec_w&x=${X}&y=${Y}&l=${Z}&tk=${KEY}`;
@@ -56,6 +67,7 @@ function testImg(sub){
   });
 }
 (async ()=>{
+  await loadKey();
   try{
     const ipr = await fetch("https://api.ipify.org?format=json", {cache:"no-store"});
     document.getElementById("ip").textContent = (await ipr.json()).ip;
