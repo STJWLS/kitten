@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>天地图瓦片诊断</title>
+<style>
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f8f4ec;color:#42392b;
+  margin:0;padding:20px;}
+main{max-width:860px;margin:0 auto;background:#fff;border:1px solid #e9e0d0;border-radius:14px;padding:22px;}
+h2{margin:0 0 6px;font-size:18px;}
+p.sub{color:#8a7f6d;font-size:12px;margin:0 0 16px;font-family:monospace;}
+table{border-collapse:collapse;width:100%;font-size:13px;}
+th,td{border:1px solid #e9e0d0;padding:6px 10px;text-align:left;}
+th{background:#f2ecdf;font-family:monospace;font-size:11px;color:#8a7f6d;}
+.ok{color:#2e9e6b;font-weight:600;}
+.fail{color:#c96a5a;font-weight:600;}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;font-size:13px;}
+.badge{background:#f2ecdf;border:1px solid #e9e0d0;border-radius:8px;padding:8px 12px;}
+.badge b{font-family:monospace;}
+</style>
+</head>
+<body>
+<main>
+  <h2>天地图瓦片加载诊断</h2>
+  <p class="sub">本页在「你的浏览器」内直接测试天地图 8 个子域（fetch 与 &lt;img&gt; 两种方式各测一次）</p>
+  <div class="row">
+    <div class="badge">浏览器出口 IP：<b id="ip">检测中…</b></div>
+    <div class="badge">UA：<span id="ua" style="font-family:monospace;font-size:11px"></span></div>
+  </div>
+  <div id="results" style="margin-top:16px">测试进行中…</div>
+</main>
+<script>
+const KEY = "34383a232f417400f8338b624f99510c";
+const X = 27443, Y = 13376, Z = 15;
+
+async function testFetch(sub){
+  const url = `https://t${sub}.tianditu.gov.cn/DataServer?T=vec_w&x=${X}&y=${Y}&l=${Z}&tk=${KEY}`;
+  try {
+    const t0 = performance.now();
+    const r = await fetch(url, {cache:"no-store"});
+    const buf = await r.arrayBuffer();
+    return {ok: r.status === 200 && buf.byteLength > 5000, detail: `HTTP ${r.status} · ${(buf.byteLength/1024).toFixed(0)}KB · ${Math.round(performance.now()-t0)}ms`};
+  } catch(e){
+    return {ok: false, detail: e.name + ": " + (e.message || "连接失败")};
+  }
+}
+function testImg(sub){
+  return new Promise(res=>{
+    const img = new Image();
+    const t0 = performance.now();
+    img.onload = ()=>res({ok: img.naturalWidth > 0, detail: `加载成功 ${img.naturalWidth}×${img.naturalHeight} · ${Math.round(performance.now()-t0)}ms`});
+    img.onerror = ()=>res({ok: false, detail: "onerror 图片加载失败 · " + Math.round(performance.now()-t0) + "ms"});
+    img.src = `https://t${sub}.tianditu.gov.cn/DataServer?T=vec_w&x=${X}&y=${Y}&l=${Z}&tk=${KEY}&_=${Date.now()}`;
+    setTimeout(()=>res({ok:false, detail:"超时(10s)"}), 10000);
+  });
+}
+(async ()=>{
+  try{
+    const ipr = await fetch("https://api.ipify.org?format=json", {cache:"no-store"});
+    document.getElementById("ip").textContent = (await ipr.json()).ip;
+  }catch(e){ document.getElementById("ip").textContent = "检测失败"; }
+  document.getElementById("ua").textContent = navigator.userAgent.slice(0, 90);
+
+  const subs = ["0","1","2","3","4","5","6","7"];
+  const rows = [];
+  let fetchOk = 0, imgOk = 0;
+  for (const s of subs){
+    const [f, i] = await Promise.all([testFetch(s), testImg(s)]);
+    if (f.ok) fetchOk++;
+    if (i.ok) imgOk++;
+    rows.push(`<tr><td>t${s}.tianditu.gov.cn</td><td class="${f.ok?'ok':'fail'}">${f.ok?'✓ 成功':'✗ 失败'}</td><td>${f.detail}</td><td class="${i.ok?'ok':'fail'}">${i.ok?'✓ 成功':'✗ 失败'}</td><td>${i.detail}</td></tr>`);
+  }
+  const verdict = (fetchOk + imgOk === 16) ? "全部正常 ✅"
+    : (fetchOk + imgOk > 0) ? "部分成功 ⚠️"
+    : "全部失败 ❌（你的网络出口可能被天地图拦截，如浏览器走了海外代理/VPN）";
+  document.getElementById("results").innerHTML =
+    `<table><tr><th>子域</th><th>fetch</th><th>详情</th><th>&lt;img&gt;</th><th>详情</th></tr>${rows.join("")}</table>` +
+    `<div class="row"><div class="badge">总结：fetch ${fetchOk}/8 · img ${imgOk}/8 → ${verdict}</div></div>` +
+    `<div class="row"><div class="badge">注意：若浏览器 IP 为海外地址（如 172.x / 美国段），天地图会拒绝服务——请在代理软件中把 tianditu.gov.cn 设为直连（DIRECT）后重试。</div></div>`;
+})();
+</script>
+</body>
+</html>
