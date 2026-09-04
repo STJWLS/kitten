@@ -1,0 +1,1751 @@
+{
+ "meta": {
+  "title": "EMF 26R 课程看板",
+  "subtitle": "Course Schedule · Module 1 & 2 · Fall 2026",
+  "school": "复旦大学泛海国际金融学院（FISF）",
+  "termStart": "2026-09-07",
+  "termEnd": "2027-01-10",
+  "totalWeeks": 18,
+  "updated": "2026-09-04",
+  "source": "MinerU 解析官方课程表 PDF（按坐标重建网格，已交叉核验）",
+  "mapCenter": [
+   31.2995,
+   121.502
+  ],
+  "tdtKey": "ca2268fd1bdc33b7a4363fecbd5a8408",
+  "tdtKeyType": "browser",
+  "tdtKeyServer": "34383a232f417400f8338b624f99510c",
+  "amapKey": "a59f78f6ee853bbd96875cc41b7e3b43"
+ },
+ "slots": [
+  {
+   "id": 0,
+   "label": "09:55-10:40"
+  },
+  {
+   "id": 1,
+   "label": "10:50-11:35"
+  },
+  {
+   "id": 2,
+   "label": "11:45-12:30"
+  },
+  {
+   "id": 3,
+   "label": "13:30-14:15"
+  },
+  {
+   "id": 4,
+   "label": "14:25-15:10"
+  },
+  {
+   "id": 5,
+   "label": "15:25-16:10"
+  },
+  {
+   "id": 6,
+   "label": "16:20-17:05"
+  },
+  {
+   "id": 7,
+   "label": "17:15-18:00"
+  },
+  {
+   "id": 8,
+   "label": "18:30-19:15"
+  },
+  {
+   "id": 9,
+   "label": "19:25-20:10"
+  },
+  {
+   "id": 10,
+   "label": "20:20-21:05"
+  }
+ ],
+ "courses": [
+  {
+   "code": "MIE",
+   "name": "Microeconomics",
+   "cn": "微观经济学",
+   "module": "M1",
+   "credit": 2,
+   "prof": "张罡",
+   "color": "#9bd1ec",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Gang Zhang"
+  },
+  {
+   "code": "PFV",
+   "name": "Principles of Finance and Valuation",
+   "cn": "金融与估值原理",
+   "module": "M1",
+   "credit": 2,
+   "prof": "罗顶",
+   "color": "#9fe0bc",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Ding Luo"
+  },
+  {
+   "code": "EAF",
+   "name": "Econometric Analysis of Financial Data",
+   "cn": "金融数据计量分析",
+   "module": "M1",
+   "credit": 2,
+   "prof": "汤海涵 & 蒋亮",
+   "color": "#cdb8f0",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Haihan Tang & Liang Jiang"
+  },
+  {
+   "code": "FAC",
+   "name": "Financial Accounting",
+   "cn": "财务会计",
+   "module": "M1",
+   "credit": 2,
+   "prof": "施文韵",
+   "color": "#f7dd8f",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Wenyun Shi"
+  },
+  {
+   "code": "COF",
+   "name": "Corporate Finance",
+   "cn": "公司金融",
+   "module": "M2",
+   "credit": 2,
+   "prof": "马晓崟",
+   "color": "#ffb8a3",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Xiaoyin Ma"
+  },
+  {
+   "code": "TPM",
+   "name": "Theory and Practice of Chinese Modernization - Macroeconomics",
+   "cn": "中国式现代化理论与实践（宏观经济学）",
+   "module": "M2",
+   "credit": 2,
+   "prof": "罗顶",
+   "color": "#a5d8ff",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Ding Luo"
+  },
+  {
+   "code": "AIC",
+   "name": "AI Coding in Finance",
+   "cn": "金融 AI 编程",
+   "module": "M2",
+   "credit": 1,
+   "prof": "张虎来",
+   "color": "#ffc2d8",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Hulai Zhang"
+  },
+  {
+   "code": "LIVEM1",
+   "name": "LIVE M1",
+   "cn": "LIVE 直播课 M1",
+   "module": "M1-M2",
+   "credit": 1,
+   "prof": "Yi Wei",
+   "color": "#99e2d2",
+   "venues": "线上直播"
+  },
+  {
+   "code": "LIVEM2",
+   "name": "LIVE M2",
+   "cn": "LIVE 直播课 M2",
+   "module": "M1-M2",
+   "credit": 1,
+   "prof": "Yi Wei",
+   "color": "#99e2d2",
+   "venues": "线上直播"
+  },
+  {
+   "code": "CARE",
+   "name": "CARE EN",
+   "cn": "英语课（大陆及港澳台学生）",
+   "module": "M1-M2",
+   "credit": 2,
+   "prof": "Hannah Chen",
+   "color": "#d9b0a6",
+   "venues": "按周次安排"
+  },
+  {
+   "code": "ELP",
+   "name": "Extended Learning - Professional Development",
+   "cn": "职业发展拓展课",
+   "module": "M1-M2",
+   "credit": 2,
+   "prof": "Yi Wei",
+   "color": "#d3c39c",
+   "venues": "按周次安排"
+  }
+ ],
+ "weeks": [
+  {
+   "no": 1,
+   "start": "2026-09-07",
+   "end": "2026-09-13",
+   "days": [
+    {
+     "date": "2026-09-07",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "FISF310",
+       "s": 5,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-09-08",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "FISF310",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-09-09",
+     "sessions": []
+    },
+    {
+     "date": "2026-09-10",
+     "sessions": []
+    },
+    {
+     "date": "2026-09-11",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "H6201",
+       "s": 1,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-09-12",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "H6201",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "H6201",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "H6201",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-09-13",
+     "sessions": [
+      {
+       "c": "ELP",
+       "v": "",
+       "s": 3,
+       "n": 2,
+       "note": "M1-ELP-1"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 2,
+   "start": "2026-09-14",
+   "end": "2026-09-20",
+   "days": [
+    {
+     "date": "2026-09-14",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "FISF310",
+       "s": 5,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-09-15",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "FISF310",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-09-16",
+     "sessions": []
+    },
+    {
+     "date": "2026-09-17",
+     "sessions": []
+    },
+    {
+     "date": "2026-09-18",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "H6201",
+       "s": 1,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-09-19",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "H6201",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "H6201",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "H6201",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-09-20",
+     "sessions": [
+      {
+       "c": "ELP",
+       "v": "",
+       "s": 3,
+       "n": 2,
+       "note": "M1-ELP-2"
+      },
+      {
+       "c": "CARE",
+       "v": "",
+       "s": 6,
+       "n": 2,
+       "note": "16:00-18:00"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 3,
+   "start": "2026-09-21",
+   "end": "2026-09-27",
+   "days": [
+    {
+     "date": "2026-09-21",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "FISF310",
+       "s": 5,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-09-22",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "FISF310",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-09-23",
+     "sessions": []
+    },
+    {
+     "date": "2026-09-24",
+     "sessions": []
+    },
+    {
+     "date": "2026-09-25",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "H6201",
+       "s": 1,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-09-26",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "H6201",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "H6201",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "H6201",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-09-27",
+     "sessions": []
+    }
+   ]
+  },
+  {
+   "no": 4,
+   "start": "2026-09-28",
+   "end": "2026-10-04",
+   "days": [
+    {
+     "date": "2026-09-28",
+     "sessions": []
+    },
+    {
+     "date": "2026-09-29",
+     "sessions": []
+    },
+    {
+     "date": "2026-09-30",
+     "sessions": []
+    },
+    {
+     "date": "2026-10-01",
+     "sessions": []
+    },
+    {
+     "date": "2026-10-02",
+     "sessions": []
+    },
+    {
+     "date": "2026-10-03",
+     "sessions": []
+    },
+    {
+     "date": "2026-10-04",
+     "sessions": []
+    }
+   ]
+  },
+  {
+   "no": 5,
+   "start": "2026-10-05",
+   "end": "2026-10-11",
+   "days": [
+    {
+     "date": "2026-10-05",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "FISF310",
+       "s": 5,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-06",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "FISF310",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-07",
+     "sessions": []
+    },
+    {
+     "date": "2026-10-08",
+     "sessions": []
+    },
+    {
+     "date": "2026-10-09",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "H6201",
+       "s": 1,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-10",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "H6201",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "H6201",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "H6201",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-11",
+     "sessions": []
+    }
+   ]
+  },
+  {
+   "no": 6,
+   "start": "2026-10-12",
+   "end": "2026-10-18",
+   "days": [
+    {
+     "date": "2026-10-12",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "FISF310",
+       "s": 5,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-13",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "FISF310",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      },
+      {
+       "c": "CARE",
+       "v": "",
+       "s": 8,
+       "n": 2,
+       "note": "18:45-20:45"
+      }
+     ]
+    },
+    {
+     "date": "2026-10-14",
+     "sessions": []
+    },
+    {
+     "date": "2026-10-15",
+     "sessions": []
+    },
+    {
+     "date": "2026-10-16",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "H6201",
+       "s": 1,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-17",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "H6201",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "H6201",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "H6201",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-18",
+     "sessions": [
+      {
+       "c": "LIVEM1",
+       "v": "",
+       "s": 0,
+       "n": 11,
+       "note": "Intro"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 7,
+   "start": "2026-10-19",
+   "end": "2026-10-25",
+   "days": [
+    {
+     "date": "2026-10-19",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "FISF310",
+       "s": 5,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-20",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "FISF310",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      },
+      {
+       "c": "CARE",
+       "v": "",
+       "s": 8,
+       "n": 2,
+       "note": "18:45-20:45"
+      }
+     ]
+    },
+    {
+     "date": "2026-10-21",
+     "sessions": []
+    },
+    {
+     "date": "2026-10-22",
+     "sessions": []
+    },
+    {
+     "date": "2026-10-23",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "H6201",
+       "s": 1,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-24",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "H6201",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "H6201",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "H6201",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-25",
+     "sessions": [
+      {
+       "c": "LIVEM1",
+       "v": "",
+       "s": 0,
+       "n": 11,
+       "note": "Progress Meeting 1"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 8,
+   "start": "2026-10-26",
+   "end": "2026-11-01",
+   "days": [
+    {
+     "date": "2026-10-26",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "FISF310",
+       "s": 5,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-27",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "FISF310",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-28",
+     "sessions": []
+    },
+    {
+     "date": "2026-10-29",
+     "sessions": []
+    },
+    {
+     "date": "2026-10-30",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "H6201",
+       "s": 1,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-10-31",
+     "sessions": [
+      {
+       "c": "EAF",
+       "v": "H6201",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "PFV",
+       "v": "H6201",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "MIE",
+       "v": "H6201",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-11-01",
+     "sessions": [
+      {
+       "c": "LIVEM1",
+       "v": "",
+       "s": 0,
+       "n": 11,
+       "note": "Progress Meeting 2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 9,
+   "start": "2026-11-02",
+   "end": "2026-11-08",
+   "days": [
+    {
+     "date": "2026-11-02",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-03",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-04",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-05",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-06",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-07",
+     "sessions": [
+      {
+       "c": "FAC",
+       "v": "",
+       "s": 4,
+       "n": 2,
+       "note": "Exam 14:00-16:00"
+      },
+      {
+       "c": "EAF",
+       "v": "",
+       "s": 8,
+       "n": 2,
+       "note": "Exam 18:00-20:00"
+      }
+     ]
+    },
+    {
+     "date": "2026-11-08",
+     "sessions": [
+      {
+       "c": "LIVEM1",
+       "v": "",
+       "s": 0,
+       "n": 11,
+       "note": "Progress Meeting 3"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 10,
+   "start": "2026-11-09",
+   "end": "2026-11-15",
+   "days": [
+    {
+     "date": "2026-11-09",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-10",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-11",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-12",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-13",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-14",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-15",
+     "sessions": [
+      {
+       "c": "LIVEM1",
+       "v": "",
+       "s": 0,
+       "n": 11,
+       "note": "Final"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 11,
+   "start": "2026-11-16",
+   "end": "2026-11-22",
+   "days": [
+    {
+     "date": "2026-11-16",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-17",
+     "sessions": [
+      {
+       "c": "COF",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "TPM",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "AIC",
+       "v": "FISF310",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-11-18",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-19",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-20",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-21",
+     "sessions": [
+      {
+       "c": "TPM",
+       "v": "H6201",
+       "s": 1,
+       "n": 1,
+       "note": ""
+      },
+      {
+       "c": "COF",
+       "v": "H6201",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "AIC",
+       "v": "H6201",
+       "s": 5,
+       "n": 2,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-11-22",
+     "sessions": [
+      {
+       "c": "ELP",
+       "v": "",
+       "s": 3,
+       "n": 2,
+       "note": "M2-ELP-1"
+      },
+      {
+       "c": "CARE",
+       "v": "",
+       "s": 1,
+       "n": 2,
+       "note": "10:00-12:00"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 12,
+   "start": "2026-11-23",
+   "end": "2026-11-29",
+   "days": [
+    {
+     "date": "2026-11-23",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-24",
+     "sessions": [
+      {
+       "c": "COF",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "TPM",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "AIC",
+       "v": "FISF310",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-11-25",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-26",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-27",
+     "sessions": []
+    },
+    {
+     "date": "2026-11-28",
+     "sessions": [
+      {
+       "c": "TPM",
+       "v": "H6201",
+       "s": 1,
+       "n": 1,
+       "note": ""
+      },
+      {
+       "c": "COF",
+       "v": "H6201",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "AIC",
+       "v": "H6201",
+       "s": 5,
+       "n": 2,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-11-29",
+     "sessions": [
+      {
+       "c": "ELP",
+       "v": "",
+       "s": 3,
+       "n": 2,
+       "note": "ELP-2（原表误标 M1）"
+      },
+      {
+       "c": "CARE",
+       "v": "",
+       "s": 1,
+       "n": 2,
+       "note": "10:00-12:00"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 13,
+   "start": "2026-11-30",
+   "end": "2026-12-06",
+   "days": [
+    {
+     "date": "2026-11-30",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-01",
+     "sessions": [
+      {
+       "c": "COF",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "TPM",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "AIC",
+       "v": "FISF310",
+       "s": 6,
+       "n": 1,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-12-02",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-03",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-04",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-05",
+     "sessions": [
+      {
+       "c": "TPM",
+       "v": "H6201",
+       "s": 1,
+       "n": 1,
+       "note": ""
+      },
+      {
+       "c": "COF",
+       "v": "H6201",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "AIC",
+       "v": "H6201",
+       "s": 5,
+       "n": 2,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-12-06",
+     "sessions": [
+      {
+       "c": "LIVEM2",
+       "v": "",
+       "s": 0,
+       "n": 11,
+       "note": "Intro"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 14,
+   "start": "2026-12-07",
+   "end": "2026-12-13",
+   "days": [
+    {
+     "date": "2026-12-07",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-08",
+     "sessions": [
+      {
+       "c": "COF",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "TPM",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-12-09",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-10",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-11",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-12",
+     "sessions": [
+      {
+       "c": "LIVEM2",
+       "v": "",
+       "s": 4,
+       "n": 2,
+       "note": "Progress Meeting 1"
+      }
+     ]
+    },
+    {
+     "date": "2026-12-13",
+     "sessions": [
+      {
+       "c": "TPM",
+       "v": "H6201",
+       "s": 1,
+       "n": 1,
+       "note": "调至周日"
+      },
+      {
+       "c": "COF",
+       "v": "H6201",
+       "s": 3,
+       "n": 2,
+       "note": "调至周日"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 15,
+   "start": "2026-12-14",
+   "end": "2026-12-20",
+   "days": [
+    {
+     "date": "2026-12-14",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-15",
+     "sessions": [
+      {
+       "c": "COF",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "TPM",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-12-16",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-17",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-18",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-19",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-20",
+     "sessions": [
+      {
+       "c": "LIVEM2",
+       "v": "",
+       "s": 4,
+       "n": 2,
+       "note": "Progress Meeting 2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 16,
+   "start": "2026-12-21",
+   "end": "2026-12-27",
+   "days": [
+    {
+     "date": "2026-12-21",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-22",
+     "sessions": [
+      {
+       "c": "COF",
+       "v": "FISF310",
+       "s": 1,
+       "n": 2,
+       "note": ""
+      },
+      {
+       "c": "TPM",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-12-23",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-24",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-25",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-26",
+     "sessions": [
+      {
+       "c": "TPM",
+       "v": "H6201",
+       "s": 1,
+       "n": 1,
+       "note": ""
+      },
+      {
+       "c": "COF",
+       "v": "H6201",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-12-27",
+     "sessions": [
+      {
+       "c": "LIVEM2",
+       "v": "",
+       "s": 4,
+       "n": 2,
+       "note": "Progress Meeting 3"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "no": 17,
+   "start": "2026-12-28",
+   "end": "2027-01-03",
+   "days": [
+    {
+     "date": "2026-12-28",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-29",
+     "sessions": [
+      {
+       "c": "TPM",
+       "v": "FISF310",
+       "s": 1,
+       "n": 1,
+       "note": ""
+      },
+      {
+       "c": "COF",
+       "v": "FISF310",
+       "s": 3,
+       "n": 2,
+       "note": ""
+      }
+     ]
+    },
+    {
+     "date": "2026-12-30",
+     "sessions": []
+    },
+    {
+     "date": "2026-12-31",
+     "sessions": [
+      {
+       "c": "TPM",
+       "v": "",
+       "s": 0,
+       "n": 2,
+       "note": "Exam 10:00-11:40"
+      }
+     ]
+    },
+    {
+     "date": "2027-01-01",
+     "sessions": []
+    },
+    {
+     "date": "2027-01-02",
+     "sessions": []
+    },
+    {
+     "date": "2027-01-03",
+     "sessions": []
+    }
+   ]
+  },
+  {
+   "no": 18,
+   "start": "2027-01-04",
+   "end": "2027-01-10",
+   "days": [
+    {
+     "date": "2027-01-04",
+     "sessions": []
+    },
+    {
+     "date": "2027-01-05",
+     "sessions": []
+    },
+    {
+     "date": "2027-01-06",
+     "sessions": []
+    },
+    {
+     "date": "2027-01-07",
+     "sessions": []
+    },
+    {
+     "date": "2027-01-08",
+     "sessions": []
+    },
+    {
+     "date": "2027-01-09",
+     "sessions": []
+    },
+    {
+     "date": "2027-01-10",
+     "sessions": [
+      {
+       "c": "LIVEM2",
+       "v": "",
+       "s": 0,
+       "n": 11,
+       "note": "Final"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "holidays": [
+  {
+   "name": "中秋节",
+   "en": "Mid-Autumn Festival",
+   "weeks": [
+    3
+   ],
+   "days": [
+    4,
+    5,
+    6
+   ],
+   "dates": [
+    "2026-09-25",
+    "2026-09-27"
+   ]
+  },
+  {
+   "name": "国庆节",
+   "en": "National Day",
+   "weeks": [
+    4
+   ],
+   "days": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "dates": [
+    "2026-10-01",
+    "2026-10-04"
+   ]
+  },
+  {
+   "name": "国庆节",
+   "en": "National Day",
+   "weeks": [
+    5
+   ],
+   "days": [
+    0,
+    1,
+    2
+   ],
+   "dates": [
+    "2026-10-05",
+    "2026-10-07"
+   ]
+  },
+  {
+   "name": "元旦",
+   "en": "New Year's Day",
+   "weeks": [
+    17
+   ],
+   "days": [
+    4,
+    5,
+    6
+   ],
+   "dates": [
+    "2027-01-01",
+    "2027-01-03"
+   ]
+  }
+ ],
+ "exams": [
+  {
+   "course": "FAC",
+   "cn": "财务会计",
+   "date": "2026-11-07",
+   "time": "14:00-16:00",
+   "week": 9,
+   "day": 5
+  },
+  {
+   "course": "EAF",
+   "cn": "金融数据计量分析",
+   "date": "2026-11-07",
+   "time": "18:00-20:00",
+   "week": 9,
+   "day": 5
+  },
+  {
+   "course": "TPM",
+   "cn": "中国式现代化理论与实践",
+   "date": "2026-12-31",
+   "time": "10:00-11:40",
+   "week": 17,
+   "day": 3
+  }
+ ],
+ "venues": [
+  {
+   "code": "FISF310",
+   "name": "泛海国际金融学院 · FISF310",
+   "short": "FISF 学院楼",
+   "address": "国权路579号 · 复旦大学邯郸校区",
+   "lat": 31.2987,
+   "lng": 121.506,
+   "approx": true
+  },
+  {
+   "code": "H6201",
+   "name": "第六教学楼 2F · H6201",
+   "short": "六教 H6201",
+   "address": "邯郸路220号 · 复旦大学邯郸校区",
+   "lat": 31.3023,
+   "lng": 121.5008,
+   "approx": true
+  },
+  {
+   "code": "GATE",
+   "name": "复旦大学正门（参考点）",
+   "short": "正门",
+   "address": "邯郸路220号",
+   "lat": 31.2976,
+   "lng": 121.4991,
+   "ref": true
+  }
+ ]
+}
