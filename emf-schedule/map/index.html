@@ -338,6 +338,13 @@ function renderArrange(v){
 }
 
 /* 新建地点：统一组件（搜索栏 / 矢量小地图 / 备选结果 / 日程绑定 / 备注）——见 assets/venues.js */
+function refreshVenueUI(){
+  venueData = VenueStore.allVenues().map(v=>({...v, note: venueNote(v), count: countForVenue(v)}));
+  venueData.push({code:"", name:"线上 / 待定（LIVE · ELP · CARE EN 等）", short:"线上/待定",
+                  address:"无固定教室", note: venueNote({code:""}), count: countForVenue({code:""}), virtual:true});
+  buildVenueCards();
+  buildMarkers();
+}
 document.getElementById("new-venue").addEventListener("click", function(){
   VenueEditor.open({onSaved: function(v){
     refreshVenueUI();
