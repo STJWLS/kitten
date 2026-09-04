@@ -243,3 +243,30 @@ table.list tr:hover td{background:rgba(236,159,190,.07);}
 .arrange h3{margin:0 0 10px;font-size:14px;color:var(--text);}
 .arrange h3::before{content:"";width:4px;height:12px;border-radius:2px;
   background:linear-gradient(180deg,var(--accent),var(--pink));display:inline-block;margin-right:8px;}
+
+/* 新建地点 */
+.bl.pink{background:linear-gradient(135deg,var(--pink),#f2a7c3);border-color:var(--pink);color:#fff;
+  box-shadow:0 2px 6px rgba(236,159,190,.35);}
+.bl.pink:hover{color:#fff;}
+.vmodes{display:flex;gap:8px;margin:2px 0 12px;}
+.vmodes .bl{background:var(--bg1);border:1px solid var(--line);color:var(--muted);
+  font-size:12px;font-weight:600;border-radius:999px;padding:4px 14px;cursor:pointer;
+  transition:border-color .15s,color .15s,background .15s;}
+.vmodes .bl:hover{border-color:var(--pink);color:var(--pink-deep);}
+.vmodes .bl.active{background:linear-gradient(135deg,var(--accent),#1a5fbe);
+  border-color:var(--accent);color:#fff;box-shadow:0 2px 6px rgba(236,159,190,.35);}
+.place-row{display:flex;gap:8px;margin-top:4px;}
+.place-row input{flex:1;min-width:0;}
+.vqres{margin-top:8px;max-height:212px;overflow-y:auto;border:1px solid var(--line);
+  border-radius:10px;background:var(--bg0);}
+.vqtitle{font-size:11px;color:var(--muted);font-family:var(--mono);padding:8px 10px 4px;}
+.vqitem{padding:7px 10px;cursor:pointer;border-top:1px solid var(--line);}
+.vqitem:first-child{border-top:none;}
+.vqitem:hover{background:rgba(236,159,190,.12);}
+.vqitem .n{font-size:12.5px;font-weight:600;color:var(--text);}
+.vqitem .n i{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--pink-deep);margin-left:4px;}
+.vqitem .a{font-size:11px;color:var(--muted);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tdt-pin.custom .pin{background:linear-gradient(135deg,#ec9fbe,#c96a5a);}
+.mini-add{font-size:11px;background:linear-gradient(135deg,var(--pink),#f2a7c3);border:none;color:#fff;
+  border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600;white-space:nowrap;}
