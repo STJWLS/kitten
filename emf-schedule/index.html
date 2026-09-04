@@ -203,9 +203,11 @@
 <script>
 const DAY_CN = ["周一","周二","周三","周四","周五","周六","周日"];
 let DATA = null, curWeek = 0;
+// 数据版本号：更新 schedule.json 时递增此值（绕开浏览器与 GitHub Pages CDN 的 10 分钟缓存）
+const DATA_V = "v20260904c";
 
 async function init(){
-  const r = await fetch("schedule.json");
+  const r = await fetch("schedule.json?v=" + DATA_V);
   DATA = await r.json();
   const m = DATA.meta;
   document.title = m.title + " · Fall 2026";
