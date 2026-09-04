@@ -42,6 +42,12 @@ var VenueStore = (function(){
   function amapGet(url){
     return fetch(url, {cache:"no-store"}).then(function(r){ return r.json(); });
   }
+  /* 高德不同接口的 address 格式不一致：regeo 是数组、place/text 是字符串 */
+  function fmtAddr(p){
+    if (typeof p.address === "string") return p.address;
+    if (p.address && p.address.length) return p.address.join("");
+    return [p.pname, p.cityname, p.adname].filter(Boolean).join("");
+  }
 
   /* 逆地理编码：坐标(GCJ-02) -> 附近 POI 列表（距离最近的几个） */
   function regeo(gcjLng, gcjLat, radius){
@@ -54,7 +60,7 @@ var VenueStore = (function(){
         var ll = String(p.location || "").split(",");
         var w = CoordTrans.gcj02_to_wgs84(parseFloat(ll[0]), parseFloat(ll[1]));
         return {
-          name: p.name, address: (p.address && p.address.length) ? p.address.join("") : (p.pname||"")+(p.cityname||"")+(p.adname||""),
+          name: p.name, address: fmtAddr(p),
           lat: w[1], lng: w[0],
           dist: (typeof p.distance === "number") ? Math.round(p.distance) : null
         };
@@ -76,7 +82,7 @@ var VenueStore = (function(){
         var ll = String(p.location || "").split(",");
         var w = CoordTrans.gcj02_to_wgs84(parseFloat(ll[0]), parseFloat(ll[1]));
         return {
-          name: p.name, address: (p.address && p.address.length) ? p.address.join("") : (p.pname||"")+(p.cityname||"")+(p.adname||""),
+          name: p.name, address: fmtAddr(p),
           lat: w[1], lng: w[0], dist: null
         };
       }).slice(0, count || 8);
