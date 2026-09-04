@@ -107,7 +107,7 @@ const EVT_KEY = "emf_schedule_events_v1";
 let editingEvtId = null;
 
 async function init(){
-  const r = await fetch("schedule.json?v=" + DATA_V);
+  const r = await fetch("schedule.a1b1c99b.json");
   DATA = await r.json();
   const m = DATA.meta;
   document.title = m.title + " · Fall 2026";
