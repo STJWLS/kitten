@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="assets/leaflet/leaflet.css">
 <script src="assets/leaflet/leaflet.js"></script>
 <script src="assets/coord.8afb7bfa.js"></script>
-<script src="assets/venues.64814439.js"></script>
-<link rel="stylesheet" href="assets/dashboard.7bc5fc18.css">
+<script src="assets/venues.aa6a539a.js"></script>
+<link rel="stylesheet" href="assets/dashboard.a4f36198.css">
 <title>EMF 26R 课程看板</title>
 </head>
 <body>
@@ -35,11 +35,9 @@
     <h2>周课表 <span class="hint" id="week-hint"></span></h2>
     <div class="weektabs" id="weektabs"></div>
     <div class="weekinfo" id="weekinfo"></div>
-    <div class="gridwrap">
-      <table class="grid" id="grid"></table>
-    </div>
+    <div class="gridwrap" id="gridwrap"></div>
     <div class="legend" id="legend"></div>
-    <div style="font-size:11.5px;color:var(--dim);font-family:var(--mono)">💡 点击任意空白的格子即可添加个人日程（时间 / 地点 / 备注）</div>
+    <div style="font-size:11.5px;color:var(--dim);font-family:var(--mono)">💡 全天 0-24 点 · 10 分钟粒度 · 点击任意空白位置即可添加个人日程（小时为大格，日程块可跨格）</div>
   </section>
 
   <section>
@@ -77,10 +75,26 @@
     <h3 id="evt-modal-title">添加日程</h3>
     <label>日期 <input id="evt-date" readonly></label>
     <div class="row2">
-      <label>开始时段 <select id="evt-s0"></select></label>
-      <label>结束时段 <select id="evt-s1"></select></label>
+      <label>开始时间
+        <div class="place-row" style="margin-top:0">
+          <select id="evt-sh"></select><select id="evt-sm"></select>
+        </div>
+      </label>
+      <label>结束时间
+        <div class="place-row" style="margin-top:0">
+          <select id="evt-eh"></select><select id="evt-em"></select>
+        </div>
+      </label>
     </div>
     <label>标题 <input id="evt-title" placeholder="例如：小组讨论 / 图书馆自习"></label>
+    <label>标签
+      <select id="evt-tag">
+        <option value="个人">个人</option>
+        <option value="学习">学习</option>
+        <option value="生活">生活</option>
+        <option value="其他">其他</option>
+      </select>
+    </label>
     <label>地点</label>
     <div class="place-row">
       <input id="evt-place" list="place-list" placeholder="选择已有地点或输入">
@@ -100,15 +114,27 @@
 <script>
 const DAY_CN = ["周一","周二","周三","周四","周五","周六","周日"];
 let DATA = null, curWeek = 0;
-// 数据版本号：更新 schedule.json 时递增此值（绕开浏览器与 GitHub Pages CDN 的 10 分钟缓存）
 const DATA_V = "v20260904g";
-// 个人日程存储（本机 localStorage，可导出/导入 JSON）
 const EVT_KEY = "emf_schedule_events_v1";
 let editingEvtId = null;
+const HOURPX = 42;   // 每小时像素高（大格）
+const TAG_COLORS = {"课程":"#003da5", "考试":"#c96a5a", "个人":"#b25e83", "学习":"#2e7d8f", "生活":"#2e9e6b", "其他":"#8a7f6d", "导入":"#c98f2f"};
+
+/* ---- 时间工具（0-1440 分钟，10 分钟粒度） ---- */
+function fmtMin(m){
+  const h = Math.floor(m/60), mm = m%60;
+  return String(h).padStart(2,"0") + ":" + String(mm).padStart(2,"0");
+}
+function parseTimeToMin(hhmm){
+  if (!hhmm) return null;
+  const [h,m] = hhmm.split(":").map(Number);
+  return Math.round((h*60 + m)/10)*10;
+}
 
 async function init(){
-  const r = await fetch("schedule.a1b1c99b.json");
+  const r = await fetch("schedule.0a54eab9.json");
   DATA = await r.json();
+  VenueStore.migrateEvents();   // 旧版 s0/s1 事件 → startMin/endMin + tag
   const m = DATA.meta;
   document.title = m.title + " · Fall 2026";
   document.getElementById("subtitle").textContent = m.subtitle;
@@ -117,7 +143,6 @@ async function init(){
   const now = new Date();
   const start = new Date(m.termStart + "T00:00:00+08:00");
   const end = new Date(m.termEnd + "T23:59:59+08:00");
-  const today = now.toISOString().slice(0,10);
   let wk = 0;
   if (now >= start && now <= end) {
     wk = Math.floor((now - start) / (7*864e5)) + 1;
@@ -148,7 +173,6 @@ async function init(){
   bindVenueModal();
   selectWeek(wk || 1);
   setInterval(()=>{ refreshCountdown(now); }, 1000);
-  // 本机存储探测完成后刷新状态提示
   setTimeout(renderMylist, 2500);
 }
 function daysUntil(d){ return Math.ceil((d - new Date()) / 864e5); }
@@ -160,8 +184,7 @@ function nextSession(now){
     for (const s of day.sessions) {
       const c = DATA.courses.find(x=>x.code===s.c);
       if (!c) continue;
-      const t = DATA.slots[s.s].label.split("-")[0];
-      const dt = new Date(day.date + "T" + t + ":00+08:00");
+      const dt = new Date(day.date + "T" + fmtMin(s.start) + ":00+08:00");
       if (dt <= now) continue;
       const diff = dt - now;
       if (!best || diff < best.diff) best = {diff, dt, course: c.cn || c.code};
@@ -225,65 +248,99 @@ function selectWeek(n){
   renderGrid(w);
 }
 
+/* ---- 全天网格（0-24 点，10 分钟粒度；小时为大格，日程块可跨格） ---- */
 function renderGrid(w){
   const today = new Date().toISOString().slice(0,10);
   const holDays = {};
   DATA.holidays.filter(h=>h.weeks.includes(w.no)).forEach(h=>h.days.forEach(d=>holDays[d]=h.name));
   const evts = getEvents().filter(e=>w.days.some(d=>d.date===e.date));
-  let html = `<thead><tr><th>时间</th>` +
-    w.days.map((d,i)=>`<th class="${d.date===today?'today':''}">${DAY_CN[i]}<span class="d">${d.date.slice(5)}</span></th>`).join("") +
-    `</tr></thead><tbody>`;
-  for (let s=0; s<DATA.slots.length; s++){
-    html += `<tr><td class="time">${DATA.slots[s].label}</td>`;
-    for (let d=0; d<7; d++){
-      const day = w.days[d];
-      const sess = day.sessions.filter(x=>x.s===s);
-      if (sess.length){
-        const x = sess[0];
-        const c = DATA.courses.find(c=>c.code===x.c);
-        const isExam = x.note && x.note.startsWith("Exam");
-        const isLive = x.c.startsWith("LIVE");
-        const bg = isExam ? "" : `style="border-left-color:${c.color};background:linear-gradient(135deg,${c.color}55,${c.color}1f)"`;
-        html += `<td rowspan="${x.n}"><div class="cell ${isExam?'exam':''} ${isLive?'live':''}" ${bg}>
-          <span class="cn">${c.cn||c.name}</span>
-          ${x.v?`<span class="venue">@ ${x.v}</span>`:""}
-          ${x.note?`<span class="note">${x.note}</span>`:""}
-          </div></td>`;
-      } else if (!day.sessions.some(x=>x.s<s && x.s+x.n>s)){
-        const evt = evts.find(e=>e.date===day.date && e.s0===s);
-        if (evt){
-          const nextSess = day.sessions.filter(x=>x.s>s).sort((a,b)=>a.s-b.s)[0];
-          let span = (evt.s1??evt.s0) - evt.s0 + 1;
-          if (nextSess) span = Math.min(span, nextSess.s - s);
-          if (span < 1) span = 1;
-          html += `<td rowspan="${span}"><div class="cell evt" data-evt="${evt.id}" title="点击编辑日程">
-            <span class="cn">📌 ${evt.title}</span>
-            ${evt.place?`<span class="venue">@ ${evt.place}</span>`:""}
-            ${evt.note?`<span class="note">${evt.note}</span>`:""}
-            </div></td>`;
-        } else if (holDays[d]!==undefined){
-          html += `<td class="cell holiday">${holDays[d]}</td>`;
-        } else {
-          html += `<td class="cell-empty" data-date="${day.date}" data-slot="${s}" title="点击添加日程"></td>`;
-        }
-      }
-    }
-    html += `</tr>`;
+
+  let labels = "";
+  for (let h=0; h<24; h++){
+    labels += `<div class="hour">${String(h).padStart(2,"0")}:00</div>`;
   }
-  html += `</tbody>`;
-  document.getElementById("grid").innerHTML = html;
-  document.querySelectorAll("td.cell-empty").forEach(td=>td.addEventListener("click",()=>{
-    openEvtModal(td.dataset.date, +td.dataset.slot, null);
-  }));
-  document.querySelectorAll(".cell.evt").forEach(c=>c.addEventListener("click",()=>{
-    openEvtModal(null, null, c.dataset.evt);
-  }));
+
+  let days = "";
+  for (let di=0; di<7; di++){
+    const day = w.days[di];
+    const isToday = day.date === today;
+    const blocks = [];
+    for (const s of day.sessions){
+      const c = DATA.courses.find(x=>x.code===s.c);
+      blocks.push({
+        start: s.start, end: s.end, tag: s.tag || "课程",
+        title: c ? (c.cn || c.name) : "日程",
+        sub: (s.v ? "@ " + s.v : "") + (s.note ? " · " + s.note : ""),
+        color: c ? c.color : "#d3c39c",
+        isExam: (s.tag === "考试")
+      });
+    }
+    for (const e of evts){
+      if (e.date !== day.date) continue;
+      blocks.push({
+        start: e.startMin, end: e.endMin, tag: e.tag || "个人",
+        title: "📌 " + e.title,
+        sub: (e.place ? "@ " + e.place : "") + (e.note ? " · " + e.note : ""),
+        color: null, isEvt: true, evtId: e.id
+      });
+    }
+    const hol = holDays[di];
+    let blocksHtml = "";
+    for (const b of blocks){
+      const h0 = b.start/60, h1 = b.end/60;
+      if (h1 <= h0) continue;
+      const top = h0 * HOURPX;
+      const height = Math.max((h1 - h0) * HOURPX, 20);
+      const tagColor = TAG_COLORS[b.tag] || "#8a7f6d";
+      const bg = b.isExam
+        ? "background:linear-gradient(135deg, rgba(201,106,90,.16), rgba(201,106,90,.06));border:1px solid rgba(201,106,90,.55);"
+        : b.isEvt
+          ? "background:linear-gradient(135deg, rgba(236,159,190,.42), rgba(236,159,190,.18));border:1.5px dashed var(--pink-deep);color:var(--pink-deep);"
+          : `background:linear-gradient(135deg,${b.color}55,${b.color}1f);border-left:3px solid ${b.color};`;
+      blocksHtml += `<div class="evtblock ${b.isEvt?"evt":""}" data-evt="${b.evtId||""}" style="top:${top.toFixed(1)}px;height:${height.toFixed(1)}px;${bg}">
+        <span class="tagchip" style="background:${tagColor}">${b.tag}</span>
+        <span class="cn">${b.title}</span>
+        <span class="venue">${b.sub}</span>
+      </div>`;
+    }
+    days += `<div class="daycol" data-date="${day.date}"${hol?` style="background:linear-gradient(rgba(201,143,47,.07),rgba(201,143,47,.07)),repeating-linear-gradient(to bottom, transparent 0 ${HOURPX-1}px, var(--line) ${HOURPX-1}px ${HOURPX}px)"`:""}>
+      ${hol?`<div class="holbadge">${hol}</div>`:""}
+      ${blocksHtml}
+    </div>`;
+  }
+
+  document.getElementById("gridwrap").innerHTML =
+    `<div class="g24">
+      <div class="g24-labels">${labels}</div>
+      <div class="g24-main">
+        <div class="g24-head">${w.days.map((d,i)=>`<div class="hd ${d.date===today?'today':''}">${DAY_CN[i]}<span class="d">${d.date.slice(5)}</span></div>`).join("")}</div>
+        <div class="g24-days">${days}</div>
+      </div>
+    </div>`;
+
+  document.querySelectorAll(".daycol").forEach(col=>{
+    col.addEventListener("click", e=>{
+      if (e.target.closest(".evtblock")) return;
+      const rect = col.getBoundingClientRect();
+      const offY = e.clientY - rect.top;
+      let minute = Math.floor(offY / HOURPX * 60 / 10) * 10;
+      minute = Math.min(1430, Math.max(0, minute));
+      openEvtModal(col.dataset.date, minute, null);
+    });
+  });
+  document.querySelectorAll(".evtblock.evt").forEach(b=>{
+    b.addEventListener("click", e=>{
+      e.stopPropagation();
+      openEvtModal(null, null, b.dataset.evt);
+    });
+  });
 }
 
 function buildLegend(){
   document.getElementById("legend").innerHTML = DATA.courses.map(c=>
     `<span class="leg"><i style="background:${c.color}"></i>${c.code} ${c.cn}</span>`).join("") +
-    `<span class="leg"><i style="background:var(--pink)"></i>📌 我的日程</span>`;
+    `<span class="leg"><i style="background:var(--pink)"></i>📌 我的日程</span>` +
+    Object.entries(TAG_COLORS).map(([t,c])=>`<span class="leg"><i style="background:${c}"></i>标签 ${t}</span>`).join("");
 }
 
 function buildCourseTable(){
@@ -323,24 +380,28 @@ function buildHolidays(){
       <div class="s">Week ${h.weeks.join(" / ")}</div></div>`).join("");
 }
 
-// ============ 个人日程（点击格子添加 / 编辑 / 删除，本机存储） ============
+/* ============ 个人日程（全天 10 分钟粒度） ============ */
 function getEvents(){
   try { return JSON.parse(localStorage.getItem(EVT_KEY) || "[]"); } catch(e) { return []; }
 }
 function saveEvents(arr){ localStorage.setItem(EVT_KEY, JSON.stringify(arr)); }
 
-function openEvtModal(date, slot, id){
+function openEvtModal(date, minute, id){
   editingEvtId = id || null;
   const evt = id ? getEvents().find(e=>e.id===id) : null;
   document.getElementById("evt-modal-title").textContent = evt ? "编辑日程" : "添加日程";
   document.getElementById("evt-date").value = evt ? evt.date : date;
-  const opts = DATA.slots.map((x,i)=>`<option value="${i}">${x.label}</option>`).join("");
-  const s0 = document.getElementById("evt-s0");
-  const s1 = document.getElementById("evt-s1");
-  s0.innerHTML = opts; s1.innerHTML = opts;
-  s0.value = evt ? evt.s0 : slot;
-  s1.value = evt ? (evt.s1 ?? evt.s0) : slot;
+  const sh = document.getElementById("evt-sh"), sm = document.getElementById("evt-sm");
+  const eh = document.getElementById("evt-eh"), em = document.getElementById("evt-em");
+  sh.innerHTML = Array.from({length:24},(_,i)=>`<option value="${i}">${String(i).padStart(2,"0")}时</option>`).join("");
+  eh.innerHTML = Array.from({length:25},(_,i)=>`<option value="${i}">${String(i).padStart(2,"0")}时</option>`).join("");
+  sm.innerHTML = em.innerHTML = ["00","10","20","30","40","50"].map(v=>`<option value="${v}">${v}分</option>`).join("");
+  const s = evt ? evt.startMin : (minute ?? 0);
+  const en = evt ? evt.endMin : Math.min(1440, (minute ?? 0) + 60);
+  sh.value = Math.floor(s/60); sm.value = String(s%60).padStart(2,"0");
+  eh.value = Math.floor(en/60); em.value = String(en%60).padStart(2,"0");
   document.getElementById("evt-title").value = evt ? evt.title : "";
+  document.getElementById("evt-tag").value = evt && evt.tag ? evt.tag : "个人";
   document.getElementById("evt-place").value = evt ? (evt.place||"") : "";
   document.getElementById("evt-place").dataset.placeCode = evt && evt.placeCode ? evt.placeCode : "";
   document.getElementById("evt-note").value = evt ? (evt.note||"") : "";
@@ -356,16 +417,17 @@ function saveEvt(){
   const title = document.getElementById("evt-title").value.trim();
   if (!title){ alert("请填写日程标题"); return; }
   const date = document.getElementById("evt-date").value;
-  let s0 = +document.getElementById("evt-s0").value;
-  let s1 = +document.getElementById("evt-s1").value;
-  if (s1 < s0) s1 = s0;
+  const startMin = (+document.getElementById("evt-sh").value)*60 + (+document.getElementById("evt-sm").value);
+  const endMin = (+document.getElementById("evt-eh").value)*60 + (+document.getElementById("evt-em").value);
+  if (endMin <= startMin){ alert("结束时间必须晚于开始时间"); return; }
   const arr = getEvents();
   const placeEl = document.getElementById("evt-place");
   const obj = {id: editingEvtId || ("e" + Date.now().toString(36) + Math.floor(Math.random()*46656).toString(36)),
-               date, s0, s1, title,
+               date, startMin, endMin, title,
+               tag: document.getElementById("evt-tag").value,
                place: placeEl.value.trim(),
                note: document.getElementById("evt-note").value.trim()};
-  if (placeEl.dataset.placeCode) obj.placeCode = placeEl.dataset.placeCode;   // 结构化地点绑定
+  if (placeEl.dataset.placeCode) obj.placeCode = placeEl.dataset.placeCode;
   if (editingEvtId){
     const i = arr.findIndex(e=>e.id===editingEvtId);
     if (i>=0) arr[i] = obj;
@@ -399,20 +461,6 @@ function bindModal(){
   });
   document.getElementById("evt-import-file").addEventListener("change", importEvents);
 }
-
-/* ============ 地点选择 + 新建（统一组件，见 assets/venues.js） ============ */
-function refreshPlaceList(){
-  // 自定义下拉：点击显示全部地点，与新建地点的搜索结果同格式（名称+经纬度+地址）
-  PlacePicker.attach(document.getElementById("evt-place"));
-}
-function bindVenueModal(){
-  document.getElementById("evt-newplace").addEventListener("click", function(){
-    VenueEditor.open({onSaved: function(v){
-      refreshPlaceList();
-      document.getElementById("evt-place").value = v.name;   // 日程界面新建 → 自动绑定
-    }});
-  });
-}
 function exportEvents(){
   const blob = new Blob([JSON.stringify(getEvents(), null, 1)], {type:"application/json"});
   const a = document.createElement("a");
@@ -429,7 +477,6 @@ function importEvents(){
       const text = String(rd.result || "");
       const name = (f.name || "").toLowerCase();
       let arr;
-      // 多模板自动识别：ICS 日历 / CSV 表格 / 看板 JSON
       if (name.endsWith(".ics") || /^BEGIN:VCALENDAR/m.test(text)) arr = parseIcs(text);
       else if (name.endsWith(".csv")) arr = parseCsv(text);
       else {
@@ -457,40 +504,24 @@ function importEvents(){
 function newEvtId(seed){
   return "i" + Math.abs(seed.split("").reduce((a,c)=>(a*31 + c.charCodeAt(0))|0, 0)).toString(36) + Math.floor(Math.random()*46656).toString(36);
 }
-function timeToSlot(hhmm){
-  if (!hhmm) return null;
-  const [h,m] = hhmm.split(":").map(Number);
-  const mins = h*60 + m;
-  for (let i=0; i<DATA.slots.length; i++){
-    const [a,b] = DATA.slots[i].label.split("-");
-    const [ah,am] = a.split(":").map(Number), [bh,bm] = b.split(":").map(Number);
-    if (mins >= ah*60+am && mins < bh*60+bm) return i;
-  }
-  // 恰好落在某节课的结束边界 → 归入该节（导入的结束时间常用整点边界）
-  for (let i=0; i<DATA.slots.length; i++){
-    const b = DATA.slots[i].label.split("-")[1];
-    const [bh,bm] = b.split(":").map(Number);
-    if (mins === bh*60+bm) return i;
-  }
-  return mins < 9*60+55 ? 0 : DATA.slots.length - 1;
-}
 function parseIcs(text){
   const out = [];
   const blocks = text.split(/BEGIN:VEVENT/).slice(1);
   for (const b of blocks){
     const grab = (k)=>{ const m = b.match(new RegExp("^" + k + "[^:\\n]*:([^\\n]+)", "m")); return m ? m[1].trim() : ""; };
-    let dt = grab("DTSTART").replace(/^.*:/, "");   // 去掉 TZID=xxx: 前缀
+    let dt = grab("DTSTART").replace(/^.*:/, "");
     if (/^VALUE=DATE/.test(grab("DTSTART"))) dt = b.match(/VALUE=DATE:(\d{8})/)?.[1] || dt;
     if (!dt) continue;
     const date = dt.slice(0,4) + "-" + dt.slice(4,6) + "-" + dt.slice(6,8);
     let t0 = dt.includes("T") ? dt.slice(9,13) : "";
     let tend = grab("DTEND").replace(/^.*:/, "");
     let t1 = tend.includes("T") ? tend.slice(9,13) : "";
-    const s0 = timeToSlot(t0.slice(0,2) + ":" + t0.slice(2));
-    const s1 = timeToSlot(t1.slice(0,2) + ":" + t1.slice(2));
+    const startMin = parseTimeToMin(t0.slice(0,2) + ":" + t0.slice(2)) ?? 0;
+    let endMin = parseTimeToMin(t1.slice(0,2) + ":" + t1.slice(2));
+    if (endMin === null || endMin <= startMin) endMin = Math.min(1440, startMin + 60);
     out.push({
-      id: "i" + Math.abs(hash(date + dt + (grab("SUMMARY")||""))).toString(36) + Math.floor(Math.random()*46656).toString(36),
-      date, s0: s0 ?? 0, s1: (s1 != null && s1 >= (s0 ?? 0)) ? s1 : (s0 ?? 0),
+      id: newEvtId(date + dt + (grab("SUMMARY")||"")), date, startMin, endMin,
+      tag: "导入",
       title: grab("SUMMARY") || "导入日程",
       place: grab("LOCATION") || "",
       note: grab("DESCRIPTION") || ""
@@ -498,7 +529,6 @@ function parseIcs(text){
   }
   return out;
 }
-function hash(s){ let h = 0; for (let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i))|0; } return h; }
 function parseCsv(text){
   const lines = text.split(/\r?\n/).filter(l=>l.trim());
   if (!lines.length) return [];
@@ -521,11 +551,12 @@ function parseCsv(text){
     const d = c[idx.date].replace(/[./年]/g,"-").replace(/月/g,"-").replace(/日/g,"");
     const dparts = d.split("-").map(Number);
     const date = dparts[0] >= 1000 ? dparts[0] + "-" + String(dparts[1]).padStart(2,"0") + "-" + String(dparts[2]).padStart(2,"0") : d;
-    const s0 = idx.s0 !== undefined ? timeToSlot(c[idx.s0]) : null;
-    const s1 = idx.s1 !== undefined ? timeToSlot(c[idx.s1]) : null;
+    const startMin = idx.s0 !== undefined ? (parseTimeToMin(c[idx.s0]) ?? 0) : 0;
+    let endMin = idx.s1 !== undefined ? parseTimeToMin(c[idx.s1]) : null;
+    if (endMin === null || endMin <= startMin) endMin = Math.min(1440, startMin + 60);
     out.push({
-      id: "i" + Math.abs(hash(lines[li])).toString(36) + Math.floor(Math.random()*46656).toString(36),
-      date, s0: s0 ?? 0, s1: (s1 != null && s1 >= (s0 ?? 0)) ? s1 : (s0 ?? 0),
+      id: newEvtId(lines[li]), date, startMin, endMin,
+      tag: "导入",
       title: (idx.title !== undefined && c[idx.title]) ? c[idx.title] : "导入日程",
       place: idx.place !== undefined ? c[idx.place] : "",
       note: idx.note !== undefined ? c[idx.note] : ""
@@ -534,13 +565,13 @@ function parseCsv(text){
   return out;
 }
 function renderMylist(){
-  const evts = getEvents().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.s0-b.s0);
+  const evts = getEvents().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.startMin??0)-(b.startMin??0));
   const hint = document.getElementById("mylist-hint");
   const backend = (typeof LocalBackend !== "undefined" && LocalBackend.online()) ? " · 本机存储已连接" : " · 本机存储未连接";
   hint.textContent = (evts.length ? ("共 " + evts.length + " 条") : "点击周课表空格添加") + backend;
   const el = document.getElementById("mylist");
   if (!evts.length){
-    el.innerHTML = `<div class="mylist-empty">还没有个人日程 — 点击上方周课表里的空白格子即可添加（时间 / 地点 / 备注）</div>`;
+    el.innerHTML = `<div class="mylist-empty">还没有个人日程 — 点击上方周课表里的空白位置即可添加（10 分钟粒度 / 标签 / 地点 / 备注）</div>`;
     return;
   }
   el.innerHTML = evts.map(e=>{
@@ -549,13 +580,14 @@ function renderMylist(){
     const start = new Date(DATA.meta.termStart + "T00:00:00+08:00");
     const wk = Math.max(1, Math.min(DATA.meta.totalWeeks,
       Math.floor((new Date(e.date + "T00:00:00+08:00") - start) / (7*864e5)) + 1));
-    const time = DATA.slots[e.s0].label.split("-")[0] + " ~ " + DATA.slots[e.s1 ?? e.s0].label.split("-")[1];
-    const meta = `${e.date}（W${wk} ${dayCn}）${time}` +
+    const tag = e.tag || "个人";
+    const tagColor = TAG_COLORS[tag] || "#8a7f6d";
+    const meta = `${e.date}（W${wk} ${dayCn}）${fmtMin(e.startMin)} ~ ${fmtMin(e.endMin)}` +
       (e.place ? " · " + e.place : "") + (e.note ? " · " + e.note : "");
     return `<div class="mylist-item">
-      <div class="mk"></div>
+      <div class="mk" style="background:${tagColor}"></div>
       <div class="body">
-        <div class="t">📌 ${e.title}</div>
+        <div class="t"><span class="tagchip" style="background:${tagColor}">${tag}</span> 📌 ${e.title}</div>
         <div class="meta">${meta}</div>
       </div>
       <div class="ops">
@@ -571,6 +603,20 @@ function renderMylist(){
     renderMylist();
     buildCards();
   }));
+}
+
+/* ============ 地点选择 + 新建（统一组件，见 assets/venues.js） ============ */
+function refreshPlaceList(){
+  PlacePicker.attach(document.getElementById("evt-place"));
+}
+function bindVenueModal(){
+  document.getElementById("evt-newplace").addEventListener("click", function(){
+    VenueEditor.open({onSaved: function(v){
+      refreshPlaceList();
+      document.getElementById("evt-place").value = v.name;
+      document.getElementById("evt-place").dataset.placeCode = v.code;
+    }});
+  });
 }
 
 init();
