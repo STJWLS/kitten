@@ -78,16 +78,18 @@ function initMap(){
   const c = DATA.meta.mapCenter || [31.2995, 121.5020];
   mapObj = L.map("map", {center: c, zoom: 15});
   // 天地图矢量底图 + 中文注记（国内访问快，无需海外瓦片）
-  // 免费 key 有并发限制：瓦片失败时随机换子域自动重试一次
+  // 瓦片失败仅重试一次（换子域），防止无限重试造成请求风暴
   const tdt = (type, attribution) => {
     const layer = L.tileLayer(
       "https://t{s}.tianditu.gov.cn/DataServer?T=" + type + "&x={x}&y={y}&l={z}&tk=" + TDT_KEY,
       {subdomains:["0","1","2","3","4","5","6","7"], maxZoom:18, attribution});
     layer.on("tileerror", e => {
+      if (e.tile.dataset.retried) return;
+      e.tile.dataset.retried = "1";
       setTimeout(()=>{
         const t = "t" + Math.floor(Math.random()*8) + ".tianditu.gov.cn";
         e.tile.src = e.tile.src.replace(/t\d\.tianditu\.gov\.cn/, t);
-      }, 400);
+      }, 800);
     });
     return layer;
   };
