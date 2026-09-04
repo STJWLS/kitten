@@ -287,3 +287,10 @@ table.list tr:hover td{background:rgba(236,159,190,.07);}
 .vbind-item:first-child{border-top:none;}
 .vbind-item:hover{background:rgba(236,159,190,.08);}
 .vbind-item input{width:auto;flex-shrink:0;}
+.btn-back{background:transparent;border:none;color:var(--accent);font-size:13px;cursor:pointer;
+  padding:0 0 10px;font-weight:600;}
+.btn-back:hover{color:var(--pink-deep);}
+.vconfirm-hint{font-size:11.5px;color:var(--dim);font-family:var(--mono);}
+.vqitem{cursor:pointer;user-select:none;}
+.vqitem.selected{background:rgba(0,61,165,.08);border-left:3px solid var(--accent);}
+#vn-confirm:disabled{opacity:.45;cursor:not-allowed;}
