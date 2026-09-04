@@ -274,16 +274,19 @@ table.list tr:hover td{background:rgba(236,159,190,.07);}
   border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600;white-space:nowrap;}
 
 /* 新建地点统一弹窗（搜索栏 + 矢量小地图 + 备选结果 + 日程绑定）
-   总高度固定：地图锚定顶部，结果区弹性伸缩内部滚动，阶段切换不变高 */
+   总高度固定；地图高度可伸缩（结果区空时地图更高，结果多时地图让位）；
+   结果区按内容自适应，超过上限才内部滚动；空提示紧凑 */
 .modal-lg{width:min(680px,94vw);height:min(660px,88vh);display:flex;flex-direction:column;overflow:hidden;}
 .modal-lg h3{flex:none;}
 .modal-lg #vstage1,.modal-lg #vstage2{flex:1;min-height:0;display:flex;flex-direction:column;}
 .modal-lg #vstage2{overflow-y:auto;}
-.modal-lg .place-row,.modal-lg .vmapbox,.modal-lg .modal-btns,.modal-lg label,.modal-lg .vbind-lab{flex:none;}
-.modal-lg .vqres{flex:1;min-height:0;max-height:none;}
+.modal-lg .place-row,.modal-lg .modal-btns,.modal-lg label,.modal-lg .vbind-lab{flex:none;}
+.modal-lg .vmapbox{flex:1;min-height:120px;}
+.modal-lg .vqres{flex:none;max-height:230px;overflow-y:auto;}
+.modal-lg .mylist-empty{padding:6px 0;font-size:12px;}
 .vmapbox{position:relative;margin:10px 0 8px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg2);
   isolation:isolate;z-index:0;}
-#vmap{width:100%;height:clamp(150px,26vh,230px);}
+#vmap{width:100%;height:100%;}
 .vmap-tip{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
   background:rgba(0,61,165,.82);color:#fff;font-size:11px;border-radius:999px;
   padding:2px 12px;pointer-events:none;font-family:var(--mono);}
