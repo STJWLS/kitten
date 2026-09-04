@@ -49,8 +49,8 @@ code{background:#f2ecdf;border-radius:5px;padding:1px 7px;font-family:monospace;
   window.addEventListener("message", function(e){
     const p = e.data && e.data.dashPath;
     if (typeof p === "string" && (p === "/" || p.indexOf("/") === 0)){
-      const want = "/kitten/emf-schedule" + p;
-      if (location.pathname !== want){
+      const want = "/kitten/emf-schedule" + p + location.search;
+      if (location.pathname + location.search !== want){
         history.replaceState(null, "", want);
       }
     }
