@@ -82,25 +82,26 @@ function countSessions(code){
   return n;
 }
 
+// 瓦片失败仅重试一次（换子域），防止无限重试造成请求风暴
+function makeLayer(urlTpl, subs, attribution){
+  const layer = L.tileLayer(urlTpl,
+    {subdomains: subs, maxZoom: 18, attribution});
+  layer.on("tileerror", e => {
+    if (e.tile.dataset.retried) return;
+    e.tile.dataset.retried = "1";
+    setTimeout(()=>{
+      const t = urlTpl.replace("{s}", subs[Math.floor(Math.random()*subs.length)]);
+      const src = t.replace("{x}", e.coords.x).replace("{y}", e.coords.y).replace("{z}", e.coords.z);
+      e.tile.src = src;
+    }, 800);
+  });
+  return layer;
+}
+
 function initMap(){
   if (mapObj){ mapObj.invalidateSize(); return; }
   const c = DATA.meta.mapCenter || [31.2995, 121.5020];
   mapObj = L.map("map", {center: c, zoom: 16});
-  // 瓦片失败仅重试一次（换子域），防止无限重试造成请求风暴
-  const makeLayer = (urlTpl, subs, attribution) => {
-    const layer = L.tileLayer(urlTpl,
-      {subdomains: subs, maxZoom: 18, attribution});
-    layer.on("tileerror", e => {
-      if (e.tile.dataset.retried) return;
-      e.tile.dataset.retried = "1";
-      setTimeout(()=>{
-        const t = urlTpl.replace("{s}", subs[Math.floor(Math.random()*subs.length)]);
-        const src = t.replace("{x}", e.coords.x).replace("{y}", e.coords.y).replace("{z}", e.coords.z);
-        e.tile.src = src;
-      }, 800);
-    });
-    return layer;
-  };
   buildBaseLayers();
 
   // 自动兜底：天地图若在浏览器中加载失败，切换高德端点（同是国内服务）
