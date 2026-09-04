@@ -119,14 +119,14 @@ var VenueStore = (function(){
   };
 })();
 
-/* ============ 新建地点编辑器（统一弹窗：搜索栏 → 矢量小地图 → 备选结果 → 日程绑定/备注） ============ */
+/* ============ 新建地点编辑器（两阶段统一弹窗） ============ */
+/* 阶段一：搜索栏 + 矢量小地图 + 备选结果（单击选中高亮；双击结果或点"确认"进入阶段二）
+   阶段二：顶部返回键；名称/地址/经纬度 + 可选绑定日程 + 备注 + 保存 */
 var VenueEditor = (function(){
   var vmap = null, vmarker = null, sel = null, opts = null;
-  var DAY_CN = ["周一","周二","周三","周四","周五","周六","周日"];
 
   function el(id){ return document.getElementById(id); }
 
-  /* 弹窗 DOM（首次使用时注入） */
   function ensureModal(){
     if (el("venue-modal")) return;
     var host = document.createElement("div");
@@ -134,14 +134,22 @@ var VenueEditor = (function(){
       '<div class="modal-back" id="venue-modal" style="display:none">' +
       '  <div class="modal modal-lg">' +
       '    <h3>新建地点</h3>' +
-      '    <div class="place-row">' +
-      '      <input id="vq" placeholder="搜索地点，例如：复旦图书馆 / 五角场万达">' +
-      '      <button class="btn-primary" id="vq-btn">搜索</button>' +
+      '    <div id="vstage1">' +
+      '      <div class="place-row">' +
+      '        <input id="vq" placeholder="搜索地点，例如：复旦图书馆 / 五角场万达">' +
+      '        <button class="btn-primary" id="vq-btn">搜索</button>' +
+      '      </div>' +
+      '      <div class="vmapbox"><div id="vmap"></div>' +
+      '        <div class="vmap-tip">点击地图可直接选点（自动逆地理编码）</div></div>' +
+      '      <div id="vq-results" class="vqres"></div>' +
+      '      <div class="modal-btns">' +
+      '        <span class="vconfirm-hint" id="vconfirm-hint">单击结果或点击地图选点，再点确认；双击结果直接确认</span>' +
+      '        <button class="btn-ghost" id="vn-cancel">取消</button>' +
+      '        <button class="btn-primary" id="vn-confirm" disabled>确认</button>' +
+      '      </div>' +
       '    </div>' +
-      '    <div class="vmapbox"><div id="vmap"></div>' +
-      '      <div class="vmap-tip">点击地图可直接选点（自动逆地理编码）</div></div>' +
-      '    <div id="vq-results" class="vqres"></div>' +
-      '    <div id="vpanel" style="display:none">' +
+      '    <div id="vstage2" style="display:none">' +
+      '      <button class="btn-back" id="vn-back">← 返回选点</button>' +
       '      <label>名称 <input id="vn-name" placeholder="地点名称"></label>' +
       '      <label>地址 <input id="vn-addr" placeholder="地址（自动填充，可修改）"></label>' +
       '      <div class="row2">' +
@@ -152,8 +160,7 @@ var VenueEditor = (function(){
       '      <div id="vbind" class="vbind"></div>' +
       '      <label>备注（可选） <input id="vn-note" placeholder="例如：常去自习"></label>' +
       '      <div class="modal-btns">' +
-      '        <button class="btn-danger" id="vn-cancel">取消</button>' +
-      '        <span style="flex:1"></span>' +
+      '        <button class="btn-ghost" id="vn-cancel2">取消</button>' +
       '        <button class="btn-primary" id="vn-save">保存地点</button>' +
       '      </div>' +
       '    </div>' +
@@ -163,13 +170,15 @@ var VenueEditor = (function(){
     el("vq-btn").addEventListener("click", runSearch);
     el("vq").addEventListener("keydown", function(e){ if (e.key==="Enter") runSearch(); });
     el("vn-cancel").addEventListener("click", close);
+    el("vn-cancel2").addEventListener("click", close);
+    el("vn-confirm").addEventListener("click", confirm);
+    el("vn-back").addEventListener("click", function(){ showStage(1); });
     el("vn-save").addEventListener("click", save);
     el("venue-modal").addEventListener("click", function(e){
       if (e.target === el("venue-modal")) close();
     });
   }
 
-  /* 矢量小地图（天地图浏览器端 key，直连；失败静默——仍可用搜索模式） */
   function ensureMap(){
     if (vmap){ vmap.invalidateSize(); return; }
     vmap = L.map("vmap", {center:[31.2995, 121.5020], zoom: 15,
@@ -184,22 +193,43 @@ var VenueEditor = (function(){
     vmap.on("click", onMapClick);
   }
 
+  function showStage(n){
+    el("vstage1").style.display = n === 1 ? "" : "none";
+    el("vstage2").style.display = n === 2 ? "" : "none";
+    if (n === 1 && vmap) setTimeout(function(){ vmap.invalidateSize(); }, 50);
+  }
+
+  function setMarker(lat, lng){
+    if (vmarker) vmap.removeLayer(vmarker);
+    vmarker = L.marker([lat, lng]).addTo(vmap);
+  }
+
+  /* 选中一个候选（结果单击 / 地图选点），确认按钮亮起 */
+  function select(o){
+    sel = o;
+    el("vn-confirm").disabled = false;
+    el("vconfirm-hint").textContent = "已选中：" + (o.name || "地图选点") + " · 点确认进入下一步（或双击结果）";
+    el("vq-results").querySelectorAll(".vqitem").forEach(function(it){
+      it.classList.toggle("selected",
+        it.dataset.lat == String(o.lat) && it.dataset.lng == String(o.lng));
+    });
+  }
+
   function onMapClick(e){
     var lat = e.latlng.lat, lng = e.latlng.lng;
     var g = VenueStore.wgs2gcj(lat, lng);
-    if (vmarker) vmap.removeLayer(vmarker);
-    vmarker = L.marker([lat, lng]).addTo(vmap);
-    setSel({name:"", address:"", lat:lat, lng:lng});   // 先确定坐标
+    setMarker(lat, lng);
+    select({name:"", address:"", lat:lat, lng:lng});   // 先确定坐标
     var box = el("vq-results");
     box.innerHTML = '<div class="mylist-empty">正在逆地理编码…</div>';
     VenueStore.regeo(g.lng, g.lat).then(function(r){
-      if (r.addr && !el("vn-addr").value) el("vn-addr").value = r.addr;
       box.innerHTML = r.pois.length
-        ? '<div class="vqtitle">距离最近的几个地点（点击选用）：</div>' + renderItems(r.pois)
-        : '<div class="mylist-empty">附近没有找到地点，可手动填写名称保存</div>';
+        ? '<div class="vqtitle">距离最近的几个地点（单击选中 / 双击确认）：</div>' + renderItems(r.pois)
+        : '<div class="mylist-empty">附近没有找到地点，可点确认后手动填写名称</div>';
       bindItems(box);
+      if (r.addr && !sel.address) sel.address = r.addr;
     }).catch(function(err){
-      box.innerHTML = '<div class="mylist-empty">逆地理编码失败：' + (err.message||err) + '（可手动填写名称保存）</div>';
+      box.innerHTML = '<div class="mylist-empty">逆地理编码失败：' + (err.message||err) + '（可点确认后手动填写名称）</div>';
     });
   }
 
@@ -229,28 +259,31 @@ var VenueEditor = (function(){
   function bindItems(box){
     box.querySelectorAll(".vqitem").forEach(function(it){
       it.addEventListener("click", function(){
-        if (vmarker){
-          vmap.removeLayer(vmarker); vmarker = null;
-        }
-        setSel({
-          name: it.dataset.name || "",
-          address: it.dataset.addr || "",
-          lat: parseFloat(it.dataset.lat), lng: parseFloat(it.dataset.lng)
-        });
-        vmap.setView([it.dataset.lat, it.dataset.lng], 15);
+        var o = {name: it.dataset.name || "", address: it.dataset.addr || "",
+                 lat: parseFloat(it.dataset.lat), lng: parseFloat(it.dataset.lng)};
+        setMarker(o.lat, o.lng);
+        vmap.setView([o.lat, o.lng], 15);
+        select(o);
+      });
+      it.addEventListener("dblclick", function(){
+        var o = {name: it.dataset.name || "", address: it.dataset.addr || "",
+                 lat: parseFloat(it.dataset.lat), lng: parseFloat(it.dataset.lng)};
+        setMarker(o.lat, o.lng);
+        select(o);
+        confirm();
       });
     });
   }
 
-  /* 选定地点：填充表单 + 显示未绑定日程勾选 */
-  function setSel(o){
-    sel = o;
-    el("vn-name").value = o.name || "";
-    el("vn-addr").value = o.address || "";
-    el("vn-lat").value = o.lat.toFixed(6);
-    el("vn-lng").value = o.lng.toFixed(6);
-    el("vpanel").style.display = "";
+  /* 确认 → 二阶段：填表 + 未绑定日程勾选 */
+  function confirm(){
+    if (!sel){ alert("请先单击搜索结果或点击地图选点"); return; }
+    el("vn-name").value = sel.name || "";
+    el("vn-addr").value = sel.address || "";
+    el("vn-lat").value = sel.lat.toFixed(6);
+    el("vn-lng").value = sel.lng.toFixed(6);
     renderBind();
+    showStage(2);
   }
 
   function renderBind(){
@@ -261,8 +294,8 @@ var VenueEditor = (function(){
       return;
     }
     box.innerHTML = unbound.map(function(e){
-      var t = e.date.slice(5) + " · 📌 " + esc(e.title);
-      return '<label class="vbind-item"><input type="checkbox" value="' + e.id + '"> ' + t + '</label>';
+      return '<label class="vbind-item"><input type="checkbox" value="' + e.id + '"> ' +
+             e.date.slice(5) + ' · 📌 ' + esc(e.title) + '</label>';
     }).join("");
   }
 
@@ -271,14 +304,13 @@ var VenueEditor = (function(){
     var lat = parseFloat(el("vn-lat").value);
     var lng = parseFloat(el("vn-lng").value);
     if (!name){ alert("请填写地点名称"); return; }
-    if (!sel || isNaN(lat) || isNaN(lng)){ alert("请先通过搜索或地图选点确定位置坐标"); return; }
+    if (!sel || isNaN(lat) || isNaN(lng)){ alert("位置坐标缺失，请返回选点"); return; }
     var v = VenueStore.addVenue({
       name: name, short: name,
       address: el("vn-addr").value.trim(),
       note: el("vn-note").value.trim(),
       lat: lat, lng: lng, custom: true
     });
-    // 绑定勾选的未绑定日程
     var evts = VenueStore.getEvents();
     var changed = false;
     el("vbind").querySelectorAll("input:checked").forEach(function(cb){
@@ -294,6 +326,8 @@ var VenueEditor = (function(){
     el("venue-modal").style.display = "none";
     if (vmarker){ vmap.removeLayer(vmarker); vmarker = null; }
     sel = null;
+    el("vn-confirm").disabled = true;
+    showStage(1);
   }
 
   /* 打开：opts = {onSaved: function(venue)} */
@@ -308,8 +342,10 @@ var VenueEditor = (function(){
     el("vn-lat").value = "";
     el("vn-lng").value = "";
     el("vq-results").innerHTML = '<div class="mylist-empty">搜索地点，或直接点击上方地图选点</div>';
-    el("vpanel").style.display = "none";
+    el("vn-confirm").disabled = true;
+    el("vconfirm-hint").textContent = "单击结果或点击地图选点，再点确认；双击结果直接确认";
     sel = null;
+    showStage(1);
     el("venue-modal").style.display = "flex";
     setTimeout(function(){ vmap.invalidateSize(); }, 50);
   }
