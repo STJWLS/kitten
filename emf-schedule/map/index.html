@@ -3,13 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EMF 26R 课程看板 · 入口</title>
+<title>EMF 26R 课程看板</title>
 <style>
-body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+html,body{margin:0;padding:0;height:100%;}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
   background:radial-gradient(900px 420px at 50% -8%, rgba(0,61,165,.06), transparent 60%),
              radial-gradient(700px 400px at 100% 100%, rgba(236,159,190,.12), transparent 55%), #f8f4ec;
-  color:#42392b;min-height:100vh;display:flex;align-items:center;justify-content:center;}
-.box{background:#fff;border:1px solid #e9e0d0;border-radius:16px;padding:36px 42px;
+  color:#42392b;}
+iframe.frame{position:fixed;inset:0;width:100%;height:100%;border:0;background:#f8f4ec;}
+.box{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+.card{background:#fff;border:1px solid #e9e0d0;border-radius:16px;padding:36px 42px;
   max-width:480px;text-align:center;box-shadow:0 12px 44px rgba(66,57,43,.12);}
 h1{font-size:20px;margin:0 0 6px;}
 h1::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;
@@ -21,33 +24,49 @@ code{background:#f2ecdf;border-radius:5px;padding:1px 7px;font-family:monospace;
 </style>
 </head>
 <body>
-<div class="box">
-  <h1>EMF 26R 课程看板</h1>
-  <p id="status">正在连接本机看板服务器…</p>
-  <p class="hint">
-    看板由<b>本机服务</b>交付（零 CDN · 改完即刷）。<br>
-    若长时间停留在此：请在本机运行 <code>start_public_dash.bat</code> 启动隧道，<br>
-    或直接访问 <a href="http://127.0.0.1:8767/">http://127.0.0.1:8767/</a>
-  </p>
+<!-- 看板内容 iframe 内嵌：地址栏始终保持 github.io，隧道域名不可见（大论文 tunnel-redirect 同款） -->
+<iframe class="frame" id="frame" style="display:none"></iframe>
+<div class="box" id="box">
+  <div class="card">
+    <h1>EMF 26R 课程看板</h1>
+    <p id="status">正在连接本机看板服务器…</p>
+    <p class="hint">
+      看板由<b>本机服务</b>交付（零 CDN · 改完即刷），地址栏保持不变。<br>
+      若长时间停留在此：请在本机运行 <code>start_public_dash.bat</code> 启动隧道，<br>
+      或直接访问 <a href="http://127.0.0.1:8767/">http://127.0.0.1:8767/</a>
+    </p>
+  </div>
 </div>
 <script>
 (function(){
   const pathname = location.pathname;
+  // 子页面结构保留：/ 与 /map/ 各自内嵌对应的隧道路径
   const rel = pathname.includes("/map/") ? "../entry.json" : "entry.json";
   const path = pathname.replace(/^\/kitten\/emf-schedule\/map/, "/map/")
                       .replace(/^\/kitten\/emf-schedule/, "");
+  const status = function(t){ document.getElementById("status").textContent = t; };
   fetch(rel + "?ts=" + Date.now(), {cache:"no-store"})
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d && d.url){
-        document.getElementById("status").textContent = "已连接本机看板服务器，正在进入…";
-        location.replace(d.url.replace(/\/+$/, "") + (path || "/"));
+        status("已连接本机看板服务器，正在加载…");
+        const f = document.getElementById("frame");
+        f.onload = function(){
+          document.getElementById("box").style.display = "none";
+          f.style.display = "";
+        };
+        f.src = d.url.replace(/\/+$/, "") + (path || "/");
+        setTimeout(function(){
+          if (document.getElementById("box").style.display !== "none"){
+            status("看板内容加载超时（隧道可能已断开，本机运行 start_public_dash.bat 后刷新）");
+          }
+        }, 15000);
       } else {
-        document.getElementById("status").textContent = "看板服务器未运行（入口配置为空）";
+        status("看板服务器未运行（入口配置为空）");
       }
     })
     .catch(function(e){
-      document.getElementById("status").textContent = "无法读取入口配置：" + e.message;
+      status("无法读取入口配置：" + e.message);
     });
 })();
 </script>
