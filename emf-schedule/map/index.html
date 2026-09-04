@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="../assets/leaflet/leaflet.css">
 <script src="../assets/leaflet/leaflet.js"></script>
 <script src="../assets/coord.js?v=g"></script>
-<script src="../assets/venues.js?v=g"></script>
+<script src="../assets/venues.js?v=h"></script>
 <link rel="stylesheet" href="../assets/dashboard.css?v=g">
 <title>地点地图 · EMF 26R</title>
 </head>
@@ -48,40 +48,6 @@
     ｜ <a href="https://github.com/STJWLS/kitten" target="_blank">仓库</a>
   </div>
 </main>
-
-<!-- 新建/编辑地点弹窗 -->
-<div class="modal-back" id="venue-modal" style="display:none">
-  <div class="modal">
-    <h3 id="venue-modal-title">新建地点</h3>
-    <div class="vmodes">
-      <button data-m="search" class="bl active">🔍 搜索地点</button>
-      <button data-m="pick" class="bl">🗺 地图选点</button>
-    </div>
-    <div id="vm-search">
-      <div class="place-row">
-        <input id="vq" placeholder="搜索地点，例如：复旦图书馆 / 五角场万达">
-        <button class="btn-primary" id="vq-btn">搜索</button>
-      </div>
-      <div id="vq-results" class="vqres"></div>
-    </div>
-    <div id="vm-pick" style="display:none">
-      <div class="mylist-empty">请在地图上点击选择位置（选点后自动逆地理编码，弹出距离最近的几个地点）</div>
-      <div id="vq-results2" class="vqres"></div>
-    </div>
-    <label>名称 <input id="vn-name" placeholder="地点名称"></label>
-    <label>地址 <input id="vn-addr" placeholder="地址（选点/搜索后自动填充，可修改）"></label>
-    <label>备注（可选） <input id="vn-note" placeholder="例如：常去自习"></label>
-    <div class="row2">
-      <label>纬度 <input id="vn-lat" readonly></label>
-      <label>经度 <input id="vn-lng" readonly></label>
-    </div>
-    <div class="modal-btns">
-      <button class="btn-danger" id="vn-cancel">取消</button>
-      <span style="flex:1"></span>
-      <button class="btn-primary" id="vn-save">保存地点</button>
-    </div>
-  </div>
-</div>
 
 <script>
 const DAY_CN = ["周一","周二","周三","周四","周五","周六","周日"];
@@ -371,110 +337,13 @@ function renderArrange(v){
     `<div class="mylist-empty">该地点暂无安排</div>`);
 }
 
-/* ============ 新建地点（搜索 / 地图选点 + 逆地理编码） ============ */
-let pickMode = false;
-
-function openVenueModal(){
-  document.getElementById("venue-modal").style.display = "flex";
-  ["vn-name","vn-addr","vn-note","vn-lat","vn-lng"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("vq-results").innerHTML = "";
-  document.getElementById("vq-results2").innerHTML = "";
-  setVenueMode("search");
-}
-function closeVenueModal(){
-  document.getElementById("venue-modal").style.display = "none";
-  if (pickMode){ setVenueMode("search"); removePickMarker(); }
-}
-function setVenueMode(m){
-  pickMode = (m === "pick");
-  document.getElementById("vm-search").style.display = m === "search" ? "" : "none";
-  document.getElementById("vm-pick").style.display = m === "pick" ? "" : "none";
-  document.querySelectorAll(".vmodes .bl").forEach(b=>b.classList.toggle("active", b.dataset.m===m));
-  if (!mapObj) return;
-  if (pickMode) mapObj.on("click", onMapPick); else mapObj.off("click", onMapPick);
-}
-function removePickMarker(){
-  if (pickMarker){ markerLayer.removeLayer(pickMarker); pickMarker = null; }
-}
-function onMapPick(e){
-  // 地图选点（天地图底图 = WGS84）；逆地理编码走 GCJ-02
-  const lat = e.latlng.lat, lng = e.latlng.lng;
-  const g = VenueStore.wgs2gcj(lat, lng);
-  removePickMarker();
-  pickMarker = L.marker([lat, lng]).addTo(markerLayer);
-  document.getElementById("vn-lat").value = lat.toFixed(6);
-  document.getElementById("vn-lng").value = lng.toFixed(6);
-  const box = document.getElementById("vq-results2");
-  box.innerHTML = '<div class="mylist-empty">正在逆地理编码…</div>';
-  VenueStore.regeo(g.lng, g.lat).then(pois=>{
-    if (!pickMarker) return;
-    box.innerHTML = pois.length
-      ? '<div class="vqtitle">距离最近的几个地点（点击填入）：</div>' + renderPoiItems(pois)
-      : '<div class="mylist-empty">附近没有找到地点，请手动填写名称保存</div>';
-    bindPoiItems(box);
-  }).catch(err=>{
-    box.innerHTML = '<div class="mylist-empty">逆地理编码失败：' + (err.message||err) + '（可手动填写名称与坐标保存）</div>';
-  });
-}
-function renderPoiItems(pois){
-  return pois.map(p=>`<div class="vqitem" data-name="${(p.name||"").replace(/"/g,'&quot;')}" data-addr="${(p.address||"").replace(/"/g,'&quot;')}" data-lat="${p.lat}" data-lng="${p.lng}">
-    <div class="n">${p.name}${p.dist!=null?` <i>${p.dist}m</i>`:""}</div><div class="a">${p.address||""}</div></div>`).join("");
-}
-function bindPoiItems(box){
-  box.querySelectorAll(".vqitem").forEach(el=>el.addEventListener("click", ()=>{
-    document.getElementById("vn-name").value = el.dataset.name || "";
-    document.getElementById("vn-addr").value = el.dataset.addr || "";
-    if (el.dataset.lat) document.getElementById("vn-lat").value = (+el.dataset.lat).toFixed(6);
-    if (el.dataset.lng) document.getElementById("vn-lng").value = (+el.dataset.lng).toFixed(6);
-  }));
-}
-function runVenueSearch(){
-  const q = document.getElementById("vq").value.trim();
-  if (!q) return;
-  const box = document.getElementById("vq-results");
-  box.innerHTML = '<div class="mylist-empty">搜索中…</div>';
-  VenueStore.search(q, "上海").then(pois=>{
-    box.innerHTML = pois.length ? renderPoiItems(pois) : '<div class="mylist-empty">没有找到相关地点</div>';
-    bindPoiItems(box);
-  }).catch(err=>{
-    box.innerHTML = '<div class="mylist-empty">搜索失败：' + (err.message||err) + '</div>';
-  });
-}
-function saveVenue(){
-  const name = document.getElementById("vn-name").value.trim();
-  const lat = parseFloat(document.getElementById("vn-lat").value);
-  const lng = parseFloat(document.getElementById("vn-lng").value);
-  if (!name){ alert("请填写地点名称"); return; }
-  if (isNaN(lat) || isNaN(lng)){ alert("请先通过搜索或地图选点确定位置坐标"); return; }
-  const v = VenueStore.addVenue({
-    name: name, short: name,
-    address: document.getElementById("vn-addr").value.trim(),
-    note: document.getElementById("vn-note").value.trim(),
-    lat: lat, lng: lng, custom: true
-  });
-  closeVenueModal();
-  refreshVenueUI();
-  selectVenue(v.code);
-}
-function refreshVenueUI(){
-  venueData = VenueStore.allVenues().map(v=>({...v, note: venueNote(v), count: countForVenue(v)}));
-  venueData.push({code:"", name:"线上 / 待定（LIVE · ELP · CARE EN 等）", short:"线上/待定",
-                  address:"无固定教室", note: venueNote({code:""}), count: countForVenue({code:""}), virtual:true});
-  buildVenueCards();
-  buildMarkers();
-}
-function bindVenueModal(){
-  document.getElementById("new-venue").addEventListener("click", openVenueModal);
-  document.getElementById("vn-cancel").addEventListener("click", closeVenueModal);
-  document.getElementById("vn-save").addEventListener("click", saveVenue);
-  document.getElementById("vq-btn").addEventListener("click", runVenueSearch);
-  document.getElementById("vq").addEventListener("keydown", e=>{ if (e.key==="Enter") runVenueSearch(); });
-  document.querySelectorAll(".vmodes .bl").forEach(b=>b.addEventListener("click", ()=>setVenueMode(b.dataset.m)));
-  document.getElementById("venue-modal").addEventListener("click", e=>{
-    if (e.target === document.getElementById("venue-modal")) closeVenueModal();
-  });
-}
-bindVenueModal();
+/* 新建地点：统一组件（搜索栏 / 矢量小地图 / 备选结果 / 日程绑定 / 备注）——见 assets/venues.js */
+document.getElementById("new-venue").addEventListener("click", function(){
+  VenueEditor.open({onSaved: function(v){
+    refreshVenueUI();
+    selectVenue(v.code);
+  }});
+});
 
 init();
 </script>
