@@ -11,7 +11,10 @@ var VenueStore = (function(){
     try { return JSON.parse(localStorage.getItem(VEN_KEY) || "[]"); }
     catch(e){ return []; }
   }
-  function saveVenues(arr){ localStorage.setItem(VEN_KEY, JSON.stringify(arr)); }
+  function saveVenues(arr){
+    localStorage.setItem(VEN_KEY, JSON.stringify(arr));
+    if (typeof LocalBackend !== "undefined") LocalBackend.push();
+  }
 
   /* 内置地点 + 自定义地点（custom 标记） */
   function allVenues(){
@@ -43,7 +46,10 @@ var VenueStore = (function(){
     try { return JSON.parse(localStorage.getItem(EVT_KEY) || "[]"); }
     catch(e){ return []; }
   }
-  function saveEvents(arr){ localStorage.setItem(EVT_KEY, JSON.stringify(arr)); }
+  function saveEvents(arr){
+    localStorage.setItem(EVT_KEY, JSON.stringify(arr));
+    if (typeof LocalBackend !== "undefined") LocalBackend.push();
+  }
 
   /* 当前没有绑定地点的日程（place 为空或未匹配任何已有地点名） */
   function unboundEvents(){
@@ -201,7 +207,12 @@ var VenueEditor = (function(){
 
   function setMarker(lat, lng){
     if (vmarker) vmap.removeLayer(vmarker);
-    vmarker = L.marker([lat, lng]).addTo(vmap);
+    // 主题风格 divIcon（不依赖 Leaflet 默认图标资源）
+    vmarker = L.marker([lat, lng], {icon: L.divIcon({
+      className: "tdt-pin pick",
+      html: '<div class="pin"><em>📍</em></div>',
+      iconSize: [30, 44], iconAnchor: [15, 42]
+    })}).addTo(vmap);
   }
 
   /* 选中一个候选（结果单击 / 地图选点），确认按钮亮起 */
@@ -351,4 +362,118 @@ var VenueEditor = (function(){
   }
 
   return { open: open, close: close };
+})();
+
+/* ============ 本机存储后端（127.0.0.1:8767，数据落盘到这台机器） ============ */
+var LocalBackend = (function(){
+  var BASE = "http://127.0.0.1:8767";
+  var online = false;
+  var timer = null;
+
+  function probe(){
+    return fetch(BASE + "/api/health", {cache:"no-store"})
+      .then(function(r){ return r.ok; }).catch(function(){ return false; });
+  }
+  function push(){
+    if (!online) return;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function(){
+      var payload = {
+        events: VenueStore.getEvents(),
+        venues: VenueStore.getVenues()
+      };
+      fetch(BASE + "/api/save", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      }).catch(function(){});
+    }, 400);
+  }
+  function init(){
+    return probe().then(function(ok){
+      online = ok;
+      if (!ok) return;
+      return fetch(BASE + "/api/state", {cache:"no-store"})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          var localE = VenueStore.getEvents(), localV = VenueStore.getVenues();
+          var serverHas = (d.events && d.events.length) || (d.venues && d.venues.length);
+          var localHas = localE.length || localV.length;
+          if (!serverHas && localHas){
+            push();   // 本机首次使用 → 迁移网页端已有数据
+          } else if (serverHas){
+            // 本机数据为准 → 覆盖网页端 localStorage
+            localStorage.setItem("emf_schedule_events_v1", JSON.stringify(d.events || []));
+            localStorage.setItem("emf_venues_v1", JSON.stringify(d.venues || []));
+          }
+        }).catch(function(){});
+    });
+  }
+  return { init: init, push: push, online: function(){ return online; } };
+})();
+LocalBackend.init();
+
+/* ============ 地点自定义下拉（与新建地点的搜索结果同格式：名称+经纬度+地址） ============ */
+var PlacePicker = (function(){
+  var attached = null, drop = null;
+
+  function esc(s){ return String(s == null ? "" : s).replace(/"/g, "&quot;"); }
+
+  function ensureDrop(){
+    if (drop) return;
+    drop = document.createElement("div");
+    drop.className = "placedrop";
+    drop.style.display = "none";
+    document.body.appendChild(drop);
+    document.addEventListener("click", function(e){
+      if (drop.style.display !== "none" && !drop.contains(e.target) && e.target !== attached) hide();
+    });
+  }
+  function render(q){
+    var vs = VenueStore.allVenues();
+    var list = q ? vs.filter(function(v){
+      return (v.name||"").toLowerCase().indexOf(q.toLowerCase()) >= 0 ||
+             (v.address||"").toLowerCase().indexOf(q.toLowerCase()) >= 0;
+    }) : vs;
+    drop.innerHTML = list.length ? list.map(function(v){
+      return '<div class="vqitem pp-item" data-code="' + esc(v.code) + '" data-name="' + esc(v.name) + '">' +
+        '<div class="n">' + esc(v.name) + (v.custom ? ' <i>自定义</i>' : '') + '</div>' +
+        (v.lat !== undefined ? '<div class="coords">' + v.lat.toFixed(6) + ', ' + v.lng.toFixed(6) + '</div>' : '') +
+        '<div class="a">' + esc(v.address || "") + '</div></div>';
+    }).join("") : '<div class="mylist-empty" style="padding:8px">没有匹配的地点（可直接输入自由文本，或点「➕ 新建」）</div>';
+    drop.querySelectorAll(".pp-item").forEach(function(it){
+      it.addEventListener("click", function(){
+        attached.value = it.dataset.name;
+        attached.dataset.placeCode = it.dataset.code;
+        hide();
+      });
+    });
+  }
+  function show(){
+    if (!attached) return;
+    var r = attached.getBoundingClientRect();
+    drop.style.left = r.left + "px";
+    drop.style.top = (r.bottom + 4) + "px";
+    drop.style.width = Math.max(r.width, 320) + "px";
+    drop.style.display = "";
+    render(attached.value);
+  }
+  function hide(){ if (drop) drop.style.display = "none"; }
+
+  function attach(input){
+    if (input.dataset.pp) return;
+    input.dataset.pp = "1";
+    ensureDrop();
+    input.addEventListener("click", function(){
+      if (drop.style.display === "none") show(); else hide();
+    });
+    input.addEventListener("input", function(){
+      if (drop.style.display !== "none") render(input.value);
+    });
+    input.addEventListener("keydown", function(e){ if (e.key === "Escape") hide(); });
+    input.addEventListener("blur", function(){
+      setTimeout(hide, 150);   // 让点击下拉项先触发
+    });
+  }
+  return { attach: attach, hide: hide };
 })();
