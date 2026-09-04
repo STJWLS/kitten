@@ -62,9 +62,10 @@
    "cn": "微观经济学",
    "module": "M1",
    "credit": 2,
-   "prof": "Gang Zhang",
+   "prof": "张罡",
    "color": "#9bd1ec",
-   "venues": "FISF310 / H6201"
+   "venues": "FISF310 / H6201",
+   "prof_en": "Gang Zhang"
   },
   {
    "code": "PFV",
@@ -72,9 +73,10 @@
    "cn": "金融与估值原理",
    "module": "M1",
    "credit": 2,
-   "prof": "Ding Luo",
+   "prof": "罗顶",
    "color": "#9fe0bc",
-   "venues": "FISF310 / H6201"
+   "venues": "FISF310 / H6201",
+   "prof_en": "Ding Luo"
   },
   {
    "code": "EAF",
@@ -82,9 +84,10 @@
    "cn": "金融数据计量分析",
    "module": "M1",
    "credit": 2,
-   "prof": "Haihan Tang & Liang Jiang",
+   "prof": "汤海涵 & 蒋亮",
    "color": "#cdb8f0",
-   "venues": "FISF310 / H6201"
+   "venues": "FISF310 / H6201",
+   "prof_en": "Haihan Tang & Liang Jiang"
   },
   {
    "code": "FAC",
@@ -92,9 +95,10 @@
    "cn": "财务会计",
    "module": "M1",
    "credit": 2,
-   "prof": "Wenyun Shi",
+   "prof": "施文韵",
    "color": "#f7dd8f",
-   "venues": "FISF310 / H6201"
+   "venues": "FISF310 / H6201",
+   "prof_en": "Wenyun Shi"
   },
   {
    "code": "COF",
@@ -102,9 +106,10 @@
    "cn": "公司金融",
    "module": "M2",
    "credit": 2,
-   "prof": "Xiaoyin Ma",
+   "prof": "马晓崟",
    "color": "#ffb8a3",
-   "venues": "FISF310 / H6201"
+   "venues": "FISF310 / H6201",
+   "prof_en": "Xiaoyin Ma"
   },
   {
    "code": "TPM",
@@ -112,9 +117,10 @@
    "cn": "中国式现代化理论与实践（宏观经济学）",
    "module": "M2",
    "credit": 2,
-   "prof": "Ding Luo",
+   "prof": "罗顶",
    "color": "#a5d8ff",
-   "venues": "FISF310 / H6201"
+   "venues": "FISF310 / H6201",
+   "prof_en": "Ding Luo"
   },
   {
    "code": "AIC",
@@ -122,9 +128,10 @@
    "cn": "金融 AI 编程",
    "module": "M2",
    "credit": 1,
-   "prof": "Hulai Zhang",
+   "prof": "张虎来",
    "color": "#ffc2d8",
-   "venues": "FISF310 / H6201"
+   "venues": "FISF310 / H6201",
+   "prof_en": "Hulai Zhang"
   },
   {
    "code": "LIVEM1",
