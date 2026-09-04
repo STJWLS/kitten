@@ -9,8 +9,8 @@
 <link rel="stylesheet" href="../assets/leaflet/leaflet.css">
 <script src="../assets/leaflet/leaflet.js"></script>
 <script src="../assets/coord.8afb7bfa.js"></script>
-<script src="../assets/venues.64814439.js"></script>
-<link rel="stylesheet" href="../assets/dashboard.7bc5fc18.css">
+<script src="../assets/venues.aa6a539a.js"></script>
+<link rel="stylesheet" href="../assets/dashboard.a4f36198.css">
 <title>地点地图 · EMF 26R</title>
 </head>
 <body>
@@ -52,6 +52,10 @@
 <script>
 const DAY_CN = ["周一","周二","周三","周四","周五","周六","周日"];
 const DATA_V = "v20260904g";
+function fmtMin(m){
+  const h = Math.floor(m/60), mm = m%60;
+  return String(h).padStart(2,"0") + ":" + String(mm).padStart(2,"0");
+}
 // 天地图瓦片 key 从 schedule.json 的 meta.tdtKey 读取（可替换为自己的浏览器端 key）
 let TDT_KEY = "";
 // 兜底底图：高德公开瓦片端点（无需 key，纯国内；仅当天地图在浏览器中加载失败时自动启用）
@@ -67,7 +71,7 @@ const EVT_KEY = "emf_schedule_events_v1";
 function getEvents(){ try { return JSON.parse(localStorage.getItem(EVT_KEY) || "[]"); } catch(e){ return []; } }
 
 async function init(){
-  const r = await fetch("../schedule.a1b1c99b.json");
+  const r = await fetch("../schedule.0a54eab9.json");
   DATA = await r.json();
   TDT_KEY = (DATA.meta && DATA.meta.tdtKey) || TDT_KEY;
   document.getElementById("term").textContent =
@@ -300,10 +304,9 @@ function renderArrange(v){
   for (const w of DATA.weeks) for (const d of w.days) for (const s of d.sessions){
     if (s.v === v.code){
       const c = DATA.courses.find(x=>x.code===s.c);
-      const end = DATA.slots[s.s + s.n - 1].label.split("-")[1];
       rows.push({
         date: d.date, wk: w.no, day: DAY_CN[w.days.indexOf(d)],
-        time: DATA.slots[s.s].label.split("-")[0] + "~" + end,
+        time: fmtMin(s.start) + "~" + fmtMin(s.end),
         course: (c ? c.cn : "") + (s.note ? " " + s.note : ""),
         color: c ? c.color : "#d3c39c"
       });
@@ -317,7 +320,7 @@ function renderArrange(v){
           Math.floor((new Date(e.date + "T00:00:00+08:00") - new Date(DATA.meta.termStart + "T00:00:00+08:00")) / (7*864e5)) + 1));
         rows.push({
           date: e.date, wk, day: "个人日程",
-          time: DATA.slots[e.s0].label.split("-")[0] + "~" + DATA.slots[e.s1 ?? e.s0].label.split("-")[1],
+          time: fmtMin(e.startMin) + "~" + fmtMin(e.endMin),
           course: "📌 " + e.title + (e.note ? " · " + e.note : ""),
           color: "#ec9fbe"
         });
