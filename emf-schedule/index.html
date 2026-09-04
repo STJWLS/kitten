@@ -4,8 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/leaflet/leaflet.css">
+<script src="assets/leaflet/leaflet.js"></script>
 <script src="assets/coord.js?v=g"></script>
-<script src="assets/venues.js?v=g"></script>
+<script src="assets/venues.js?v=h"></script>
 <link rel="stylesheet" href="assets/dashboard.css?v=g">
 <title>EMF 26R 课程看板</title>
 </head>
@@ -91,30 +93,6 @@
       <span style="flex:1"></span>
       <button class="btn-ghost" id="evt-cancel">取消</button>
       <button class="btn-primary" id="evt-save">保存</button>
-    </div>
-  </div>
-</div>
-
-<!-- 新建地点弹窗（搜索模式，与地图页共用高德地理编码） -->
-<div class="modal-back" id="venue-modal" style="display:none">
-  <div class="modal">
-    <h3>新建地点</h3>
-    <div class="place-row">
-      <input id="vq" placeholder="搜索地点，例如：复旦图书馆 / 五角场万达">
-      <button class="btn-primary" id="vq-btn">搜索</button>
-    </div>
-    <div id="vq-results" class="vqres"></div>
-    <label>名称 <input id="vn-name" placeholder="地点名称"></label>
-    <label>地址 <input id="vn-addr" placeholder="地址（搜索后自动填充，可修改）"></label>
-    <label>备注（可选） <input id="vn-note" placeholder="例如：常去自习"></label>
-    <div class="row2">
-      <label>纬度 <input id="vn-lat" readonly></label>
-      <label>经度 <input id="vn-lng" readonly></label>
-    </div>
-    <div class="modal-btns">
-      <button class="btn-danger" id="vn-cancel">取消</button>
-      <span style="flex:1"></span>
-      <button class="btn-primary" id="vn-save">保存地点</button>
     </div>
   </div>
 </div>
@@ -418,62 +396,13 @@ function bindModal(){
   document.getElementById("evt-newplace").addEventListener("click", openVenueModal);
 }
 
-/* ============ 地点选择 + 新建（搜索模式，与地图页共用逻辑） ============ */
-function refreshPlaceList(){
-  const dl = document.getElementById("place-list");
-  dl.innerHTML = VenueStore.allVenues()
-    .map(v=>`<option value="${(v.name||"").replace(/"/g,'&quot;')}"></option>`).join("");
-}
-function openVenueModal(){
-  document.getElementById("venue-modal").style.display = "flex";
-  ["vn-name","vn-addr","vn-note","vn-lat","vn-lng"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("vq-results").innerHTML = "";
-}
-function closeVenueModal(){
-  document.getElementById("venue-modal").style.display = "none";
-}
-function runVenueSearch(){
-  const q = document.getElementById("vq").value.trim();
-  if (!q) return;
-  const box = document.getElementById("vq-results");
-  box.innerHTML = '<div class="mylist-empty">搜索中…</div>';
-  VenueStore.search(q, "上海").then(pois=>{
-    box.innerHTML = pois.length ? pois.map(p=>`<div class="vqitem" data-name="${(p.name||"").replace(/"/g,'&quot;')}" data-addr="${(p.address||"").replace(/"/g,'&quot;')}" data-lat="${p.lat}" data-lng="${p.lng}">
-      <div class="n">${p.name}</div><div class="a">${p.address||""}</div></div>`).join("")
-      : '<div class="mylist-empty">没有找到相关地点</div>';
-    box.querySelectorAll(".vqitem").forEach(el=>el.addEventListener("click", ()=>{
-      document.getElementById("vn-name").value = el.dataset.name || "";
-      document.getElementById("vn-addr").value = el.dataset.addr || "";
-      if (el.dataset.lat) document.getElementById("vn-lat").value = (+el.dataset.lat).toFixed(6);
-      if (el.dataset.lng) document.getElementById("vn-lng").value = (+el.dataset.lng).toFixed(6);
-    }));
-  }).catch(err=>{
-    box.innerHTML = '<div class="mylist-empty">搜索失败：' + (err.message||err) + '</div>';
-  });
-}
-function saveVenue(){
-  const name = document.getElementById("vn-name").value.trim();
-  const lat = parseFloat(document.getElementById("vn-lat").value);
-  const lng = parseFloat(document.getElementById("vn-lng").value);
-  if (!name){ alert("请填写地点名称"); return; }
-  if (isNaN(lat) || isNaN(lng)){ alert("请先搜索地点确定位置坐标"); return; }
-  VenueStore.addVenue({
-    name: name, short: name,
-    address: document.getElementById("vn-addr").value.trim(),
-    note: document.getElementById("vn-note").value.trim(),
-    lat: lat, lng: lng, custom: true
-  });
-  closeVenueModal();
-  refreshPlaceList();
-  document.getElementById("evt-place").value = name;   // 自动填入日程弹窗的地点框
-}
+/* ============ 地点选择 + 新建（统一组件，见 assets/venues.js） ============ */
 function bindVenueModal(){
-  document.getElementById("vn-cancel").addEventListener("click", closeVenueModal);
-  document.getElementById("vn-save").addEventListener("click", saveVenue);
-  document.getElementById("vq-btn").addEventListener("click", runVenueSearch);
-  document.getElementById("vq").addEventListener("keydown", e=>{ if (e.key==="Enter") runVenueSearch(); });
-  document.getElementById("venue-modal").addEventListener("click", e=>{
-    if (e.target === document.getElementById("venue-modal")) closeVenueModal();
+  document.getElementById("evt-newplace").addEventListener("click", function(){
+    VenueEditor.open({onSaved: function(v){
+      refreshPlaceList();
+      document.getElementById("evt-place").value = v.name;   // 日程界面新建 → 自动绑定
+    }});
   });
 }
 function exportEvents(){
