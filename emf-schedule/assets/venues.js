@@ -463,6 +463,7 @@ var PlacePicker = (function(){
   function attach(input){
     if (input.dataset.pp) return;
     input.dataset.pp = "1";
+    attached = input;
     ensureDrop();
     input.addEventListener("click", function(){
       if (drop.style.display === "none") show(); else hide();
