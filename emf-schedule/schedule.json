@@ -12,8 +12,9 @@
    31.2995,
    121.502
   ],
-  "tdtKey": "34383a232f417400f8338b624f99510c",
-  "tdtKeyType": "server"
+  "tdtKey": "ca2268fd1bdc33b7a4363fecbd5a8408",
+  "tdtKeyType": "browser",
+  "tdtKeyServer": "34383a232f417400f8338b624f99510c"
  },
  "slots": [
   {
