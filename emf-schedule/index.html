@@ -8,7 +8,7 @@
 <script src="assets/leaflet/leaflet.js"></script>
 <script src="assets/coord.8afb7bfa.js"></script>
 <script src="assets/venues.75c80b32.js"></script>
-<link rel="stylesheet" href="assets/dashboard.b5b7ecd3.css">
+<link rel="stylesheet" href="assets/dashboard.0a2cd5f3.css">
 <title>EMF 26R 课程看板</title>
 </head>
 <body>
@@ -33,6 +33,13 @@
 
   <section>
     <h2>周课表 <span class="hint" id="week-hint"></span></h2>
+    <div class="disp-toggles" id="disp-toggles">
+      <span>卡片显示：</span>
+      <label><input type="checkbox" data-k="tag">标签</label>
+      <label><input type="checkbox" data-k="time">时间</label>
+      <label><input type="checkbox" data-k="venue">地点</label>
+      <label><input type="checkbox" data-k="note">备注</label>
+    </div>
     <div class="weektabs" id="weektabs"></div>
     <div class="weekinfo" id="weekinfo"></div>
     <div class="gridwrap" id="gridwrap"></div>
@@ -133,7 +140,7 @@ function parseTimeToMin(hhmm){
 }
 
 async function init(){
-  const r = await fetch("schedule.0a54eab9.json");
+  const r = await fetch("schedule.af3db431.json");
   DATA = await r.json();
   VenueStore.migrateEvents();   // 旧版 s0/s1 事件 → startMin/endMin + tag
   const m = DATA.meta;
@@ -172,6 +179,7 @@ async function init(){
   refreshPlaceList();
   bindModal();
   bindVenueModal();
+  bindDispToggles();
   selectWeek(wk || 1);
   setInterval(()=>{ refreshCountdown(now); }, 1000);
   setTimeout(renderMylist, 2500);
@@ -249,8 +257,34 @@ function selectWeek(n){
   renderGrid(w);
 }
 
+/* ---- 卡片显示开关（标签/时间/地点/备注） ---- */
+const DISP_KEY = "emf_disp_prefs";
+function getDisp(){
+  try { return Object.assign({tag:true,time:true,venue:true,note:true}, JSON.parse(localStorage.getItem(DISP_KEY)||"{}")); }
+  catch(e){ return {tag:true,time:true,venue:true,note:true}; }
+}
+function bindDispToggles(){
+  const prefs = getDisp();
+  document.querySelectorAll("#disp-toggles input").forEach(cb=>{
+    cb.checked = prefs[cb.dataset.k] !== false;
+    cb.addEventListener("change", ()=>{
+      prefs[cb.dataset.k] = cb.checked;
+      localStorage.setItem(DISP_KEY, JSON.stringify(prefs));
+      selectWeek(curWeek || 1);
+    });
+  });
+}
+/* 地点信息更全：代码/名称 → 完整名称 + 地址 */
+function venueFull(codeOrName){
+  if (!codeOrName) return "";
+  const v = VenueStore.findVenue(codeOrName);
+  if (!v) return codeOrName;
+  return v.name + (v.address ? " · " + v.address : "");
+}
+
 /* ---- 全天网格（0-24 点，10 分钟粒度；小时为大格，日程块可跨格/跨日；重叠等宽、交叉分段） ---- */
 function renderGrid(w){
+  const prefs = getDisp();
   const today = new Date().toISOString().slice(0,10);
   const holDays = {};
   DATA.holidays.filter(h=>h.weeks.includes(w.no)).forEach(h=>h.days.forEach(d=>holDays[d]=h.name));
@@ -278,12 +312,19 @@ function renderGrid(w){
         : e.isEvt
           ? "background:linear-gradient(135deg, rgba(236,159,190,.42), rgba(236,159,190,.18));border:1.5px dashed var(--pink-deep);color:var(--pink-deep);"
           : `background:linear-gradient(135deg,${e.color}55,${e.color}1f);border-left:3px solid ${e.color};`;
-      const timeLabel = (e.isEvt || e.isExam) ? `${fmtMin(seg.t0)}~${fmtMin(seg.t1)} ` : "";
+      // 可开关的信息项
+      const parts = [];
+      if (prefs.time && (e.isEvt || e.isExam)) parts.push(fmtMin(seg.t0) + "~" + fmtMin(seg.t1));
+      if (prefs.venue && e.venue) parts.push("@ " + venueFull(e.venue));
+      if (e.cross) parts.push("跨日");
+      if (prefs.note && e.note) parts.push(e.note);
+      const tagHtml = prefs.tag ? `<span class="tagchip" style="background:${tagColor}">${e.tag}</span>` : "";
+      const subHtml = parts.length ? `<span class="venue">${parts.join(" · ")}</span>` : "";
       blocksHtml += `<div class="evtblock ${e.isEvt?"evt":""}" data-evt="${e.evtId||""}"
         style="top:${top.toFixed(1)}px;height:${height.toFixed(1)}px;left:${seg.left.toFixed(2)}%;width:calc(${seg.width.toFixed(2)}% - 3px);${bg}">
-        <span class="tagchip" style="background:${tagColor}">${e.tag}</span>
+        ${tagHtml}
         <span class="cn">${e.title}</span>
-        <span class="venue">${timeLabel}${e.sub}</span>
+        ${subHtml}
       </div>`;
     }
     const hol = holDays[di];
@@ -329,7 +370,9 @@ function dayEntries(day, evts){
       id: "c" + day.date + s.c + s.start, start: s.start, end: s.end,
       tag: s.tag || "课程",
       title: c ? (c.cn || c.name) : "日程",
-      sub: (s.v ? "@ " + s.v : "") + (s.note ? " · " + s.note : ""),
+      venue: s.v || "",
+      note: s.note || "",
+      cross: false,
       color: c ? c.color : "#d3c39c",
       isExam: (s.tag === "考试")
     });
@@ -345,7 +388,9 @@ function dayEntries(day, evts){
       id: e.id, start: st, end: en,
       tag: e.tag || "个人",
       title: "📌 " + e.title,
-      sub: (e.place ? "@ " + e.place + " " : "") + (cross ? "跨日 " : "") + (e.note ? "· " + e.note : ""),
+      venue: e.place || "",
+      note: e.note || "",
+      cross: cross,
       color: null, isEvt: true, evtId: e.id
     });
   }
