@@ -67,7 +67,7 @@ const EVT_KEY = "emf_schedule_events_v1";
 function getEvents(){ try { return JSON.parse(localStorage.getItem(EVT_KEY) || "[]"); } catch(e){ return []; } }
 
 async function init(){
-  const r = await fetch("../schedule.json?v=" + DATA_V);
+  const r = await fetch("../schedule.a1b1c99b.json");
   DATA = await r.json();
   TDT_KEY = (DATA.meta && DATA.meta.tdtKey) || TDT_KEY;
   document.getElementById("term").textContent =
