@@ -210,6 +210,13 @@ table.list tr:hover td{background:rgba(236,159,190,.07);}
 .mylist-tools button:hover{border-color:var(--pink);color:var(--pink-deep);}
 
 /* 地点地图子页 */
+.baselayers{display:flex;gap:8px;margin-bottom:12px;}
+.baselayers .bl{background:var(--bg1);border:1px solid var(--line);color:var(--muted);
+  font-size:12px;font-weight:600;border-radius:999px;padding:4px 14px;cursor:pointer;
+  transition:border-color .15s,color .15s,background .15s;}
+.baselayers .bl:hover{border-color:var(--pink);color:var(--pink-deep);}
+.baselayers .bl.active{background:linear-gradient(135deg,var(--accent),#1a5fbe);
+  border-color:var(--accent);color:#fff;box-shadow:0 2px 6px rgba(236,159,190,.35);}
 .mapgrid{display:grid;grid-template-columns:1.65fr 1fr;gap:14px;}
 @media(max-width:900px){.mapgrid{grid-template-columns:1fr;}}
 .mapbox{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg2);}
