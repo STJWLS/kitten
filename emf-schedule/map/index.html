@@ -29,6 +29,10 @@
 <main>
   <section>
     <h2>地点地图 <span class="hint" id="map-hint"></span></h2>
+    <div class="baselayers" id="baselayers">
+      <button data-b="vec" class="bl">🗺 矢量</button>
+      <button data-b="img" class="bl active">🛰 卫星影像</button>
+    </div>
     <div class="mapgrid">
       <div class="mapbox"><div id="map"></div></div>
       <div><div id="venue-cards"></div></div>
@@ -47,7 +51,7 @@ const DAY_CN = ["周一","周二","周三","周四","周五","周六","周日"];
 const DATA_V = "v20260904e";
 // 天地图瓦片 key（来自论文项目 P08/TianDiTuFetch 的公开 key；如需更换在天地图官网免费申请）
 const TDT_KEY = "34383a232f417400f8338b624f99510c";
-let DATA = null, mapObj = null, venueData = [];
+let DATA = null, mapObj = null, venueData = [], baseLayers = {};
 
 async function init(){
   const r = await fetch("../schedule.json?v=" + DATA_V);
@@ -76,9 +80,10 @@ function countSessions(code){
 function initMap(){
   if (mapObj){ mapObj.invalidateSize(); return; }
   const c = DATA.meta.mapCenter || [31.2995, 121.5020];
-  mapObj = L.map("map", {center: c, zoom: 15});
-  // 天地图矢量底图 + 中文注记（国内访问快，无需海外瓦片）
-  // 瓦片失败仅重试一次（换子域），防止无限重试造成请求风暴
+  mapObj = L.map("map", {center: c, zoom: 16});
+  // 天地图瓦片（国内访问快，无需海外瓦片）。
+  // 注意：矢量 vec_w 风格本身偏灰白，卫星影像 img_w 色彩丰富——默认影像。
+  // 瓦片失败仅重试一次（换子域），防止无限重试造成请求风暴。
   const tdt = (type, attribution) => {
     const layer = L.tileLayer(
       "https://t{s}.tianditu.gov.cn/DataServer?T=" + type + "&x={x}&y={y}&l={z}&tk=" + TDT_KEY,
@@ -93,8 +98,15 @@ function initMap(){
     });
     return layer;
   };
-  tdt("vec_w", "© 天地图").addTo(mapObj);
-  tdt("cva_w", "").addTo(mapObj);
+  // 两组底图（基础层 + 注记层）
+  baseLayers = {
+    vec: { base: tdt("vec_w", "© 天地图"), label: tdt("cva_w", "") },
+    img: { base: tdt("img_w", "© 天地图"), label: tdt("cia_w", "") },
+  };
+  switchBase("img");
+  document.getElementById("baselayers").querySelectorAll(".bl").forEach(b=>{
+    b.addEventListener("click", ()=>switchBase(b.dataset.b));
+  });
 
   (DATA.venues || []).forEach(v=>{
     const isGate = !!v.ref;
@@ -117,6 +129,20 @@ function initMap(){
       });
   });
   document.getElementById("map-hint").textContent = "天地图底图 · 点击标记或右侧卡片查看该地点安排";
+}
+
+function switchBase(kind){
+  if (!mapObj) return;
+  Object.values(baseLayers).forEach(g=>{
+    if (g.base && mapObj.hasLayer(g.base)) mapObj.removeLayer(g.base);
+    if (g.label && mapObj.hasLayer(g.label)) mapObj.removeLayer(g.label);
+  });
+  const g = baseLayers[kind];
+  if (!g) return;
+  g.base.addTo(mapObj);
+  g.label.addTo(mapObj);
+  g.base.bringToBack();
+  document.querySelectorAll("#baselayers .bl").forEach(b=>b.classList.toggle("active", b.dataset.b===kind));
 }
 
 function buildVenueCards(){
