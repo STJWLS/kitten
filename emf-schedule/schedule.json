@@ -14,7 +14,8 @@
   ],
   "tdtKey": "ca2268fd1bdc33b7a4363fecbd5a8408",
   "tdtKeyType": "browser",
-  "tdtKeyServer": "34383a232f417400f8338b624f99510c"
+  "tdtKeyServer": "34383a232f417400f8338b624f99510c",
+  "amapKey": "a59f78f6ee853bbd96875cc41b7e3b43"
  },
  "slots": [
   {
@@ -1726,8 +1727,7 @@
    "address": "国权路579号 · 复旦大学邯郸校区",
    "lat": 31.2987,
    "lng": 121.506,
-   "approx": true,
-   "note": "学院楼，周二等平日课程在此"
+   "approx": true
   },
   {
    "code": "H6201",
@@ -1736,8 +1736,7 @@
    "address": "邯郸路220号 · 复旦大学邯郸校区",
    "lat": 31.3023,
    "lng": 121.5008,
-   "approx": true,
-   "note": "教学楼，周五/周六课程多在此"
+   "approx": true
   },
   {
    "code": "GATE",
