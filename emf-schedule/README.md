@@ -38,4 +38,5 @@ schedule.json  ──fetch──▶  index.html（纯前端渲染）
 ## 更新课表
 
 1. 编辑 `schedule.json`（本地：`school/dashboard/emf-schedule/schedule.json`）
-2. 运行 `python sync_schedule.py`（使用 `~/.dashboard_config/` 下的 GitHub 凭据）
+2. **递增 `index.html` 中的 `DATA_V` 版本号**（绕开浏览器与 Pages CDN 的 10 分钟缓存，否则用户端看不到新数据）
+3. 运行 `python sync_schedule.py`（使用 `~/.dashboard_config/` 下的 GitHub 凭据）
