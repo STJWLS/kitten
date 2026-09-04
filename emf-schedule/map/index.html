@@ -10,7 +10,7 @@
 <script src="../assets/leaflet/leaflet.js"></script>
 <script src="../assets/coord.8afb7bfa.js"></script>
 <script src="../assets/venues.75c80b32.js"></script>
-<link rel="stylesheet" href="../assets/dashboard.b5b7ecd3.css">
+<link rel="stylesheet" href="../assets/dashboard.0a2cd5f3.css">
 <title>地点地图 · EMF 26R</title>
 </head>
 <body>
@@ -71,7 +71,7 @@ const EVT_KEY = "emf_schedule_events_v1";
 function getEvents(){ try { return JSON.parse(localStorage.getItem(EVT_KEY) || "[]"); } catch(e){ return []; } }
 
 async function init(){
-  const r = await fetch("../schedule.0a54eab9.json");
+  const r = await fetch("../schedule.af3db431.json");
   DATA = await r.json();
   TDT_KEY = (DATA.meta && DATA.meta.tdtKey) || TDT_KEY;
   document.getElementById("term").textContent =
