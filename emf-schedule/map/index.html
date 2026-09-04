@@ -6,8 +6,8 @@
 <!-- 天地图 key 有 Referer 白名单：瓦片请求不带 Referer 才能正常加载 -->
 <meta name="referrer" content="no-referrer">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="../assets/leaflet/leaflet.css">
+<script src="../assets/leaflet/leaflet.js"></script>
 <link rel="stylesheet" href="../assets/dashboard.css">
 <title>地点地图 · EMF 26R</title>
 </head>
@@ -41,7 +41,7 @@
   </section>
 
   <div class="foot">
-    底图：天地图（key 复用论文项目）｜ 标记坐标为近似值，可在 schedule.json 的 venues 中修改
+    底图：天地图（加载失败自动切换高德兜底）｜ 标记坐标为近似值，可在 schedule.json 的 venues 中修改
     ｜ <a href="https://github.com/STJWLS/kitten" target="_blank">仓库</a>
   </div>
 </main>
@@ -51,6 +51,11 @@ const DAY_CN = ["周一","周二","周三","周四","周五","周六","周日"];
 const DATA_V = "v20260904e";
 // 天地图瓦片 key（来自论文项目 P08/TianDiTuFetch 的公开 key；如需更换在天地图官网免费申请）
 const TDT_KEY = "34383a232f417400f8338b624f99510c";
+// 兜底底图：高德公开瓦片端点（无需 key，纯国内；仅当天地图在浏览器中加载失败时自动启用）
+const AMAP_IMG = "https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}";
+const AMAP_VEC = "https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}";
+const AMAP_SUB = ["1","2","3","4"];
+let provider = "tdt";   // 当前底图服务商：tdt（天地图）| amap（高德兜底）
 let DATA = null, mapObj = null, venueData = [], baseLayers = {};
 
 async function init(){
@@ -81,32 +86,25 @@ function initMap(){
   if (mapObj){ mapObj.invalidateSize(); return; }
   const c = DATA.meta.mapCenter || [31.2995, 121.5020];
   mapObj = L.map("map", {center: c, zoom: 16});
-  // 天地图瓦片（国内访问快，无需海外瓦片）。
-  // 注意：矢量 vec_w 风格本身偏灰白，卫星影像 img_w 色彩丰富——默认影像。
-  // 瓦片失败仅重试一次（换子域），防止无限重试造成请求风暴。
-  const tdt = (type, attribution) => {
-    const layer = L.tileLayer(
-      "https://t{s}.tianditu.gov.cn/DataServer?T=" + type + "&x={x}&y={y}&l={z}&tk=" + TDT_KEY,
-      {subdomains:["0","1","2","3","4","5","6","7"], maxZoom:18, attribution});
+  // 瓦片失败仅重试一次（换子域），防止无限重试造成请求风暴
+  const makeLayer = (urlTpl, subs, attribution) => {
+    const layer = L.tileLayer(urlTpl,
+      {subdomains: subs, maxZoom: 18, attribution});
     layer.on("tileerror", e => {
       if (e.tile.dataset.retried) return;
       e.tile.dataset.retried = "1";
       setTimeout(()=>{
-        const t = "t" + Math.floor(Math.random()*8) + ".tianditu.gov.cn";
-        e.tile.src = e.tile.src.replace(/t\d\.tianditu\.gov\.cn/, t);
+        const t = urlTpl.replace("{s}", subs[Math.floor(Math.random()*subs.length)]);
+        const src = t.replace("{x}", e.coords.x).replace("{y}", e.coords.y).replace("{z}", e.coords.z);
+        e.tile.src = src;
       }, 800);
     });
     return layer;
   };
-  // 两组底图（基础层 + 注记层）
-  baseLayers = {
-    vec: { base: tdt("vec_w", "© 天地图"), label: tdt("cva_w", "") },
-    img: { base: tdt("img_w", "© 天地图"), label: tdt("cia_w", "") },
-  };
-  switchBase("img");
-  document.getElementById("baselayers").querySelectorAll(".bl").forEach(b=>{
-    b.addEventListener("click", ()=>switchBase(b.dataset.b));
-  });
+  buildBaseLayers();
+
+  // 自动兜底：天地图若在浏览器中加载失败，切换高德端点（同是国内服务）
+  setTimeout(checkFallback, 7000);
 
   (DATA.venues || []).forEach(v=>{
     const isGate = !!v.ref;
@@ -131,6 +129,45 @@ function initMap(){
   document.getElementById("map-hint").textContent = "天地图底图 · 点击标记或右侧卡片查看该地点安排";
 }
 
+function buildBaseLayers(){
+  const sub8 = ["0","1","2","3","4","5","6","7"];
+  Object.values(baseLayers).forEach(g=>{
+    if (g.base && mapObj.hasLayer(g.base)) mapObj.removeLayer(g.base);
+    if (g.label && mapObj.hasLayer(g.label)) mapObj.removeLayer(g.label);
+  });
+  if (provider === "tdt"){
+    baseLayers = {
+      vec: { base: makeLayer("https://t{s}.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk=" + TDT_KEY, sub8, "© 天地图"),
+             label: makeLayer("https://t{s}.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=" + TDT_KEY, sub8, "") },
+      img: { base: makeLayer("https://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=" + TDT_KEY, sub8, "© 天地图"),
+             label: makeLayer("https://t{s}.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=" + TDT_KEY, sub8, "") },
+    };
+  } else {
+    baseLayers = {
+      vec: { base: makeLayer(AMAP_VEC, AMAP_SUB, "© 高德"), label: null },
+      img: { base: makeLayer(AMAP_IMG, AMAP_SUB, "© 高德"), label: null },
+    };
+  }
+  switchBase(document.querySelector("#baselayers .bl.active")?.dataset.b || "img");
+}
+
+function checkFallback(){
+  if (provider !== "tdt") return;   // 已经兜底
+  const tiles = [...document.querySelectorAll("#map img.leaflet-tile")];
+  let loaded = 0, failed = 0;
+  for (const t of tiles){
+    if (t.complete && t.naturalWidth > 0) loaded++;
+    else if (t.dataset.retried) failed++;
+  }
+  // 重试过仍失败且几乎没加载成功 → 切换高德兜底
+  if (failed >= 5 && loaded <= 3){
+    provider = "amap";
+    buildBaseLayers();
+    document.getElementById("map-hint").textContent =
+      "已自动切换高德底图（天地图在浏览器中加载失败）· 点击标记或右侧卡片查看该地点安排";
+  }
+}
+
 function switchBase(kind){
   if (!mapObj) return;
   Object.values(baseLayers).forEach(g=>{
@@ -140,7 +177,7 @@ function switchBase(kind){
   const g = baseLayers[kind];
   if (!g) return;
   g.base.addTo(mapObj);
-  g.label.addTo(mapObj);
+  if (g.label) g.label.addTo(mapObj);
   g.base.bringToBack();
   document.querySelectorAll("#baselayers .bl").forEach(b=>b.classList.toggle("active", b.dataset.b===kind));
 }
