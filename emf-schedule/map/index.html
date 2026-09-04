@@ -3,359 +3,49 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- 天地图 key 有 Referer 白名单：瓦片请求不带 Referer 才能正常加载 -->
-<meta name="referrer" content="no-referrer">
-<link rel="icon" href="data:,">
-<link rel="stylesheet" href="../assets/leaflet/leaflet.css">
-<script src="../assets/leaflet/leaflet.js"></script>
-<script src="../assets/coord.8afb7bfa.js"></script>
-<script src="../assets/venues.75c80b32.js"></script>
-<link rel="stylesheet" href="../assets/dashboard.0a2cd5f3.css">
-<title>地点地图 · EMF 26R</title>
+<title>EMF 26R 课程看板 · 入口</title>
+<style>
+body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:radial-gradient(900px 420px at 50% -8%, rgba(0,61,165,.06), transparent 60%),
+             radial-gradient(700px 400px at 100% 100%, rgba(236,159,190,.12), transparent 55%), #f8f4ec;
+  color:#42392b;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.box{background:#fff;border:1px solid #e9e0d0;border-radius:16px;padding:36px 42px;
+  max-width:480px;text-align:center;box-shadow:0 12px 44px rgba(66,57,43,.12);}
+h1{font-size:20px;margin:0 0 6px;}
+h1::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;
+  background:linear-gradient(135deg,#003da5,#ec9fbe);}
+#status{font-size:14px;color:#8a7f6d;margin:14px 0;font-family:monospace;}
+.hint{font-size:12px;color:#b5a88f;line-height:1.7;}
+a{color:#003da5;}
+code{background:#f2ecdf;border-radius:5px;padding:1px 7px;font-family:monospace;font-size:12px;}
+</style>
 </head>
 <body>
-<header>
-  <div class="top">
-    <h1>EMF 26R 课程看板 <small>Venue Map · Fall 2026</small></h1>
-    <div class="meta">
-      <span class="chip">学期 <b id="term"></b></span>
-      <span class="chip">数据更新 <b id="updated"></b></span>
-    </div>
-  </div>
-  <div class="countbar"><i style="width:100%"></i></div>
-</header>
-<div class="nav">
-  <a href="../">📅 周课表</a>
-  <a class="active" href="./">🗺 地点地图</a>
+<div class="box">
+  <h1>EMF 26R 课程看板 · 地图页</h1>
+  <p id="status">正在连接本机看板服务器…</p>
+  <p class="hint">
+    看板由<b>本机服务</b>交付（零 CDN · 改完即刷）。<br>
+    若长时间停留在此：请在本机运行 <code>start_public_dash.bat</code> 启动隧道，<br>
+    或直接访问 <a href="http://127.0.0.1:8767/">http://127.0.0.1:8767/</a>
+  </p>
 </div>
-<main>
-  <section>
-    <h2>地点地图 <span class="hint" id="map-hint"></span></h2>
-    <div class="baselayers" id="baselayers">
-      <button data-b="vec" class="bl">🗺 矢量</button>
-      <button data-b="img" class="bl active">🛰 卫星影像</button>
-      <button id="new-venue" class="bl pink">➕ 新建地点</button>
-    </div>
-    <div class="mapgrid">
-      <div class="mapbox"><div id="map"></div></div>
-      <div><div id="venue-cards"></div></div>
-    </div>
-    <div class="arrange" id="arrange"></div>
-  </section>
-
-  <div class="foot">
-    底图：天地图（加载失败自动切换高德兜底）｜ 标记坐标为近似值，可在 schedule.json 的 venues 中修改
-    ｜ <a href="https://github.com/STJWLS/kitten" target="_blank">仓库</a>
-  </div>
-</main>
-
 <script>
-const DAY_CN = ["周一","周二","周三","周四","周五","周六","周日"];
-const DATA_V = "v20260904g";
-function fmtMin(m){
-  const h = Math.floor(m/60), mm = m%60;
-  return String(h).padStart(2,"0") + ":" + String(mm).padStart(2,"0");
-}
-// 天地图瓦片 key 从 schedule.json 的 meta.tdtKey 读取（可替换为自己的浏览器端 key）
-let TDT_KEY = "";
-// 兜底底图：高德公开瓦片端点（无需 key，纯国内；仅当天地图在浏览器中加载失败时自动启用）
-const AMAP_IMG = "https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}";
-const AMAP_VEC = "https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}";
-const AMAP_SUB = ["1","2","3","4"];
-let provider = "tdt";   // 当前底图服务商：tdt（天地图）| amap（高德兜底）
-let DATA = null, mapObj = null, venueData = [], baseLayers = {};
-let proxyBase = null;   // 本机天地图瓦片代理（Cloudflare 隧道）地址，来自 tile-proxy.json
-let markerLayer = null, pickMarker = null;   // 地点标记层 / 地图选点临时标记
-// 个人日程（与主页共用同一个 localStorage key，用于自定义地点的日程统计）
-const EVT_KEY = "emf_schedule_events_v1";
-function getEvents(){ try { return JSON.parse(localStorage.getItem(EVT_KEY) || "[]"); } catch(e){ return []; } }
-
-async function init(){
-  const r = await fetch("../schedule.af3db431.json");
-  DATA = await r.json();
-  TDT_KEY = (DATA.meta && DATA.meta.tdtKey) || TDT_KEY;
-  document.getElementById("term").textContent =
-    DATA.meta.termStart.slice(5).replace("-","/") + " ~ " + DATA.meta.termEnd.slice(5).replace("-","/");
-  document.getElementById("updated").textContent = DATA.meta.updated;
-  // 本机瓦片代理（隧道）地址：由 tdt_tunnel.py 更新（大论文管线同款模式）
+const path = location.pathname.replace(/^\/kitten\/emf-schedule\/map/, "/map/");
+(async function(){
   try {
-    const pr = await fetch("../tile-proxy.json?ts=" + Date.now(), {cache:"no-store"});
-    if (pr.ok){
-      const pj = await pr.json();
-      if (pj && pj.url) proxyBase = pj.url.replace(/\/+$/, "");
+    const r = await fetch("../entry.json?ts=" + Date.now(), {cache:"no-store"});
+    const d = await r.json();
+    if (d && d.url){
+      document.getElementById("status").textContent = "已连接本机看板服务器，正在进入…";
+      location.replace(d.url.replace(/\/+$/, "") + (path || "/"));
+    } else {
+      document.getElementById("status").textContent = "看板服务器未运行（入口配置为空）";
     }
-  } catch(e){ proxyBase = null; }
-  // key 类型决定首选链路：浏览器端 key → 直连；服务端 key（浏览器 UA 会被 403）→ 优先本机代理
-  const keyType = (DATA.meta && DATA.meta.tdtKeyType) || "server";
-  provider = (keyType === "browser") ? "tdt" : (proxyBase ? "proxy" : "tdt");
-  triedProviders = [];
-
-  // 地点卡片：内置地点 + 自定义地点 + 线上/待定桶（描述按课程数据结构化生成）
-  venueData = VenueStore.allVenues().map(v=>({...v, note: venueNote(v), count: countForVenue(v)}));
-  venueData.push({code:"", name:"线上 / 待定（LIVE · ELP · CARE EN 等）", short:"线上/待定",
-                  address:"无固定教室", note: venueNote({code:""}), count: countForVenue({code:""}),
-                  virtual:true});
-  buildVenueCards();
-  initMap();
-  selectVenue(venueData[0] ? venueData[0].code : "");
-}
-
-function countForVenue(v){
-  let n = 0;
-  for (const w of DATA.weeks) for (const d of w.days) for (const s of d.sessions)
-    if (s.v === v.code) n++;
-  // 自定义地点：加上在该地点举行的个人日程
-  if (v.custom) n += getEvents().filter(e=>e.place && e.place === v.name).length;
-  return n;
-}
-
-/* 地点描述结构化生成（不再硬编码）：
-   按课程数据统计主要上课日 + 工作日/周末归类 */
-function venueNote(v){
-  if (!v.code) return "直播课与英语课等（无固定教室）";
-  if (v.ref) return "参考点";
-  if (v.custom){
-    const evts = getEvents().filter(e=>e.place && e.place === v.name);
-    return evts.length ? ("个人日程 " + evts.length + " 条" + (v.note ? " · " + v.note : ""))
-                       : "自定义地点" + (v.note ? " · " + v.note : "");
+  } catch(e){
+    document.getElementById("status").textContent = "无法读取入口配置：" + e.message;
   }
-  const dayCnt = [0,0,0,0,0,0,0];
-  for (const w of DATA.weeks) for (const d of w.days) for (const s of d.sessions)
-    if (s.v === v.code) dayCnt[w.days.indexOf(d)]++;
-  const active = dayCnt.map((n,i)=>({n,i})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n);
-  if (!active.length) return "暂无课程安排";
-  const days = active.map(x=>DAY_CN[x.i]).join("、");
-  const weekday = active.filter(x=>x.i<5).length;
-  const weekend = active.length - weekday;
-  const part = weekend > weekday ? "周末为主" : (weekday > weekend ? "工作日" : "工作日+周末");
-  return "主要上课日：" + days + "（" + part + "）";
-}
-
-// 瓦片失败仅重试一次（换子域），防止无限重试造成请求风暴
-function makeLayer(urlTpl, subs, attribution){
-  const layer = L.tileLayer(urlTpl,
-    {subdomains: subs, maxZoom: 18, attribution});
-  layer.on("tileerror", e => {
-    if (e.tile.dataset.retried) return;
-    e.tile.dataset.retried = "1";
-    setTimeout(()=>{
-      const t = urlTpl.includes("{s}")
-        ? urlTpl.replace("{s}", subs[Math.floor(Math.random()*subs.length)])
-        : urlTpl + (urlTpl.includes("?") ? "&" : "?") + "_=" + Math.floor(Math.random()*1e6);
-      const src = t.replace("{x}", e.coords.x).replace("{y}", e.coords.y).replace("{z}", e.coords.z);
-      e.tile.src = src;
-    }, 800);
-  });
-  return layer;
-}
-
-function initMap(){
-  if (mapObj){ mapObj.invalidateSize(); return; }
-  const c = DATA.meta.mapCenter || [31.2995, 121.5020];
-  mapObj = L.map("map", {center: c, zoom: 16});
-  buildBaseLayers();
-
-  // 底图切换按钮（矢量 / 卫星影像）
-  document.getElementById("baselayers").querySelectorAll(".bl[data-b]").forEach(b=>{
-    b.addEventListener("click", ()=>switchBase(b.dataset.b));
-  });
-
-  // 自动兜底：天地图若在浏览器中加载失败，切换高德端点（同是国内服务）
-  setTimeout(checkFallback, 7000);
-
-  buildMarkers();
-  document.getElementById("map-hint").textContent =
-    (provider === "proxy" ? "天地图底图（经本机代理·国内网络拉取）" : "天地图底图") +
-    " · 点击标记或右侧卡片查看该地点安排";
-}
-
-/* 地图标记：内置 + 自定义地点（描述结构化生成） */
-function buildMarkers(){
-  if (!mapObj) return;
-  if (markerLayer) markerLayer.clearLayers();
-  else markerLayer = L.layerGroup().addTo(mapObj);
-  VenueStore.allVenues().forEach(v=>{
-    if (v.lat === undefined || v.lng === undefined) return;
-    const isGate = !!v.ref;
-    const isCustom = !!v.custom;
-    const icon = L.divIcon({
-      className: "tdt-pin" + (isGate ? " gate" : "") + (isCustom ? " custom" : ""),
-      html: `<div class="pin"><em>${isGate ? "门" : (isCustom ? "📍" : "🏛")}</em></div><div class="pin-tip">${v.short || v.name}</div>`,
-      iconSize: [30, 44], iconAnchor: [15, 42]
-    });
-    const pop = L.popup().setContent(
-      `<b>${v.name}</b><br>${v.address || ""}` +
-      (v.approx ? `<br><i style="font-size:11px">坐标近似，可在地图上校正</i>` : "") +
-      `<br><span style="font-size:11px;color:#8a7f6d">${venueNote(v)}</span>` +
-      `<br><a href="javascript:;" class="pop-sel">查看该地点安排 →</a>`
-    );
-    L.marker([v.lat, v.lng], {icon}).addTo(markerLayer).bindPopup(pop)
-      .on("popupopen", e=>{
-        e.popup.getElement().querySelector(".pop-sel").addEventListener("click", ()=>{
-          selectVenue(v.code); mapObj.closePopup();
-        });
-      });
-  });
-}
-
-function buildBaseLayers(){
-  const sub8 = ["0","1","2","3","4","5","6","7"];
-  Object.values(baseLayers).forEach(g=>{
-    if (g.base && mapObj.hasLayer(g.base)) mapObj.removeLayer(g.base);
-    if (g.label && mapObj.hasLayer(g.label)) mapObj.removeLayer(g.label);
-  });
-  if (provider === "tdt"){
-    baseLayers = {
-      vec: { base: makeLayer("https://t{s}.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk=" + TDT_KEY, sub8, "© 天地图"),
-             label: makeLayer("https://t{s}.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=" + TDT_KEY, sub8, "") },
-      img: { base: makeLayer("https://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=" + TDT_KEY, sub8, "© 天地图"),
-             label: makeLayer("https://t{s}.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=" + TDT_KEY, sub8, "") },
-    };
-  } else if (provider === "proxy" && proxyBase){
-    // 本机隧道代理：由国内网络拉取天地图瓦片再回传
-    const p = T => proxyBase + "/tdt/" + T + "/{z}/{x}/{y}";
-    baseLayers = {
-      vec: { base: makeLayer(p("vec_w"), [""], "天地图·本机代理"), label: makeLayer(p("cva_w"), [""], "") },
-      img: { base: makeLayer(p("img_w"), [""], "天地图·本机代理"), label: makeLayer(p("cia_w"), [""], "") },
-    };
-  } else {
-    baseLayers = {
-      vec: { base: makeLayer(AMAP_VEC, AMAP_SUB, "© 高德"), label: null },
-      img: { base: makeLayer(AMAP_IMG, AMAP_SUB, "© 高德"), label: null },
-    };
-  }
-  switchBase(document.querySelector("#baselayers .bl.active")?.dataset.b || "img");
-}
-
-const HINTS = {
-  tdt: "天地图直连 · 点击标记或右侧卡片查看该地点安排",
-  proxy: "天地图（经本机代理·国内网络拉取）· 点击标记或右侧卡片查看该地点安排",
-  amap: "已自动切换高德底图（天地图不可达）· 点击标记或右侧卡片查看该地点安排",
-};
-let triedProviders = [];
-
-function nextProvider(){
-  for (const p of ["tdt", "proxy", "amap"]){
-    if (p === "proxy" && !proxyBase) continue;
-    if (!triedProviders.includes(p)) return p;
-  }
-  return null;
-}
-
-function checkFallback(){
-  if (provider === "amap") return;   // 已是最终兜底
-  const tiles = [...document.querySelectorAll("#map img.leaflet-tile")];
-  let loaded = 0, failed = 0;
-  for (const t of tiles){
-    if (t.complete && t.naturalWidth > 0) loaded++;
-    else if (t.dataset.retried) failed++;
-  }
-  if (failed >= 5 && loaded <= 3){
-    triedProviders.push(provider);
-    const next = nextProvider();
-    if (!next) return;
-    provider = next;
-    buildBaseLayers();
-    document.getElementById("map-hint").textContent = HINTS[provider];
-    setTimeout(checkFallback, 10000);
-  }
-}
-
-function switchBase(kind){
-  if (!mapObj) return;
-  Object.values(baseLayers).forEach(g=>{
-    if (g.base && mapObj.hasLayer(g.base)) mapObj.removeLayer(g.base);
-    if (g.label && mapObj.hasLayer(g.label)) mapObj.removeLayer(g.label);
-  });
-  const g = baseLayers[kind];
-  if (!g) return;
-  g.base.addTo(mapObj);
-  if (g.label) g.label.addTo(mapObj);
-  g.base.bringToBack();
-  document.querySelectorAll("#baselayers .bl").forEach(b=>b.classList.toggle("active", b.dataset.b===kind));
-}
-
-function buildVenueCards(){
-  const el = document.getElementById("venue-cards");
-  el.innerHTML = venueData.map(v=>{
-    const dotColor = v.virtual ? "#d3c39c" : (v.ref ? "#8a7f6d" : "#003da5");
-    return `<div class="vcard" data-code="${v.code}">
-      <div class="n"><span class="dot" style="background:${dotColor}"></span>${v.short}${v.approx?'<span class="apx">坐标近似</span>':""}</div>
-      <div class="a">${v.address}</div>
-      <div class="c">安排 ${v.count} 节 ${v.note?("· "+v.note):""}</div>
-    </div>`;
-  }).join("");
-  el.querySelectorAll(".vcard").forEach(c=>c.addEventListener("click",()=>selectVenue(c.dataset.code)));
-}
-
-function selectVenue(code){
-  const v = venueData.find(x=>x.code===code);
-  if (!v) return;
-  document.querySelectorAll(".vcard").forEach(c=>c.classList.toggle("active", c.dataset.code===code));
-  renderArrange(v);
-  if (!v.virtual && v.lat !== undefined && mapObj){
-    // 保持 15 级：避免缩放大批量并发请求触发天地图免费 key 的并发限制
-    mapObj.setView([v.lat, v.lng], 15, {animate: true});
-  }
-}
-
-function renderArrange(v){
-  const rows = [];
-  for (const w of DATA.weeks) for (const d of w.days) for (const s of d.sessions){
-    if (s.v === v.code){
-      const c = DATA.courses.find(x=>x.code===s.c);
-      rows.push({
-        date: d.date, wk: w.no, day: DAY_CN[w.days.indexOf(d)],
-        time: fmtMin(s.start) + "~" + fmtMin(s.end),
-        course: (c ? c.cn : "") + (s.note ? " " + s.note : ""),
-        color: c ? c.color : "#d3c39c"
-      });
-    }
-  }
-  // 自定义地点：列出在该地点举行的个人日程
-  if (v.custom){
-    for (const e of getEvents()){
-      if (e.place && e.place === v.name){
-        const wk = Math.max(1, Math.min(DATA.meta.totalWeeks,
-          Math.floor((new Date(e.date + "T00:00:00+08:00") - new Date(DATA.meta.termStart + "T00:00:00+08:00")) / (7*864e5)) + 1));
-        rows.push({
-          date: e.date, wk, day: "个人日程",
-          time: fmtMin(e.startMin) + "~" + fmtMin(e.endMin),
-          course: "📌 " + e.title + (e.note ? " · " + e.note : ""),
-          color: "#ec9fbe"
-        });
-      }
-    }
-  }
-  rows.sort((a,b)=>a.date<b.date?-1:1);
-  const el = document.getElementById("arrange");
-  el.innerHTML = `<h3>${v.short} · 安排（${rows.length} 节）</h3>` + (rows.length ?
-    `<div class="table-wrap"><table class="list">
-       <tr><th>日期</th><th>时间</th><th>内容</th></tr>` +
-    rows.map(r=>`<tr>
-      <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap">${r.date}（W${r.wk} ${r.day}）</td>
-      <td style="font-family:var(--mono);font-size:11.5px;white-space:nowrap">${r.time}</td>
-      <td><span class="codechip" style="background:${r.color}">${r.course}</span></td>
-    </tr>`).join("") + `</table></div>` :
-    `<div class="mylist-empty">该地点暂无安排</div>`);
-}
-
-/* 新建地点：统一组件（搜索栏 / 矢量小地图 / 备选结果 / 日程绑定 / 备注）——见 assets/venues.js */
-function refreshVenueUI(){
-  venueData = VenueStore.allVenues().map(v=>({...v, note: venueNote(v), count: countForVenue(v)}));
-  venueData.push({code:"", name:"线上 / 待定（LIVE · ELP · CARE EN 等）", short:"线上/待定",
-                  address:"无固定教室", note: venueNote({code:""}), count: countForVenue({code:""}), virtual:true});
-  buildVenueCards();
-  buildMarkers();
-}
-document.getElementById("new-venue").addEventListener("click", function(){
-  VenueEditor.open({onSaved: function(v){
-    refreshVenueUI();
-    selectVenue(v.code);
-  }});
-});
-
-init();
+})();
 </script>
 </body>
 </html>
