@@ -42,8 +42,8 @@ code{background:#f2ecdf;border-radius:5px;padding:1px 7px;font-family:monospace;
   const pathname = location.pathname;
   // 子页面结构保留：/ 与 /map/ 各自内嵌对应的隧道路径
   const rel = pathname.includes("/map/") ? "../entry.json" : "entry.json";
-  const path = pathname.replace(/^\/kitten\/emf-schedule\/map/, "/map/")
-                      .replace(/^\/kitten\/emf-schedule/, "");
+  const path = pathname.replace(/^\/kitten\/emf-schedule\/map\//, "/map/")
+                      .replace(/^\/kitten\/emf-schedule\/?/, "/");
   const status = function(t){ document.getElementById("status").textContent = t; };
   // iframe 内看板导航到子页面时：同步地址栏（replaceState 不刷新不跳转，刷新后仍回到该子页面）
   window.addEventListener("message", function(e){
