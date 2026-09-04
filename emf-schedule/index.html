@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="assets/leaflet/leaflet.css">
 <script src="assets/leaflet/leaflet.js"></script>
 <script src="assets/coord.8afb7bfa.js"></script>
-<script src="assets/venues.aa6a539a.js"></script>
-<link rel="stylesheet" href="assets/dashboard.a4f36198.css">
+<script src="assets/venues.75c80b32.js"></script>
+<link rel="stylesheet" href="assets/dashboard.b5b7ecd3.css">
 <title>EMF 26R 课程看板</title>
 </head>
 <body>
@@ -73,18 +73,19 @@
 <div class="modal-back" id="evt-modal" style="display:none">
   <div class="modal">
     <h3 id="evt-modal-title">添加日程</h3>
-    <label>日期 <input id="evt-date" readonly></label>
+    <label>开始 <span class="dim-hint">（可跨日：起止日期可不同）</span></label>
     <div class="row2">
-      <label>开始时间
-        <div class="place-row" style="margin-top:0">
-          <select id="evt-sh"></select><select id="evt-sm"></select>
-        </div>
-      </label>
-      <label>结束时间
-        <div class="place-row" style="margin-top:0">
-          <select id="evt-eh"></select><select id="evt-em"></select>
-        </div>
-      </label>
+      <input type="date" id="evt-date">
+      <div class="place-row" style="margin-top:0">
+        <select id="evt-sh"></select><select id="evt-sm"></select>
+      </div>
+    </div>
+    <label>结束</label>
+    <div class="row2">
+      <input type="date" id="evt-edate">
+      <div class="place-row" style="margin-top:0">
+        <select id="evt-eh"></select><select id="evt-em"></select>
+      </div>
     </div>
     <label>标题 <input id="evt-title" placeholder="例如：小组讨论 / 图书馆自习"></label>
     <label>标签
@@ -248,12 +249,12 @@ function selectWeek(n){
   renderGrid(w);
 }
 
-/* ---- 全天网格（0-24 点，10 分钟粒度；小时为大格，日程块可跨格） ---- */
+/* ---- 全天网格（0-24 点，10 分钟粒度；小时为大格，日程块可跨格/跨日；重叠等宽、交叉分段） ---- */
 function renderGrid(w){
   const today = new Date().toISOString().slice(0,10);
   const holDays = {};
   DATA.holidays.filter(h=>h.weeks.includes(w.no)).forEach(h=>h.days.forEach(d=>holDays[d]=h.name));
-  const evts = getEvents().filter(e=>w.days.some(d=>d.date===e.date));
+  const evts = getEvents();
 
   let labels = "";
   for (let h=0; h<24; h++){
@@ -263,46 +264,29 @@ function renderGrid(w){
   let days = "";
   for (let di=0; di<7; di++){
     const day = w.days[di];
-    const isToday = day.date === today;
-    const blocks = [];
-    for (const s of day.sessions){
-      const c = DATA.courses.find(x=>x.code===s.c);
-      blocks.push({
-        start: s.start, end: s.end, tag: s.tag || "课程",
-        title: c ? (c.cn || c.name) : "日程",
-        sub: (s.v ? "@ " + s.v : "") + (s.note ? " · " + s.note : ""),
-        color: c ? c.color : "#d3c39c",
-        isExam: (s.tag === "考试")
-      });
-    }
-    for (const e of evts){
-      if (e.date !== day.date) continue;
-      blocks.push({
-        start: e.startMin, end: e.endMin, tag: e.tag || "个人",
-        title: "📌 " + e.title,
-        sub: (e.place ? "@ " + e.place : "") + (e.note ? " · " + e.note : ""),
-        color: null, isEvt: true, evtId: e.id
-      });
-    }
-    const hol = holDays[di];
+    const entries = dayEntries(day, evts);
+    const segments = layoutDay(entries);
+
     let blocksHtml = "";
-    for (const b of blocks){
-      const h0 = b.start/60, h1 = b.end/60;
-      if (h1 <= h0) continue;
-      const top = h0 * HOURPX;
-      const height = Math.max((h1 - h0) * HOURPX, 20);
-      const tagColor = TAG_COLORS[b.tag] || "#8a7f6d";
-      const bg = b.isExam
+    for (const seg of segments){
+      const e = seg.entry;
+      const top = seg.t0/60 * HOURPX;
+      const height = Math.max((seg.t1 - seg.t0)/60 * HOURPX, 20);
+      const tagColor = TAG_COLORS[e.tag] || "#8a7f6d";
+      const bg = e.isExam
         ? "background:linear-gradient(135deg, rgba(201,106,90,.16), rgba(201,106,90,.06));border:1px solid rgba(201,106,90,.55);"
-        : b.isEvt
+        : e.isEvt
           ? "background:linear-gradient(135deg, rgba(236,159,190,.42), rgba(236,159,190,.18));border:1.5px dashed var(--pink-deep);color:var(--pink-deep);"
-          : `background:linear-gradient(135deg,${b.color}55,${b.color}1f);border-left:3px solid ${b.color};`;
-      blocksHtml += `<div class="evtblock ${b.isEvt?"evt":""}" data-evt="${b.evtId||""}" style="top:${top.toFixed(1)}px;height:${height.toFixed(1)}px;${bg}">
-        <span class="tagchip" style="background:${tagColor}">${b.tag}</span>
-        <span class="cn">${b.title}</span>
-        <span class="venue">${b.sub}</span>
+          : `background:linear-gradient(135deg,${e.color}55,${e.color}1f);border-left:3px solid ${e.color};`;
+      const timeLabel = (e.isEvt || e.isExam) ? `${fmtMin(seg.t0)}~${fmtMin(seg.t1)} ` : "";
+      blocksHtml += `<div class="evtblock ${e.isEvt?"evt":""}" data-evt="${e.evtId||""}"
+        style="top:${top.toFixed(1)}px;height:${height.toFixed(1)}px;left:${seg.left.toFixed(2)}%;width:calc(${seg.width.toFixed(2)}% - 3px);${bg}">
+        <span class="tagchip" style="background:${tagColor}">${e.tag}</span>
+        <span class="cn">${e.title}</span>
+        <span class="venue">${timeLabel}${e.sub}</span>
       </div>`;
     }
+    const hol = holDays[di];
     days += `<div class="daycol" data-date="${day.date}"${hol?` style="background:linear-gradient(rgba(201,143,47,.07),rgba(201,143,47,.07)),repeating-linear-gradient(to bottom, transparent 0 ${HOURPX-1}px, var(--line) ${HOURPX-1}px ${HOURPX}px)"`:""}>
       ${hol?`<div class="holbadge">${hol}</div>`:""}
       ${blocksHtml}
@@ -334,6 +318,74 @@ function renderGrid(w){
       openEvtModal(null, null, b.dataset.evt);
     });
   });
+}
+
+/* 某天的日程条目（课程 + 个人日程；跨日日程按覆盖天拆分） */
+function dayEntries(day, evts){
+  const entries = [];
+  for (const s of day.sessions){
+    const c = DATA.courses.find(x=>x.code===s.c);
+    entries.push({
+      id: "c" + day.date + s.c + s.start, start: s.start, end: s.end,
+      tag: s.tag || "课程",
+      title: c ? (c.cn || c.name) : "日程",
+      sub: (s.v ? "@ " + s.v : "") + (s.note ? " · " + s.note : ""),
+      color: c ? c.color : "#d3c39c",
+      isExam: (s.tag === "考试")
+    });
+  }
+  for (const e of evts){
+    const d0 = e.date, d1 = e.endDate || e.date;
+    if (day.date < d0 || day.date > d1) continue;
+    const st = (day.date === d0) ? (e.startMin ?? 0) : 0;
+    const en = (day.date === d1) ? (e.endMin ?? 1440) : 1440;
+    if (en <= st) continue;
+    const cross = d0 !== d1;
+    entries.push({
+      id: e.id, start: st, end: en,
+      tag: e.tag || "个人",
+      title: "📌 " + e.title,
+      sub: (e.place ? "@ " + e.place + " " : "") + (cross ? "跨日 " : "") + (e.note ? "· " + e.note : ""),
+      color: null, isEvt: true, evtId: e.id
+    });
+  }
+  return entries;
+}
+
+/* 重叠布局算法：
+   1) 按所有起止时间点扫描时间片，每片的活跃日程为一组 → 组内等宽
+   2) 同一日程相邻时间片若 (left, width) 不变则合并成一段；
+      交叉状态（并行日程数/位置）变化处自动断开分段渲染 */
+function layoutDay(entries){
+  const pts = new Set();
+  for (const e of entries){
+    if (e.end <= e.start) continue;
+    pts.add(e.start); pts.add(e.end);
+  }
+  const sorted = [...pts].sort((a,b)=>a-b);
+  const byId = new Map();
+  const segs = [];
+  for (let i=0; i<sorted.length-1; i++){
+    const t0 = sorted[i], t1 = sorted[i+1];
+    if (t1 <= t0) continue;
+    const active = entries.filter(e=>e.start <= t0 && e.end >= t1);
+    if (!active.length) continue;
+    const n = active.length;
+    active.forEach((e, idx)=>{
+      const left = idx*100/n, width = 100/n;
+      const arr = byId.get(e.id) || [];
+      const last = arr[arr.length-1];
+      if (last && last.t1 === t0 && Math.abs(last.left-left) < 0.01 && Math.abs(last.width-width) < 0.01){
+        last.t1 = t1;   // 相邻且等宽同位 → 合并
+      } else {
+        const seg = {id: e.id, t0, t1, left, width, entry: e};
+        arr.push(seg);
+        segs.push(seg);
+      }
+      byId.set(e.id, arr);
+    });
+  }
+  return segs;
 }
 
 function buildLegend(){
@@ -391,6 +443,7 @@ function openEvtModal(date, minute, id){
   const evt = id ? getEvents().find(e=>e.id===id) : null;
   document.getElementById("evt-modal-title").textContent = evt ? "编辑日程" : "添加日程";
   document.getElementById("evt-date").value = evt ? evt.date : date;
+  document.getElementById("evt-edate").value = evt ? (evt.endDate || evt.date) : date;
   const sh = document.getElementById("evt-sh"), sm = document.getElementById("evt-sm");
   const eh = document.getElementById("evt-eh"), em = document.getElementById("evt-em");
   sh.innerHTML = Array.from({length:24},(_,i)=>`<option value="${i}">${String(i).padStart(2,"0")}时</option>`).join("");
@@ -417,13 +470,16 @@ function saveEvt(){
   const title = document.getElementById("evt-title").value.trim();
   if (!title){ alert("请填写日程标题"); return; }
   const date = document.getElementById("evt-date").value;
+  const endDate = document.getElementById("evt-edate").value || date;
   const startMin = (+document.getElementById("evt-sh").value)*60 + (+document.getElementById("evt-sm").value);
   const endMin = (+document.getElementById("evt-eh").value)*60 + (+document.getElementById("evt-em").value);
-  if (endMin <= startMin){ alert("结束时间必须晚于开始时间"); return; }
+  const sKey = date + "T" + fmtMin(startMin);
+  const eKey = endDate + "T" + fmtMin(endMin);
+  if (eKey <= sKey){ alert("结束时间必须晚于开始时间"); return; }
   const arr = getEvents();
   const placeEl = document.getElementById("evt-place");
   const obj = {id: editingEvtId || ("e" + Date.now().toString(36) + Math.floor(Math.random()*46656).toString(36)),
-               date, startMin, endMin, title,
+               date, startMin, endMin, endDate, title,
                tag: document.getElementById("evt-tag").value,
                place: placeEl.value.trim(),
                note: document.getElementById("evt-note").value.trim()};
@@ -582,8 +638,11 @@ function renderMylist(){
       Math.floor((new Date(e.date + "T00:00:00+08:00") - start) / (7*864e5)) + 1));
     const tag = e.tag || "个人";
     const tagColor = TAG_COLORS[tag] || "#8a7f6d";
-    const meta = `${e.date}（W${wk} ${dayCn}）${fmtMin(e.startMin)} ~ ${fmtMin(e.endMin)}` +
-      (e.place ? " · " + e.place : "") + (e.note ? " · " + e.note : "");
+    const cross = e.endDate && e.endDate !== e.date;
+    const range = cross
+      ? `${e.date} ${fmtMin(e.startMin)} ~ ${e.endDate} ${fmtMin(e.endMin)}（跨日）`
+      : `${e.date}（W${wk} ${dayCn}）${fmtMin(e.startMin)} ~ ${fmtMin(e.endMin)}`;
+    const meta = range + (e.place ? " · " + e.place : "") + (e.note ? " · " + e.note : "");
     return `<div class="mylist-item">
       <div class="mk" style="background:${tagColor}"></div>
       <div class="body">
