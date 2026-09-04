@@ -2,10 +2,22 @@
 
 复旦大学泛海国际金融学院 EMF 26R 班 Module 1 & 2 秋季学期课程表数据看板。
 
-- **在线入口**：https://stjwls.github.io/kitten/emf-schedule/
-- **数据**：`schedule.json`（单一数据源，前端零逻辑改动即可更新课表）
-- **前端**：`index.html`（自包含前端，无任何第三方依赖）
-- **设计参照**：大论文 vault 的「大论文实验看板」（结构同源，配色改为明快浅色系）
+## 页面（多 URL 结构）
+
+- **周课表主页**：https://stjwls.github.io/kitten/emf-schedule/
+  - 周课表（点击空白格子添加个人日程：时间/地点/备注，存本机 localStorage，可导出/导入 JSON）
+  - 我的日程 / 课程信息 / 考试与节假日
+- **地点地图子页**：https://stjwls.github.io/kitten/emf-schedule/map/
+  - 天地图底图（key 复用论文项目）+ 地点标记 + 各地点安排（按地点聚合全部周次）
+
+## 文件
+
+| 路径 | 作用 |
+| --- | --- |
+| `index.html` | 周课表主页 |
+| `map/index.html` | 地点地图子页 |
+| `assets/dashboard.css` | 两页共享样式 |
+| `schedule.json` | 单一数据源（课程/周次/考试/节假日/**venues 地点坐标**） |
 
 ## 配色
 
