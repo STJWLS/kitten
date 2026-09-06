@@ -518,8 +518,8 @@
       14
      ],
      "day": 5,
-     "slot": 5,
-     "span": 2,
+     "slot": 1,
+     "span": 11,
      "venue": "",
      "note": "Progress Meeting 1"
     },
@@ -528,8 +528,8 @@
       15
      ],
      "day": 6,
-     "slot": 5,
-     "span": 2,
+     "slot": 1,
+     "span": 11,
      "venue": "",
      "note": "Progress Meeting 2"
     },
@@ -538,8 +538,8 @@
       16
      ],
      "day": 6,
-     "slot": 5,
-     "span": 2,
+     "slot": 1,
+     "span": 11,
      "venue": "",
      "note": "Progress Meeting 3"
     },
