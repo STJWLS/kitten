@@ -136,8 +136,8 @@
       8
      ],
      "day": 5,
-     "slot": 7,
-     "span": 1,
+     "slot": 6,
+     "span": 3,
      "venue": "H6201",
      "note": ""
     }
@@ -164,8 +164,8 @@
       8
      ],
      "day": 1,
-     "slot": 7,
-     "span": 1,
+     "slot": 6,
+     "span": 3,
      "venue": "FISF310",
      "note": ""
     },
@@ -207,8 +207,8 @@
       8
      ],
      "day": 0,
-     "slot": 6,
-     "span": 1,
+     "slot": 5,
+     "span": 3,
      "venue": "FISF310",
      "note": ""
     },
@@ -265,8 +265,8 @@
       8
      ],
      "day": 4,
-     "slot": 2,
-     "span": 1,
+     "slot": 1,
+     "span": 3,
      "venue": "H6201",
      "note": ""
     }
@@ -293,8 +293,8 @@
       16
      ],
      "day": 1,
-     "slot": 2,
-     "span": 1,
+     "slot": 1,
+     "span": 3,
      "venue": "FISF310",
      "note": ""
     },
@@ -367,8 +367,8 @@
       16
      ],
      "day": 5,
-     "slot": 2,
-     "span": 1,
+     "slot": 1,
+     "span": 3,
      "venue": "H6201",
      "note": ""
     },
@@ -377,8 +377,8 @@
       14
      ],
      "day": 6,
-     "slot": 2,
-     "span": 1,
+     "slot": 1,
+     "span": 3,
      "venue": "H6201",
      "note": "调至周日"
     },
@@ -387,8 +387,8 @@
       17
      ],
      "day": 1,
-     "slot": 2,
-     "span": 1,
+     "slot": 1,
+     "span": 3,
      "venue": "FISF310",
      "note": ""
     }
@@ -412,8 +412,8 @@
       13
      ],
      "day": 1,
-     "slot": 7,
-     "span": 1,
+     "slot": 6,
+     "span": 3,
      "venue": "FISF310",
      "note": ""
     },
