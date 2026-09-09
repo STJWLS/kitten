@@ -1,0 +1,834 @@
+{
+ "meta": {
+  "title": "课程看板",
+  "subtitle": "KittenPuppy4Ever · Module 1 & 2 · Fall 2026",
+  "school": "复旦大学泛海国际金融学院（FISF）",
+  "termStart": "2026-09-07",
+  "termEnd": "2027-01-10",
+  "totalWeeks": 18,
+  "updated": "2026-09-04",
+  "source": "MinerU 解析官方课程表 PDF（按坐标重建网格，已交叉核验）",
+  "mapCenter": [
+   31.2995,
+   121.502
+  ],
+  "tdtKey": "ca2268fd1bdc33b7a4363fecbd5a8408",
+  "tdtKeyType": "browser",
+  "tdtKeyServer": "34383a232f417400f8338b624f99510c",
+  "amapKey": "a59f78f6ee853bbd96875cc41b7e3b43",
+  "granularity": 10,
+  "dayStart": 0,
+  "dayEnd": 1440
+ },
+ "slots": [
+  {
+   "id": 1,
+   "name": "第1节",
+   "label": "09:55-10:40",
+   "start": 595,
+   "end": 640
+  },
+  {
+   "id": 2,
+   "name": "第2节",
+   "label": "10:50-11:35",
+   "start": 650,
+   "end": 695
+  },
+  {
+   "id": 3,
+   "name": "第3节",
+   "label": "11:45-12:30",
+   "start": 705,
+   "end": 750
+  },
+  {
+   "id": 4,
+   "name": "第4节",
+   "label": "13:30-14:15",
+   "start": 810,
+   "end": 855
+  },
+  {
+   "id": 5,
+   "name": "第5节",
+   "label": "14:25-15:10",
+   "start": 865,
+   "end": 910
+  },
+  {
+   "id": 6,
+   "name": "第6节",
+   "label": "15:25-16:10",
+   "start": 925,
+   "end": 970
+  },
+  {
+   "id": 7,
+   "name": "第7节",
+   "label": "16:20-17:05",
+   "start": 980,
+   "end": 1025
+  },
+  {
+   "id": 8,
+   "name": "第8节",
+   "label": "17:15-18:00",
+   "start": 1035,
+   "end": 1080
+  },
+  {
+   "id": 9,
+   "name": "第9节",
+   "label": "18:30-19:15",
+   "start": 1110,
+   "end": 1155
+  },
+  {
+   "id": 10,
+   "name": "第10节",
+   "label": "19:25-20:10",
+   "start": 1165,
+   "end": 1210
+  },
+  {
+   "id": 11,
+   "name": "第11节",
+   "label": "20:20-21:05",
+   "start": 1220,
+   "end": 1265
+  }
+ ],
+ "courses": [
+  {
+   "code": "MIE",
+   "name": "Microeconomics",
+   "cn": "微观经济学",
+   "module": "M1",
+   "credit": 2,
+   "prof": "张罡",
+   "color": "#9bd1ec",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Gang Zhang",
+   "schedule": [
+    {
+     "weeks": [
+      1,
+      2,
+      3,
+      6,
+      7,
+      8
+     ],
+     "day": 1,
+     "slot": 4,
+     "span": 2,
+     "venue": "FISF310",
+     "note": ""
+    },
+    {
+     "weeks": [
+      1,
+      2,
+      5,
+      6,
+      7,
+      8
+     ],
+     "day": 5,
+     "slot": 6,
+     "span": 3,
+     "venue": "H6201",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "code": "PFV",
+   "name": "Principles of Finance and Valuation",
+   "cn": "金融与估值原理",
+   "module": "M1",
+   "credit": 2,
+   "prof": "罗顶",
+   "color": "#9fe0bc",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Ding Luo",
+   "schedule": [
+    {
+     "weeks": [
+      1,
+      2,
+      3,
+      6,
+      7,
+      8
+     ],
+     "day": 1,
+     "slot": 6,
+     "span": 3,
+     "venue": "FISF310",
+     "note": ""
+    },
+    {
+     "weeks": [
+      1,
+      2,
+      5,
+      6,
+      7,
+      8
+     ],
+     "day": 5,
+     "slot": 4,
+     "span": 2,
+     "venue": "H6201",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "code": "EAF",
+   "name": "Econometric Analysis of Financial Data",
+   "cn": "金融数据计量分析",
+   "module": "M1",
+   "credit": 2,
+   "prof": "汤海涵 & 蒋亮",
+   "color": "#cdb8f0",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Haihan Tang & Liang Jiang",
+   "schedule": [
+    {
+     "weeks": [
+      1,
+      2,
+      3,
+      6,
+      7,
+      8
+     ],
+     "day": 0,
+     "slot": 5,
+     "span": 3,
+     "venue": "FISF310",
+     "note": ""
+    },
+    {
+     "weeks": [
+      1,
+      2,
+      5,
+      6,
+      7,
+      8
+     ],
+     "day": 5,
+     "slot": 2,
+     "span": 2,
+     "venue": "H6201",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "code": "FAC",
+   "name": "Financial Accounting",
+   "cn": "财务会计",
+   "module": "M1",
+   "credit": 2,
+   "prof": "施文韵",
+   "color": "#f7dd8f",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Wenyun Shi",
+   "schedule": [
+    {
+     "weeks": [
+      1,
+      2,
+      3,
+      6,
+      7,
+      8
+     ],
+     "day": 1,
+     "slot": 2,
+     "span": 2,
+     "venue": "FISF310",
+     "note": ""
+    },
+    {
+     "weeks": [
+      1,
+      2,
+      5,
+      6,
+      7,
+      8
+     ],
+     "day": 4,
+     "slot": 1,
+     "span": 3,
+     "venue": "H6201",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "code": "COF",
+   "name": "Corporate Finance",
+   "cn": "公司金融",
+   "module": "M2",
+   "credit": 2,
+   "prof": "马晓崟",
+   "color": "#ffb8a3",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Xiaoyin Ma",
+   "schedule": [
+    {
+     "weeks": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "day": 1,
+     "slot": 1,
+     "span": 3,
+     "venue": "FISF310",
+     "note": ""
+    },
+    {
+     "weeks": [
+      11,
+      12,
+      13,
+      16
+     ],
+     "day": 5,
+     "slot": 4,
+     "span": 2,
+     "venue": "H6201",
+     "note": ""
+    },
+    {
+     "weeks": [
+      14
+     ],
+     "day": 6,
+     "slot": 4,
+     "span": 2,
+     "venue": "H6201",
+     "note": "调至周日"
+    },
+    {
+     "weeks": [
+      17
+     ],
+     "day": 1,
+     "slot": 4,
+     "span": 2,
+     "venue": "FISF310",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "code": "TPM",
+   "name": "Theory and Practice of Chinese Modernization - Macroeconomics",
+   "cn": "中国式现代化理论与实践（宏观经济学）",
+   "module": "M2",
+   "credit": 2,
+   "prof": "罗顶",
+   "color": "#a5d8ff",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Ding Luo",
+   "schedule": [
+    {
+     "weeks": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "day": 1,
+     "slot": 4,
+     "span": 2,
+     "venue": "FISF310",
+     "note": ""
+    },
+    {
+     "weeks": [
+      11,
+      12,
+      13,
+      16
+     ],
+     "day": 5,
+     "slot": 1,
+     "span": 3,
+     "venue": "H6201",
+     "note": ""
+    },
+    {
+     "weeks": [
+      14
+     ],
+     "day": 6,
+     "slot": 1,
+     "span": 3,
+     "venue": "H6201",
+     "note": "调至周日"
+    },
+    {
+     "weeks": [
+      17
+     ],
+     "day": 1,
+     "slot": 1,
+     "span": 3,
+     "venue": "FISF310",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "code": "AIC",
+   "name": "AI Coding in Finance",
+   "cn": "金融 AI 编程",
+   "module": "M2",
+   "credit": 1,
+   "prof": "张虎来",
+   "color": "#ffc2d8",
+   "venues": "FISF310 / H6201",
+   "prof_en": "Hulai Zhang",
+   "schedule": [
+    {
+     "weeks": [
+      11,
+      12,
+      13
+     ],
+     "day": 1,
+     "slot": 6,
+     "span": 3,
+     "venue": "FISF310",
+     "note": ""
+    },
+    {
+     "weeks": [
+      11,
+      12,
+      13
+     ],
+     "day": 5,
+     "slot": 6,
+     "span": 2,
+     "venue": "H6201",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "code": "LIVEM1",
+   "name": "LIVE M1",
+   "cn": "LIVE 直播课 M1",
+   "module": "M1-M2",
+   "credit": 1,
+   "prof": "Yi Wei",
+   "color": "#99e2d2",
+   "venues": "线上直播",
+   "schedule": [
+    {
+     "weeks": [
+      6
+     ],
+     "day": 6,
+     "slot": 1,
+     "span": 11,
+     "venue": "",
+     "note": "Intro"
+    },
+    {
+     "weeks": [
+      7
+     ],
+     "day": 6,
+     "slot": 1,
+     "span": 11,
+     "venue": "",
+     "note": "Progress Meeting 1"
+    },
+    {
+     "weeks": [
+      8
+     ],
+     "day": 6,
+     "slot": 1,
+     "span": 11,
+     "venue": "",
+     "note": "Progress Meeting 2"
+    },
+    {
+     "weeks": [
+      9
+     ],
+     "day": 6,
+     "slot": 1,
+     "span": 11,
+     "venue": "",
+     "note": "Progress Meeting 3"
+    },
+    {
+     "weeks": [
+      10
+     ],
+     "day": 6,
+     "slot": 1,
+     "span": 11,
+     "venue": "",
+     "note": "Final"
+    }
+   ]
+  },
+  {
+   "code": "LIVEM2",
+   "name": "LIVE M2",
+   "cn": "LIVE 直播课 M2",
+   "module": "M1-M2",
+   "credit": 1,
+   "prof": "Yi Wei",
+   "color": "#99e2d2",
+   "venues": "线上直播",
+   "schedule": [
+    {
+     "weeks": [
+      13
+     ],
+     "day": 6,
+     "slot": 1,
+     "span": 11,
+     "venue": "",
+     "note": "Intro"
+    },
+    {
+     "weeks": [
+      14
+     ],
+     "day": 5,
+     "slot": 1,
+     "span": 11,
+     "venue": "",
+     "note": "Progress Meeting 1"
+    },
+    {
+     "weeks": [
+      15
+     ],
+     "day": 6,
+     "slot": 1,
+     "span": 11,
+     "venue": "",
+     "note": "Progress Meeting 2"
+    },
+    {
+     "weeks": [
+      16
+     ],
+     "day": 6,
+     "slot": 1,
+     "span": 11,
+     "venue": "",
+     "note": "Progress Meeting 3"
+    },
+    {
+     "weeks": [
+      18
+     ],
+     "day": 6,
+     "slot": 1,
+     "span": 11,
+     "venue": "",
+     "note": "Final"
+    }
+   ]
+  },
+  {
+   "code": "CARE",
+   "name": "CARE EN",
+   "cn": "英语课（大陆及港澳台学生）",
+   "module": "M1-M2",
+   "credit": 2,
+   "prof": "Hannah Chen",
+   "color": "#d9b0a6",
+   "venues": "按周次安排",
+   "schedule": []
+  },
+  {
+   "code": "ELP",
+   "name": "Extended Learning - Professional Development",
+   "cn": "职业发展拓展课",
+   "module": "M1-M2",
+   "credit": 2,
+   "prof": "Yi Wei",
+   "color": "#d3c39c",
+   "venues": "按周次安排",
+   "schedule": [
+    {
+     "weeks": [
+      1
+     ],
+     "day": 6,
+     "slot": 4,
+     "span": 2,
+     "venue": "",
+     "note": "M1-ELP-1"
+    },
+    {
+     "weeks": [
+      2
+     ],
+     "day": 6,
+     "slot": 4,
+     "span": 2,
+     "venue": "",
+     "note": "M1-ELP-2"
+    },
+    {
+     "weeks": [
+      11
+     ],
+     "day": 6,
+     "slot": 4,
+     "span": 2,
+     "venue": "",
+     "note": "M2-ELP-1"
+    },
+    {
+     "weeks": [
+      12
+     ],
+     "day": 6,
+     "slot": 4,
+     "span": 2,
+     "venue": "",
+     "note": "ELP-2（原表误标 M1）"
+    }
+   ]
+  }
+ ],
+ "holidays": [
+  {
+   "name": "中秋节",
+   "en": "Mid-Autumn Festival",
+   "weeks": [
+    3
+   ],
+   "days": [
+    4,
+    5,
+    6
+   ],
+   "dates": [
+    "2026-09-25",
+    "2026-09-27"
+   ]
+  },
+  {
+   "name": "国庆节",
+   "en": "National Day",
+   "weeks": [
+    4
+   ],
+   "days": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "dates": [
+    "2026-10-01",
+    "2026-10-04"
+   ]
+  },
+  {
+   "name": "国庆节",
+   "en": "National Day",
+   "weeks": [
+    5
+   ],
+   "days": [
+    0,
+    1,
+    2
+   ],
+   "dates": [
+    "2026-10-05",
+    "2026-10-07"
+   ]
+  },
+  {
+   "name": "元旦",
+   "en": "New Year's Day",
+   "weeks": [
+    17
+   ],
+   "days": [
+    4,
+    5,
+    6
+   ],
+   "dates": [
+    "2027-01-01",
+    "2027-01-03"
+   ]
+  }
+ ],
+ "exams": [
+  {
+   "course": "FAC",
+   "cn": "财务会计",
+   "date": "2026-11-07",
+   "time": "14:00-16:00",
+   "week": 9,
+   "day": 5
+  },
+  {
+   "course": "EAF",
+   "cn": "金融数据计量分析",
+   "date": "2026-11-07",
+   "time": "18:00-20:00",
+   "week": 9,
+   "day": 5
+  },
+  {
+   "course": "TPM",
+   "cn": "中国式现代化理论与实践",
+   "date": "2026-12-31",
+   "time": "10:00-11:40",
+   "week": 17,
+   "day": 3
+  }
+ ],
+ "venues": [
+  {
+   "code": "FISF310",
+   "name": "泛海国际金融学院 · FISF310",
+   "short": "FISF 学院楼",
+   "address": "国权路579号 · 复旦大学邯郸校区",
+   "lat": 31.2987,
+   "lng": 121.506,
+   "approx": true
+  },
+  {
+   "code": "H6201",
+   "name": "第六教学楼 2F · H6201",
+   "short": "六教 H6201",
+   "address": "邯郸路220号 · 复旦大学邯郸校区",
+   "lat": 31.3023,
+   "lng": 121.5008,
+   "approx": true
+  },
+  {
+   "code": "GATE",
+   "name": "复旦大学正门（参考点）",
+   "short": "正门",
+   "address": "邯郸路220号",
+   "lat": 31.2976,
+   "lng": 121.4991,
+   "ref": true
+  }
+ ],
+ "specials": [
+  {
+   "code": "CARE",
+   "weeks": [
+    2
+   ],
+   "day": 6,
+   "start": 960,
+   "end": 1080,
+   "venue": "",
+   "note": "16:00-18:00"
+  },
+  {
+   "code": "CARE",
+   "weeks": [
+    6
+   ],
+   "day": 1,
+   "start": 1125,
+   "end": 1245,
+   "venue": "",
+   "note": "18:45-20:45"
+  },
+  {
+   "code": "CARE",
+   "weeks": [
+    7
+   ],
+   "day": 1,
+   "start": 1125,
+   "end": 1245,
+   "venue": "",
+   "note": "18:45-20:45"
+  },
+  {
+   "code": "FAC",
+   "weeks": [
+    9
+   ],
+   "day": 5,
+   "start": 840,
+   "end": 960,
+   "venue": "",
+   "note": "Exam 14:00-16:00"
+  },
+  {
+   "code": "EAF",
+   "weeks": [
+    9
+   ],
+   "day": 5,
+   "start": 1080,
+   "end": 1200,
+   "venue": "",
+   "note": "Exam 18:00-20:00"
+  },
+  {
+   "code": "CARE",
+   "weeks": [
+    11
+   ],
+   "day": 6,
+   "start": 600,
+   "end": 720,
+   "venue": "",
+   "note": "10:00-12:00"
+  },
+  {
+   "code": "CARE",
+   "weeks": [
+    12
+   ],
+   "day": 6,
+   "start": 600,
+   "end": 720,
+   "venue": "",
+   "note": "10:00-12:00"
+  },
+  {
+   "code": "TPM",
+   "weeks": [
+    17
+   ],
+   "day": 3,
+   "start": 600,
+   "end": 700,
+   "venue": "",
+   "note": "Exam 10:00-11:40"
+  }
+ ]
+}
