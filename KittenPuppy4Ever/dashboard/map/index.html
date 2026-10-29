@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KittenPuppy4Ever</title>
+<style>
+  html,body{height:100%;margin:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(160deg,#fbf7f0,#f4eadf 55%,#eee1d6);color:#42392b}
+  .c{background:#fffdf8;border:1px solid #e8dfd2;border-radius:18px;padding:26px 34px;
+    text-align:center;box-shadow:0 16px 50px rgba(66,57,43,.14)}
+  .l{font-size:26px} h1{margin:6px 0 2px;font-size:17px;font-family:monospace}
+  p{font-size:12px;color:#8a7f6d;margin:8px 0 0;font-family:monospace}
+  a{color:#2f6fb5}
+</style></head>
+<body><div class="c"><div class="l">🐱🐶</div><h1>KittenPuppy4Ever</h1>
+<p id="s">正在连接工作台…</p>
+<p><a href="../../entry.json">查看入口配置</a></p></div>
+<script>
+fetch("../../entry.json?ts=" + Date.now(), {cache: "no-store"})
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d && d.url) {
+      document.getElementById("s").textContent = "已连接，正在进入…";
+      location.replace(d.url.replace(/\/+$/, "") + "/dashboard/map/");
+    } else {
+      document.getElementById("s").textContent = "工作台入口未配置";
+    }
+  })
+  .catch(function(e){ document.getElementById("s").textContent = "无法读取入口：" + e.message; });
+</script></body></html>
