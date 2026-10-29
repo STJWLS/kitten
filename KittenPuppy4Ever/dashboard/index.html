@@ -1,31 +1,61 @@
 <!DOCTYPE html>
-<html lang="zh"><head><meta charset="utf-8">
+<html lang="zh">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KittenPuppy4Ever</title>
 <style>
-  html,body{height:100%;margin:0}
-  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
-    display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(160deg,#fbf7f0,#f4eadf 55%,#eee1d6);color:#42392b}
-  .c{background:#fffdf8;border:1px solid #e8dfd2;border-radius:18px;padding:26px 34px;
-    text-align:center;box-shadow:0 16px 50px rgba(66,57,43,.14)}
-  .l{font-size:26px} h1{margin:6px 0 2px;font-size:17px;font-family:monospace}
-  p{font-size:12px;color:#8a7f6d;margin:8px 0 0;font-family:monospace}
-  a{color:#2f6fb5}
-</style></head>
-<body><div class="c"><div class="l">🐱🐶</div><h1>KittenPuppy4Ever</h1>
-<p id="s">正在连接工作台…</p>
-<p><a href="../entry.json">查看入口配置</a></p></div>
+  html, body { height: 100%; margin: 0; background: #f8f4ec; }
+  #frame { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #f8f4ec; }
+  #msg {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    font: 13px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: #8a7f6d;
+    background: linear-gradient(160deg, #fbf7f0, #eee1d6);
+  }
+  #msg.hidden { display: none; }
+  #msg b { color: #42392b; display: block; margin-bottom: 6px; font-size: 15px; }
+</style>
+</head>
+<body>
+<iframe id="frame" allow="microphone; camera; autoplay; fullscreen" title="KittenPuppy4Ever"></iframe>
+<div id="msg"><div><b>🐱🐶 KittenPuppy4Ever</b>正在连接工作台…</div></div>
 <script>
-fetch("../entry.json?ts=" + Date.now(), {cache: "no-store"})
-  .then(function(r){ return r.json(); })
-  .then(function(d){
-    if (d && d.url) {
-      document.getElementById("s").textContent = "已连接，正在进入…";
-      location.replace(d.url.replace(/\/+$/, "") + "/dashboard/");
-    } else {
-      document.getElementById("s").textContent = "工作台入口未配置";
+(function () {
+  var PREFIX = "/kitten/KittenPuppy4Ever";
+  var path = location.pathname.indexOf(PREFIX) === 0
+    ? (location.pathname.slice(PREFIX.length) || "/")
+    : "/";
+  if (path.charAt(0) !== "/") path = "/" + path;
+  var base = "";
+
+  function fail(text) {
+    document.getElementById("msg").classList.remove("hidden");
+    document.querySelector("#msg b").textContent = "🐱🐶 KittenPuppy4Ever";
+    document.querySelector("#msg div").innerHTML = "<b>🐱🐶 KittenPuppy4Ever</b>" + text;
+  }
+
+  fetch(PREFIX + "/entry.json?ts=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d || !d.url) { fail("工作台入口未配置（entry.json 为空）"); return; }
+      base = d.url.replace(/\/+$/, "");
+      var f = document.getElementById("frame");
+      f.onload = function () { document.getElementById("msg").classList.add("hidden"); };
+      f.src = base + path;
+    })
+    .catch(function (e) { fail("无法读取入口配置：" + e.message); });
+
+  // 子页面（隧道内的工作台）把路径同步回来，地址栏保持在 github.io 原格式
+  window.addEventListener("message", function (e) {
+    if (!base || e.origin !== new URL(base).origin) return;
+    var p = e.data && e.data.kpPath;
+    if (typeof p !== "string" || p.charAt(0) !== "/") return;
+    var want = PREFIX + p;
+    if (location.pathname + location.search !== want) {
+      history.replaceState(null, "", want);
     }
-  })
-  .catch(function(e){ document.getElementById("s").textContent = "无法读取入口：" + e.message; });
-</script></body></html>
+  });
+})();
+</script>
+</body>
+</html>
