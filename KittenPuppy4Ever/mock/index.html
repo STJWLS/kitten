@@ -40,8 +40,19 @@
       if (!d || !d.url) { fail("工作台入口未配置（entry.json 为空）"); return; }
       base = d.url.replace(/\/+$/, "");
       var f = document.getElementById("frame");
-      f.onload = function () { document.getElementById("msg").classList.add("hidden"); };
-      f.src = base + path;
+      var loaded = false, tries = 0;
+      f.onload = function () { loaded = true; document.getElementById("msg").classList.add("hidden"); };
+      function load() {
+        tries++;
+        if (tries > 3) return;
+        f.src = base + path + (path.indexOf("?") >= 0 ? "&" : "?") + "kp_frame=" + tries;
+      }
+      load();
+      // quick tunnel 偶尔首次跨域导航很慢；6 秒没进来就换一次 URL 重试
+      var timer = setInterval(function () {
+        if (loaded) { clearInterval(timer); return; }
+        if (tries < 3) load(); else clearInterval(timer);
+      }, 6000);
     })
     .catch(function (e) { fail("无法读取入口配置：" + e.message); });
 
