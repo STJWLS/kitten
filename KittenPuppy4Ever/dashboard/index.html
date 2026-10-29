@@ -44,15 +44,23 @@
       f.onload = function () { loaded = true; document.getElementById("msg").classList.add("hidden"); };
       function load() {
         tries++;
-        if (tries > 3) return;
         f.src = base + path + (path.indexOf("?") >= 0 ? "&" : "?") + "kp_frame=" + tries;
       }
       load();
-      // quick tunnel 偶尔首次跨域导航很慢；6 秒没进来就换一次 URL 重试
-      var timer = setInterval(function () {
-        if (loaded) { clearInterval(timer); return; }
-        if (tries < 3) load(); else clearInterval(timer);
-      }, 6000);
+      // 首次跨域加载慢时显示"重试/直接打开"，不自动重置（避免打断正在进行的加载）
+      setTimeout(function () {
+        if (loaded) return;
+        document.getElementById("msg").classList.remove("hidden");
+        document.querySelector("#msg div").innerHTML =
+          "<b>🐱🐶 KittenPuppy4Ever</b>工作台加载较慢…" +
+          '<div style="margin-top:10px"><button id="retry" style="border:1px solid #d9cdb9;background:#fff;border-radius:999px;padding:6px 14px;cursor:pointer">重试</button> ' +
+          '<a href="' + base + path + '" style="margin-left:8px">直接打开</a></div>';
+        var btn = document.getElementById("retry");
+        if (btn) btn.onclick = function () {
+          document.querySelector("#msg div").innerHTML = "<b>🐱🐶 KittenPuppy4Ever</b>正在重试…";
+          load();
+        };
+      }, 20000);
     })
     .catch(function (e) { fail("无法读取入口配置：" + e.message); });
 
