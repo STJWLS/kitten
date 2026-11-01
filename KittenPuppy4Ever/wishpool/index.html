@@ -43,6 +43,10 @@
   }, 15000);
   window.addEventListener("message", function (e) {
     if (e.origin !== new URL(BASE).origin) return;
+    if (e.data && e.data.kpLanding) {
+      location.href = PREFIX + "/";
+      return;
+    }
     var p = e.data && e.data.kpPath;
     if (typeof p !== "string" || p.charAt(0) !== "/") return;
     var want = PREFIX + p;
