@@ -589,42 +589,184 @@ public class MainActivity extends Activity {
     // ---------------- messages ----------------
     private void showMessages() { showMessages(messagesTab); }
     private void showMessages(int tab) {
-        screen = "messages"; messagesTab = tab;
+        messagesTab = tab;
+        String[] items = {"通知", "私信"};
+        KpPopup popup = new KpPopup(this, "消息", items, tab, (p, index) -> messagesPane(p, index),
+                bg, card, ink, muted, line, accent, soft);
+        popup.show();
+    }
+    private View messagesPane(KpPopup popup, int tab) {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackground(rounded(card, 30, line));
-        root.setElevation(dp(8));
-        root.addView(topBar("消息", true, this::showHome));
-
-        LinearLayout tabs = new LinearLayout(this);
-        tabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabs.setPadding(dp(16), 0, dp(16), dp(8));
-        TextView notice = tabChip("通知", tab == 0);
-        TextView dm = tabChip("私信", tab == 1);
-        tabs.addView(notice, new LinearLayout.LayoutParams(0, dp(36), 1));
-        LinearLayout.LayoutParams dp2 = new LinearLayout.LayoutParams(0, dp(36), 1); dp2.leftMargin = dp(8);
-        tabs.addView(dm, dp2);
-        notice.setOnClickListener(v -> showMessages(0));
-        dm.setOnClickListener(v -> showMessages(1));
-        root.addView(tabs);
-
+        TextView head = tv(tab == 0 ? "通知" : "私信", 17, ink, true);
+        head.setPadding(0, 0, dp(44), dp(10));
+        root.addView(head);
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setGravity(Gravity.END);
-        actions.setPadding(dp(16), 0, dp(16), dp(6));
         TextView readAll = smallButton("全部已读");
-        readAll.setOnClickListener(v -> markAllRead());
+        readAll.setOnClickListener(v -> markAllFromPopup(popup));
         actions.addView(readAll);
         root.addView(actions);
-
         ScrollView scroll = new ScrollView(this);
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
-        list.setPadding(dp(16), dp(4), dp(16), dp(24));
+        list.setPadding(0, dp(4), 0, dp(8));
         scroll.addView(list);
         root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        setRoot(wrapPanel(root));
-        loadMessages(list, tab);
+        if (tab == 0) loadNotificationsPane(popup, list);
+        else loadPrivatePane(popup, list);
+        return root;
+    }
+    private void loadNotificationsPane(KpPopup popup, LinearLayout list) {
+        list.addView(tv("读取中…", 12, muted, false));
+        getAsync("/api/notifications?limit=200", new JsonCb() {
+            @Override public void ok(JSONObject j) {
+                list.removeAllViews();
+                JSONArray arr = j.optJSONArray("items");
+                if (arr == null || arr.length() == 0) { list.addView(empty("还没有通知。")); return; }
+                for (int i = 0; i < arr.length(); i++) {
+                    final JSONObject n = arr.optJSONObject(i);
+                    if (n == null) continue;
+                    list.addView(simpleRow(n.optString("title", "消息"), n.optString("body", ""), n.optBoolean("read", false) ? 0 : 1, () -> {
+                        if (n.optBoolean("read")) return;
+                        JSONObject body = new JSONObject();
+                        try { JSONArray ids = new JSONArray(); ids.put(n.optString("id")); body.put("ids", ids); } catch (Exception ignored) {}
+                        postAsync("/api/notifications/read", body, new JsonCb() {
+                            @Override public void ok(JSONObject x) { popup.selectTab(0); refreshBadge(); }
+                            @Override public void fail(String m) { err(m); }
+                        });
+                    }));
+                }
+            }
+            @Override public void fail(String m) { list.removeAllViews(); list.addView(empty("读取失败：" + m)); }
+        });
+    }
+    private void loadPrivatePane(KpPopup popup, LinearLayout list) {
+        list.addView(tv("读取中…", 12, muted, false));
+        getAsync("/api/messages/threads", new JsonCb() {
+            @Override public void ok(JSONObject j) {
+                list.removeAllViews();
+                JSONArray arr = j.optJSONArray("threads");
+                if (arr == null || arr.length() == 0) { list.addView(empty("还没有私信。")); return; }
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject t = arr.optJSONObject(i);
+                    if (t == null) continue;
+                    final String peer = t.optString("peer", "");
+                    JSONObject last = t.optJSONObject("last");
+                    list.addView(simpleRow("🐾 " + peer, last == null ? "" : last.optString("body", ""), t.optInt("unread", 0),
+                            () -> showThreadPane(popup, peer)));
+                }
+            }
+            @Override public void fail(String m) { list.removeAllViews(); list.addView(empty("读取失败：" + m)); }
+        });
+    }
+    private void markAllFromPopup(KpPopup popup) {
+        JSONObject body = new JSONObject();
+        try { body.put("all", true); } catch (Exception ignored) {}
+        postAsync("/api/notifications/read", body, new JsonCb() {
+            @Override public void ok(JSONObject j) {
+                JSONObject dm = new JSONObject();
+                try { dm.put("all", true); } catch (Exception ignored) {}
+                postAsync("/api/messages/read", dm, new JsonCb() {
+                    @Override public void ok(JSONObject x) { popup.selectTab(messagesTab); refreshBadge(); }
+                    @Override public void fail(String m) { err(m); }
+                });
+            }
+            @Override public void fail(String m) { err(m); }
+        });
+    }
+    private void showThreadPane(KpPopup popup, String peer) {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout head = new LinearLayout(this);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        TextView back = tv("←", 16, muted, false);
+        back.setGravity(Gravity.CENTER);
+        back.setBackground(rounded(card, 20, line));
+        back.setClickable(true);
+        back.setOnClickListener(v -> popup.selectTab(1));
+        head.addView(back, new LinearLayout.LayoutParams(dp(36), dp(36)));
+        TextView title = tv("与 " + peer, 15, ink, true);
+        title.setPadding(dp(9), 0, dp(44), 0);
+        head.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        root.addView(head);
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(0, dp(8), 0, dp(8));
+        scroll.addView(list);
+        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        LinearLayout composer = new LinearLayout(this);
+        composer.setOrientation(LinearLayout.HORIZONTAL);
+        composer.setGravity(Gravity.BOTTOM);
+        composer.setPadding(0, dp(6), 0, 0);
+        EditText input = field("发消息给 " + peer + "…", false);
+        composer.addView(input, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        TextView send = tv("↑", 18, Color.WHITE, true);
+        send.setGravity(Gravity.CENTER);
+        send.setBackground(rounded(accent, 22, 0));
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(dp(44), dp(44)); sp.leftMargin = dp(7);
+        composer.addView(send, sp);
+        root.addView(composer);
+        popup.setContent(root);
+        loadThreadPane(list, peer, scroll, popup);
+        send.setOnClickListener(v -> {
+            String text = input.getText().toString().trim();
+            if (text.length() == 0) return;
+            send.setEnabled(false);
+            JSONObject body = new JSONObject();
+            try { body.put("to", peer); body.put("body", text); } catch (Exception ignored) {}
+            postAsync("/api/messages/send", body, new JsonCb() {
+                @Override public void ok(JSONObject j) { input.setText(""); send.setEnabled(true); loadThreadPane(list, peer, scroll, popup); refreshBadge(); }
+                @Override public void fail(String m) { send.setEnabled(true); err("发送失败：" + m); }
+            });
+        });
+    }
+    private void loadThreadPane(LinearLayout list, String peer, ScrollView scroll, KpPopup popup) {
+        list.removeAllViews();
+        list.addView(tv("读取中…", 12, muted, false));
+        getAsync("/api/messages/thread?peer=" + android.net.Uri.encode(peer), new JsonCb() {
+            @Override public void ok(JSONObject j) {
+                list.removeAllViews();
+                JSONArray arr = j.optJSONArray("messages");
+                String me = session == null ? "" : session.optString("user", "");
+                if (arr == null || arr.length() == 0) list.addView(empty("还没有消息。"));
+                else for (int i = 0; i < arr.length(); i++) {
+                    JSONObject m = arr.optJSONObject(i);
+                    if (m == null) continue;
+                    boolean mine = me.equals(m.optString("from", ""));
+                    LinearLayout row = new LinearLayout(MainActivity.this);
+                    row.setOrientation(LinearLayout.HORIZONTAL);
+                    row.setGravity(mine ? Gravity.END : Gravity.START);
+                    if (mine) {
+                        TextView read = tv(m.optBoolean("read", false) ? "已读" : "未读", 8.5f, m.optBoolean("read", false) ? muted : accent, false);
+                        read.setPadding(0, 0, dp(5), dp(4));
+                        row.addView(read);
+                    }
+                    LinearLayout bubble = new LinearLayout(MainActivity.this);
+                    bubble.setOrientation(LinearLayout.VERTICAL);
+                    bubble.setPadding(dp(11), dp(8), dp(11), dp(7));
+                    bubble.setBackground(rounded(mine ? accent : card, 14, mine ? 0 : line));
+                    TextView b = tv(m.optString("body", ""), 12.5f, mine ? Color.WHITE : ink, false);
+                    b.setMaxWidth(dp(250));
+                    bubble.addView(b);
+                    LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    bp.leftMargin = mine ? 0 : dp(4); bp.rightMargin = mine ? dp(4) : 0; bp.bottomMargin = dp(7);
+                    row.addView(bubble, bp);
+                    list.addView(row);
+                }
+                JSONObject readBody = new JSONObject();
+                try { readBody.put("peer", peer); } catch (Exception ignored) {}
+                postAsync("/api/messages/read", readBody, new JsonCb() {
+                    @Override public void ok(JSONObject x) { refreshBadge(); }
+                    @Override public void fail(String m) {}
+                });
+                scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
+            }
+            @Override public void fail(String m) { list.removeAllViews(); list.addView(empty("读取失败：" + m)); }
+        });
     }
     private TextView tabChip(String label, boolean active) {
         TextView v = tv(label, 12, active ? Color.WHITE : ink, true);
@@ -1027,61 +1169,103 @@ public class MainActivity extends Activity {
     // ---------------- settings ----------------
     private void showSettings() {
         screen = "settings";
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackground(rounded(card, 30, line));
-        root.setElevation(dp(8));
-        root.addView(topBar("设置", true, this::showHome));
+        String[] items = {"个人资料", "主题外观", "服务器", "关于"};
+        KpPopup popup = new KpPopup(this, "设置", items, 0, (p, index) -> settingsPane(p, index),
+                bg, card, ink, muted, line, accent, soft);
+        popup.show();
+    }
+    private View settingsPane(KpPopup popup, int index) {
         ScrollView scroll = new ScrollView(this);
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(dp(18), dp(8), dp(18), dp(28));
+        body.setPadding(0, 0, 0, dp(12));
+        TextView head = tv(index == 0 ? "个人资料" : index == 1 ? "主题外观" : index == 2 ? "服务器" : "关于", 17, ink, true);
+        head.setPadding(0, 0, dp(44), dp(14));
+        body.addView(head);
 
-        LinearLayout cardBox = new LinearLayout(this);
-        cardBox.setOrientation(LinearLayout.VERTICAL);
-        cardBox.setPadding(dp(16), dp(14), dp(16), dp(14));
-        cardBox.setBackground(rounded(card, 16, line));
-        String emoji = session == null ? "🐱" : session.optString("emoji", "🐱");
-        String user = session == null ? "" : session.optString("user", "");
-        TextView who = tv(emoji + "  " + user, 19, ink, true);
-        cardBox.addView(who);
-        TextView role = tv((session == null ? "" : session.optString("role_label", "")) + " · 原生客户端", 11, muted, false);
-        role.setPadding(0, dp(4), 0, 0);
-        cardBox.addView(role);
-        body.addView(cardBox, lp(LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 6));
-
-        TextView serverLabel = tv("后端地址", 12, ink, true);
-        serverLabel.setPadding(0, dp(16), 0, dp(5));
-        body.addView(serverLabel);
-        EditText server = field("http://10.0.2.2:8772", false);
-        server.setText(api.base);
-        body.addView(server, lp(LinearLayout.LayoutParams.MATCH_PARENT, dp(46), 4));
-        TextView save = smallButton("保存并重新连接");
-        save.setOnClickListener(v -> {
-            String b = server.getText().toString().trim();
-            if (b.length() == 0) return;
-            api.base = b; prefs.edit().putString("base", b).apply(); loadBootstrap();
-        });
-        body.addView(save, lp(LinearLayout.LayoutParams.WRAP_CONTENT, dp(38), 4));
-
-        TextView colorLabel = tv("当前主题", 12, ink, true);
-        colorLabel.setPadding(0, dp(18), 0, dp(8));
-        body.addView(colorLabel);
-        TextView slash = tv("■ " + String.format("#%06X", (0xFFFFFF & accent)), 13, accent, true);
-        body.addView(slash);
-
-        TextView logout = smallButton("退出登录");
-        logout.setTextColor(RED);
-        logout.setOnClickListener(v -> { clearSession(); showLogin(); });
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(38));
-        lp.topMargin = dp(24);
-        body.addView(logout, lp);
-        TextView version = tv("KittenPuppy4Ever native · 0.1.0 · phase 1", 10, muted, false);
-        version.setPadding(0, dp(18), 0, 0);
-        body.addView(version);
+        if (index == 0) {
+            LinearLayout userCard = new LinearLayout(this);
+            userCard.setOrientation(LinearLayout.VERTICAL);
+            userCard.setPadding(dp(16), dp(14), dp(16), dp(14));
+            userCard.setBackground(rounded(mix(card, bg, .45f), 16, line));
+            String emoji = session == null ? "🐱" : session.optString("emoji", "🐱");
+            String user = session == null ? "" : session.optString("user", "");
+            userCard.addView(tv(emoji + "  " + user, 19, ink, true));
+            TextView role = tv((session == null ? "" : session.optString("role_label", "")) + " · 原生客户端", 11, muted, false);
+            role.setPadding(0, dp(4), 0, 0);
+            userCard.addView(role);
+            body.addView(userCard);
+            TextView hint = tv("账号、会话和消息数据与网页端共享同一个后端。", 11, muted, false);
+            hint.setLineSpacing(0, 1.5f);
+            hint.setPadding(0, dp(12), 0, 0);
+            body.addView(hint);
+            TextView logout = pill("退出登录", RED, false);
+            logout.setOnClickListener(v -> { popup.dismiss(); clearSession(); showLogin(); });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40));
+            lp.topMargin = dp(22);
+            body.addView(logout, lp);
+        } else if (index == 1) {
+            TextView preview = tv("主题色", 11, muted, false);
+            body.addView(preview);
+            LinearLayout colors = new LinearLayout(this);
+            colors.setOrientation(LinearLayout.HORIZONTAL);
+            int[] cs = {accent, soft, mix(accent, Color.WHITE, .55f), mix(bg, accent, .15f)};
+            for (int c : cs) {
+                View dot = new View(this);
+                GradientDrawable d = new GradientDrawable();
+                d.setColor(c); d.setCornerRadius(dp(17)); d.setStroke(dp(2), card);
+                dot.setBackground(d);
+                LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(dp(34), dp(34));
+                dlp.rightMargin = dp(8);
+                colors.addView(dot, dlp);
+            }
+            body.addView(colors, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)));
+            TextView info = tv("当前主题由后端主题对象下发，与网页端使用同一套 bg/card/line/ink/muted/accent/soft。后续在这里接主题切换，而不是在客户端硬编码。", 11.5f, muted, false);
+            info.setLineSpacing(0, 1.5f);
+            info.setPadding(0, dp(14), 0, 0);
+            body.addView(info);
+        } else if (index == 2) {
+            TextView label = tv("后端地址", 11, ink, true);
+            body.addView(label);
+            EditText server = field("https://…", false);
+            server.setText(api.base);
+            server.setInputType(InputType.TYPE_TEXT_VARIATION_URI);
+            linearAdd(body, server, dp(46), dp(5));
+            TextView hint = tv("网页端和 App 共享同一个 Python 服务：/api 是后端，/static 与 /p 是前端页面。", 10.5f, muted, false);
+            hint.setLineSpacing(0, 1.5f);
+            hint.setPadding(0, dp(8), 0, dp(14));
+            body.addView(hint);
+            TextView save = pill("保存并重新连接", accent, true);
+            save.setOnClickListener(v -> {
+                String b = server.getText().toString().trim();
+                if (b.length() == 0) return;
+                api.base = b; prefs.edit().putString("base", b).apply();
+                popup.dismiss(); loadBootstrap();
+            });
+            body.addView(save, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)));
+        } else {
+            TextView version = tv("KittenPuppy4Ever native 0.4.0", 15, ink, true);
+            body.addView(version);
+            TextView info = tv("原生 Android 客户端\n后端：本机 Python / Tailscale Funnel\n前端模板：网页端 Popup / Drawer / Card\n无 WebView", 11.5f, muted, false);
+            info.setLineSpacing(0, 1.7f);
+            info.setPadding(0, dp(10), 0, 0);
+            body.addView(info);
+        }
         scroll.addView(body);
-        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        setRoot(wrapPanel(root));
+        return scroll;
+    }
+    private void linearAdd(LinearLayout parent, View child, int height, int top) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height);
+        lp.topMargin = top;
+        parent.addView(child, lp);
+    }
+    private TextView pill(String label, int color, boolean filled) {
+        TextView v = tv(label, 12, filled ? Color.WHITE : color, true);
+        v.setGravity(Gravity.CENTER);
+        v.setPadding(dp(16), 0, dp(16), 0);
+        v.setBackground(rounded(filled ? color : mix(card, bg, .4f), 20, filled ? 0 : line));
+        v.setClickable(true);
+        return v;
     }
     private View wrapPanel(LinearLayout panel) {
         FrameLayout screen = new FrameLayout(this);
