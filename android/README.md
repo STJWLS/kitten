@@ -35,13 +35,13 @@ CI 构建使用 `JAVA_HOME` + `ANDROID_SDK_ROOT`，不需要本地 toolchain。
 
 ## 服务器地址
 
-默认面向 Android 模拟器：
+默认指向 Tailscale Funnel 公网入口：
 
 ```text
-http://10.0.2.2:8772
+https://02f5c6734009.tail4ba04e.ts.net
 ```
 
-真机需要在登录页填写手机可访问的 HTTPS 隧道地址或局域网地址。当前后端默认只监听回环地址，手机直接连接需要隧道或调整监听配置。
+GitHub Pages 只是静态入口，实际后端运行在本机 `127.0.0.1:8772`，由 Tailscale Funnel 暴露。Android 模拟器也可改为 `http://10.0.2.2:8772`。
 
 ## 安装
 

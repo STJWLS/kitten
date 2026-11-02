@@ -36,7 +36,7 @@ import java.util.concurrent.Executors;
 /** KittenPuppy4Ever native Android client — phase 1 (native shell, no WebView). */
 public class MainActivity extends Activity {
     private static final String PREFS = "kp_native";
-    private static final String DEFAULT_BASE = "http://10.0.2.2:8772";
+    private static final String DEFAULT_BASE = "https://02f5c6734009.tail4ba04e.ts.net";
     private static final int RED = 0xffd92b45;
 
     private final Api api = new Api();
@@ -190,7 +190,7 @@ public class MainActivity extends Activity {
 
         TextView serverLabel = tv("服务器", 12, ink, true);
         root.addView(serverLabel, lp(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, 0));
-        EditText server = field("http://10.0.2.2:8772", false);
+        EditText server = field("https://02f5c6734009.tail4ba04e.ts.net", false);
         server.setText(prefs.getString("base", DEFAULT_BASE));
         server.setInputType(InputType.TYPE_TEXT_VARIATION_URI);
         root.addView(server, lp(LinearLayout.LayoutParams.MATCH_PARENT, dp(48), 6));
