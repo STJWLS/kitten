@@ -20,6 +20,7 @@
 - 完整模板层：`KpTemplate` 按网页 KP_POPUP_TREE 递归计算 R30/R38/R0；`KpPopup` 支持左右抽屉、抽屉开关、关闭键、移动全宽、内容让位
 - 模板层：原生 `KpPopup` 复刻网页 Popup + Drawer（900x620、R38、桌面25%抽屉、移动端全宽抽屉、m=8、内容2m）
 - 消息/设置改为模板化 Popup + 左侧抽屉，而不是普通全屏页面
+- 新增 `KpDrawer` 边栏模板：AI 右抽屉 + 嵌套历史/设置抽屉（桌面 25vw，移动全宽，嵌套全屏）
 - 服务端主题色应用到原生界面
 - 无 WebView、无 Capacitor/Cordova、无 Gradle 依赖
 
@@ -34,7 +35,7 @@ python android/build_apk.py
 输出：
 
 ```text
-releases/KittenPuppy4Ever-0.5.0.apk
+releases/KittenPuppy4Ever-0.6.0.apk
 ```
 
 CI 构建使用 `JAVA_HOME` + `ANDROID_SDK_ROOT`，不需要本地 toolchain。
@@ -52,7 +53,7 @@ GitHub Pages 只是静态入口；本机 `127.0.0.1:8772` 的 Python 服务同�
 ## 安装
 
 ```bash
-adb install -r releases/KittenPuppy4Ever-0.5.0.apk
+adb install -r releases/KittenPuppy4Ever-0.6.0.apk
 ```
 
 ## GitHub Actions

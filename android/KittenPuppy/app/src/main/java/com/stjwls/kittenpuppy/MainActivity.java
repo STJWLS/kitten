@@ -398,6 +398,13 @@ public class MainActivity extends Activity {
         brandBox.addView(who);
         header.addView(brandBox, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
+        JSONObject mods = session == null ? null : session.optJSONObject("modules");
+        if (mods != null && mods.optBoolean("ai", false)) {
+            TextView ai = action("🤖", this::showAiDrawer);
+            LinearLayout.LayoutParams aw = new LinearLayout.LayoutParams(dp(44), dp(44));
+            aw.leftMargin = dp(6);
+            header.addView(ai, aw);
+        }
         final TextView mail = action("✉", () -> { hideKeyboard(); showMessages(); });
         FrameLayout mailWrap = new FrameLayout(this);
         mailWrap.addView(mail, new FrameLayout.LayoutParams(dp(44), dp(44)));
@@ -962,6 +969,25 @@ public class MainActivity extends Activity {
         });
     }
 
+    // ---------------- edge drawer template (AI) ----------------
+    private void showAiDrawer() {
+        KpDrawer drawer = new KpDrawer(this, "ai-drawer", "🤖 AI 服务",
+                d -> drawerNote("AI 原生对话将在下一阶段接入。这个抽屉使用网页端边栏模板：25vw、R30、顶部/底部边距、关闭键。"),
+                bg, card, ink, muted, line, accent, soft);
+        drawer.addNested("对话历史", "🕘", d -> drawerNote("AI 历史记录抽屉：嵌套抽屉模板，移动端全宽、桌面端在父抽屉内覆盖。"));
+        drawer.addNested("AI 设置", "⚙️", d -> drawerNote("AI 设置抽屉：同一个嵌套抽屉模板，不单独写页面。"));
+        drawer.show();
+    }
+    private View drawerNote(String text) {
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        TextView t = tv(text, 11.5f, muted, false);
+        t.setLineSpacing(0, 1.65f);
+        body.addView(t);
+        scroll.addView(body);
+        return scroll;
+    }
     // ---------------- bottle (native Canvas) ----------------
     private void showBottle(JSONObject node) {
         if (node != null) currentProject = node;

@@ -49,3 +49,16 @@ mail-popup (R38)
 ## Still to add as native nodes
 
 AI drawer, AI history/settings nested drawers, bottle status drawer, debug drawer, manage popup, bug popup, birthday popup. They can reuse `KpTemplate`/`KpPopup`; they are not page-specific templates.
+
+
+## Edge drawer
+
+`KpDrawer` is the edge variant (AI/bottle-style):
+
+- right edge, 25vw desktop, 100% screen width mobile (top/bottom preserved)
+- R30, header/close, content
+- nested drawers are full-cover overlays inside the drawer, R0
+- 44dp nested trigger buttons
+- bottom button stack
+
+Demo node: AI drawer (button on home) with history/settings nested drawers.
