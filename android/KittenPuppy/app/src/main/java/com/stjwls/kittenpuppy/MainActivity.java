@@ -15,6 +15,8 @@ import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -63,6 +65,7 @@ public class MainActivity extends Activity {
     private TextView homeMailBadge;
     private BottleView bottleView;
     private int bottleRev = 0;
+    private String loginUser = "kitten";
 
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -136,10 +139,26 @@ public class MainActivity extends Activity {
         p.setMargins(margin, margin, margin, margin);
         return p;
     }
+    private int mix(int a, int b, float t) {
+        t = Math.max(0f, Math.min(1f, t));
+        return Color.argb(
+                Math.round(Color.alpha(a) + (Color.alpha(b) - Color.alpha(a)) * t),
+                Math.round(Color.red(a) + (Color.red(b) - Color.red(a)) * t),
+                Math.round(Color.green(a) + (Color.green(b) - Color.green(a)) * t),
+                Math.round(Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t));
+    }
+    private GradientDrawable screenBackground() {
+        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{mix(bg, Color.WHITE, .42f), bg, mix(bg, soft, .22f)});
+        return g;
+    }
+    private GradientDrawable accentButton() {
+        return new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{accent, mix(accent, soft, .35f)});
+    }
     private void setRoot(View view) {
         setContentView(view);
-        View root = view;
-        root.setBackgroundColor(bg);
+        view.setBackground(screenBackground());
     }
     private void showLoading(String text) {
         LinearLayout root = new LinearLayout(this);
@@ -186,47 +205,84 @@ public class MainActivity extends Activity {
     // ---------------- login ----------------
     private void showLogin() {
         screen = "login";
+        FrameLayout root = new FrameLayout(this);
+        root.setBackground(screenBackground());
         ScrollView scroll = new ScrollView(this);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(24), dp(42), dp(24), dp(30));
-        root.setBackgroundColor(bg);
+        scroll.setFillViewport(true);
+        LinearLayout center = new LinearLayout(this);
+        center.setOrientation(LinearLayout.VERTICAL);
+        center.setGravity(Gravity.CENTER_HORIZONTAL);
+        center.setPadding(dp(18), dp(28), dp(18), dp(28));
+        int cardW = Math.min(dp(360), getResources().getDisplayMetrics().widthPixels - dp(36));
+        LinearLayout cardBox = new LinearLayout(this);
+        cardBox.setOrientation(LinearLayout.VERTICAL);
+        cardBox.setPadding(dp(24), dp(24), dp(24), dp(20));
+        cardBox.setBackground(rounded(mix(card, Color.WHITE, .35f), 20, line));
+        cardBox.setElevation(dp(10));
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(cardW, ViewGroup.LayoutParams.WRAP_CONTENT);
+        center.addView(cardBox, cp);
 
-        TextView logo = tv("🐱🐶", 38, ink, false);
-        root.addView(logo);
-        TextView title = tv("KittenPuppy4Ever", 27, ink, true);
-        title.setPadding(0, dp(12), 0, 0);
-        root.addView(title);
-        TextView sub = tv("原生客户端 · 第一阶段", 12, muted, false);
-        sub.setPadding(0, dp(4), 0, dp(26));
-        root.addView(sub);
+        TextView logo = tv("🐱🐶", 30, ink, false);
+        logo.setGravity(Gravity.CENTER_HORIZONTAL);
+        cardBox.addView(logo);
+        TextView title = tv("KittenPuppy4Ever", 19, ink, true);
+        title.setGravity(Gravity.CENTER_HORIZONTAL);
+        title.setPadding(0, dp(8), 0, dp(2));
+        cardBox.addView(title);
+        TextView sub = tv("选择角色，进入私人工作台", 12, muted, false);
+        sub.setGravity(Gravity.CENTER_HORIZONTAL);
+        sub.setPadding(0, 0, 0, dp(16));
+        cardBox.addView(sub);
 
-        TextView serverLabel = tv("服务器", 12, ink, true);
-        root.addView(serverLabel, lp(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, 0));
-        EditText server = field("https://02f5c6734009.tail4ba04e.ts.net", false);
+        loginUser = prefs.getString("user", "kitten");
+        final LinearLayout roles = new LinearLayout(this);
+        roles.setOrientation(LinearLayout.HORIZONTAL);
+        final LinearLayout[] roleViews = new LinearLayout[2];
+        String[][] roleMeta = {{"🐱", "kitten", "主要使用者"}, {"🐶", "puppy", "主要维护者"}};
+        for (int i = 0; i < 2; i++) {
+            final String ru = roleMeta[i][1];
+            LinearLayout role = new LinearLayout(this);
+            role.setOrientation(LinearLayout.VERTICAL);
+            role.setGravity(Gravity.CENTER);
+            role.setPadding(dp(8), dp(10), dp(8), dp(9));
+            TextView em = tv(roleMeta[i][0], 20, ink, false);
+            em.setGravity(Gravity.CENTER);
+            role.addView(em);
+            TextView nm = tv(ru, 13, ink, true);
+            nm.setGravity(Gravity.CENTER);
+            role.addView(nm);
+            TextView sm = tv(roleMeta[i][2], 10, muted, false);
+            sm.setGravity(Gravity.CENTER);
+            role.addView(sm);
+            role.setOnClickListener(v -> { loginUser = ru; refreshRoleCards(roleViews); });
+            roleViews[i] = role;
+            LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            if (i == 1) rlp.leftMargin = dp(10);
+            roles.addView(role, rlp);
+        }
+        cardBox.addView(roles, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        EditText user = field("用户名", false);
+        user.setText(loginUser);
+        user.setPadding(dp(12), 0, dp(12), 0);
+        LinearLayout.LayoutParams up = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
+        up.topMargin = dp(12);
+        cardBox.addView(user, up);
+        EditText pwd = field("凭据", true);
+        cardBox.addView(pwd, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46)));
+
+        TextView serverLabel = tv("服务器", 10, muted, false);
+        serverLabel.setPadding(0, dp(10), 0, dp(3));
+        cardBox.addView(serverLabel);
+        EditText server = field("https://…", false);
         server.setText(prefs.getString("base", DEFAULT_BASE));
         server.setInputType(InputType.TYPE_TEXT_VARIATION_URI);
-        root.addView(server, lp(LinearLayout.LayoutParams.MATCH_PARENT, dp(48), 6));
+        server.setTextSize(11);
+        cardBox.addView(server, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)));
 
-        TextView userLabel = tv("账号", 12, ink, true);
-        root.addView(userLabel, lp(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, 0));
-        LinearLayout roles = new LinearLayout(this);
-        roles.setOrientation(LinearLayout.HORIZONTAL);
-        TextView kitten = chip("🐱 kitten", true);
-        TextView puppy = chip("🐶 puppy", false);
-        roles.addView(kitten, new LinearLayout.LayoutParams(0, dp(38), 1));
-        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(0, dp(38), 1);
-        rp.leftMargin = dp(8);
-        roles.addView(puppy, rp);
-        root.addView(roles, lp(LinearLayout.LayoutParams.MATCH_PARENT, dp(38), 6));
-        EditText user = field("kitten", false);
-        user.setText(prefs.getString("user", "kitten"));
-        root.addView(user, lp(LinearLayout.LayoutParams.MATCH_PARENT, dp(48), 6));
-
-        TextView pwdLabel = tv("口令", 12, ink, true);
-        root.addView(pwdLabel, lp(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, 0));
-        EditText pwd = field("输入登录口令", true);
-        root.addView(pwd, lp(LinearLayout.LayoutParams.MATCH_PARENT, dp(48), 6));
+        TextView status = tv("登录由服务器校验，会话保存在本机。", 10, muted, false);
+        status.setPadding(0, dp(9), 0, dp(6));
+        cardBox.addView(status);
 
         Button go = new Button(this);
         go.setText("登 录");
@@ -234,23 +290,18 @@ public class MainActivity extends Activity {
         go.setTextSize(14);
         go.setAllCaps(false);
         go.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        go.setBackground(rounded(accent, 24, 0));
-        root.addView(go, lp(LinearLayout.LayoutParams.MATCH_PARENT, dp(48), 6));
+        go.setBackground(accentButton());
+        cardBox.addView(go, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46)));
 
-        TextView status = tv("登录后会自动读取工作台与主题。", 11, muted, false);
-        status.setPadding(0, dp(10), 0, 0);
-        root.addView(status);
-
-        kitten.setOnClickListener(v -> user.setText("kitten"));
-        puppy.setOnClickListener(v -> user.setText("puppy"));
+        user.setOnFocusChangeListener((v, has) -> { if (has) loginUser = user.getText().toString().trim(); });
         go.setOnClickListener(v -> {
             String b = server.getText().toString().trim();
             String u = user.getText().toString().trim();
             String p = pwd.getText().toString();
-            if (b.length() == 0 || u.length() == 0 || p.length() == 0) { status.setText("请填写服务器、账号和口令"); return; }
+            if (b.length() == 0 || u.length() == 0 || p.length() == 0) { status.setText("请填写服务器、账号和凭据"); return; }
             hideKeyboard();
             go.setEnabled(false); go.setText("登录中…"); status.setText("正在连接服务器…");
-            api.base = b;
+            api.base = b; loginUser = u;
             JSONObject body = new JSONObject();
             try { body.put("user", u); body.put("password", p); } catch (Exception ignored) {}
             postAsync("/api/login", body, new JsonCb() {
@@ -267,9 +318,19 @@ public class MainActivity extends Activity {
             });
         });
 
-        scroll.addView(root);
-        setRoot(scroll);
+        scroll.addView(center);
+        root.addView(scroll, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        setRoot(root);
+        refreshRoleCards(roleViews);
         pwd.requestFocus();
+    }
+    private void refreshRoleCards(LinearLayout[] views) {
+        for (LinearLayout v : views) {
+            if (v == null) continue;
+            boolean on = v.getChildAt(1) != null && loginUser.equals(((TextView) v.getChildAt(1)).getText().toString());
+            v.setBackground(rounded(on ? mix(accent, Color.WHITE, .86f) : mix(card, Color.WHITE, .45f), 14, on ? accent : line));
+            if (on) v.setElevation(dp(3)); else v.setElevation(0);
+        }
     }
     private EditText field(String hint, boolean password) {
         EditText e = new EditText(this);
@@ -326,19 +387,20 @@ public class MainActivity extends Activity {
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(16), dp(12), dp(14), dp(8));
+        header.setPadding(dp(20), dp(12), dp(14), dp(10));
+        header.setBackgroundColor(mix(card, bg, .45f));
 
         LinearLayout brandBox = new LinearLayout(this);
         brandBox.setOrientation(LinearLayout.VERTICAL);
         TextView brand = tv("🐱🐶 KittenPuppy4Ever", 17, ink, true);
-        TextView who = tv(session == null ? "" : "已登录：" + session.optString("emoji", "") + " " + session.optString("user", ""), 10, muted, false);
+        TextView who = tv("私人工作台", 10, muted, false);
         brandBox.addView(brand);
         brandBox.addView(who);
         header.addView(brandBox, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         final TextView mail = action("✉", () -> { hideKeyboard(); showMessages(); });
         FrameLayout mailWrap = new FrameLayout(this);
-        mailWrap.addView(mail, new FrameLayout.LayoutParams(dp(40), dp(40)));
+        mailWrap.addView(mail, new FrameLayout.LayoutParams(dp(44), dp(44)));
         homeMailBadge = tv("0", 8.5f, Color.WHITE, true);
         homeMailBadge.setGravity(Gravity.CENTER);
         homeMailBadge.setBackground(rounded(RED, 8, 0));
@@ -346,12 +408,12 @@ public class MainActivity extends Activity {
         FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(dp(16), dp(16));
         bp.gravity = Gravity.TOP | Gravity.RIGHT;
         mailWrap.addView(homeMailBadge, bp);
-        LinearLayout.LayoutParams mw = new LinearLayout.LayoutParams(dp(44), dp(40));
+        LinearLayout.LayoutParams mw = new LinearLayout.LayoutParams(dp(48), dp(44));
         mw.leftMargin = dp(6);
         header.addView(mailWrap, mw);
 
         TextView settings = action("⚙", this::showSettings);
-        LinearLayout.LayoutParams sw = new LinearLayout.LayoutParams(dp(40), dp(40));
+        LinearLayout.LayoutParams sw = new LinearLayout.LayoutParams(dp(44), dp(44));
         sw.leftMargin = dp(6);
         header.addView(settings, sw);
         root.addView(header);
@@ -359,15 +421,13 @@ public class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(dp(16), dp(10), dp(16), dp(28));
+        body.setPadding(dp(20), dp(16), dp(20), dp(36));
 
         String user = session == null ? "" : session.optString("user", "");
         String emoji = session == null ? "" : session.optString("emoji", "");
-        TextView hello = tv("你好，" + emoji + " " + user, 24, ink, true);
+        TextView hello = tv("你好，" + emoji + " " + user, 14, muted, false);
+        hello.setPadding(dp(2), dp(4), 0, dp(18));
         body.addView(hello);
-        TextView hint = tv("在这里继续你的日常。原生客户端第一阶段：账号、主题、卡片、路由、消息与设置。", 11.5f, muted, false);
-        hint.setPadding(0, dp(6), 0, dp(16));
-        body.addView(hint);
 
         List<JSONObject> nodes = new ArrayList<>();
         JSONArray children = tree == null ? null : tree.optJSONArray("children");
@@ -391,37 +451,43 @@ public class MainActivity extends Activity {
     }
     private View projectCard(JSONObject node) {
         LinearLayout cardBox = new LinearLayout(this);
-        cardBox.setOrientation(LinearLayout.HORIZONTAL);
-        cardBox.setGravity(Gravity.CENTER_VERTICAL);
-        cardBox.setPadding(dp(14), dp(14), dp(14), dp(14));
+        cardBox.setOrientation(LinearLayout.VERTICAL);
+        cardBox.setPadding(dp(18), dp(18), dp(18), dp(15));
         cardBox.setBackground(rounded(card, 18, line));
-        cardBox.setElevation(dp(2));
+        cardBox.setElevation(dp(3));
         cardBox.setClickable(true);
         cardBox.setOnClickListener(v -> showProject(node));
-        TextView icon = tv(node.optString("icon", "📄"), 28, ink, false);
-        cardBox.addView(icon, new LinearLayout.LayoutParams(dp(46), dp(46)));
-        LinearLayout texts = new LinearLayout(this);
-        texts.setOrientation(LinearLayout.VERTICAL);
-        texts.setPadding(dp(11), 0, 0, 0);
-        TextView title = tv(node.optString("title", "未命名"), 15, ink, true);
-        texts.addView(title);
-        TextView desc = tv(node.optString("desc", ""), 10.5f, muted, false);
+
+        TextView icon = tv(node.optString("icon", "📄"), 24, ink, false);
+        icon.setGravity(Gravity.CENTER);
+        icon.setBackground(rounded(mix(accent, Color.WHITE, .78f), 14, 0));
+        cardBox.addView(icon, new LinearLayout.LayoutParams(dp(44), dp(44)));
+        TextView title = tv(node.optString("title", "未命名"), 16, ink, true);
+        title.setPadding(0, dp(10), 0, 0);
+        cardBox.addView(title);
+        TextView desc = tv(node.optString("desc", ""), 12, muted, false);
         desc.setMaxLines(3);
-        desc.setPadding(0, dp(3), 0, 0);
-        texts.addView(desc);
-        String tags = "";
+        desc.setLineSpacing(0, 1.45f);
+        desc.setMinHeight(dp(38));
+        desc.setPadding(0, dp(4), 0, dp(10));
+        cardBox.addView(desc);
+
+        LinearLayout foot = new LinearLayout(this);
+        foot.setOrientation(LinearLayout.HORIZONTAL);
+        foot.setGravity(Gravity.CENTER_VERTICAL);
+        StringBuilder tags = new StringBuilder();
         JSONArray ta = node.optJSONArray("tags");
-        if (ta != null) for (int i = 0; i < Math.min(4, ta.length()); i++) tags += (i == 0 ? "" : "  ") + "#" + ta.optString(i);
-        if (tags.length() > 0) {
-            TextView tag = tv(tags, 9.5f, accent, false);
-            tag.setPadding(0, dp(5), 0, 0);
-            texts.addView(tag);
+        if (ta != null) for (int i = 0; i < Math.min(3, ta.length()); i++) {
+            if (tags.length() > 0) tags.append("   ");
+            tags.append("#").append(ta.optString(i));
         }
-        cardBox.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView arrow = tv("›", 24, muted, false);
-        cardBox.addView(arrow);
+        TextView tag = tv(tags.toString(), 10, muted, false);
+        foot.addView(tag, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView go = tv("进入 ›", 12, accent, true);
+        foot.addView(go);
+        cardBox.addView(foot);
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        p.bottomMargin = dp(10);
+        p.bottomMargin = dp(16);
         cardBox.setLayoutParams(p);
         return cardBox;
     }
@@ -504,9 +570,15 @@ public class MainActivity extends Activity {
         header.setPadding(dp(12), dp(10), dp(14), dp(8));
         LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         header.setLayoutParams(hp);
+        header.setBackground(rounded(mix(card, bg, .52f), 18, line));
         if (back) {
-            TextView b = action("←", backAction);
-            header.addView(b, new LinearLayout.LayoutParams(dp(38), dp(38)));
+            TextView b = tv("← 返回", 11, muted, false);
+            b.setGravity(Gravity.CENTER);
+            b.setPadding(dp(11), 0, dp(11), 0);
+            b.setBackground(rounded(card, 18, line));
+            b.setClickable(true);
+            b.setOnClickListener(v -> backAction.run());
+            header.addView(b, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)));
         }
         TextView t = tv(title, 16, ink, true);
         t.setPadding(back ? dp(10) : 0, 0, 0, 0);
@@ -520,7 +592,8 @@ public class MainActivity extends Activity {
         screen = "messages"; messagesTab = tab;
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(bg);
+        root.setBackground(rounded(card, 30, line));
+        root.setElevation(dp(8));
         root.addView(topBar("消息", true, this::showHome));
 
         LinearLayout tabs = new LinearLayout(this);
@@ -550,7 +623,7 @@ public class MainActivity extends Activity {
         list.setPadding(dp(16), dp(4), dp(16), dp(24));
         scroll.addView(list);
         root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        setRoot(root);
+        setRoot(wrapPanel(root));
         loadMessages(list, tab);
     }
     private TextView tabChip(String label, boolean active) {
@@ -813,7 +886,7 @@ public class MainActivity extends Activity {
             d.setPositiveButton("打开", (dialog, which) -> openBottle(id));
         }
         d.setNegativeButton(msg.length() > 0 ? "收下这句话" : "先放着", null);
-        d.show();
+        styleDialog(d.show());
     }
     private void openBottle(String id) {
         JSONObject body = new JSONObject();
@@ -919,6 +992,15 @@ public class MainActivity extends Activity {
             });
         }));
         dialog.show();
+        styleDialog(dialog);
+    }
+    private void styleDialog(AlertDialog d) {
+        Window w = d.getWindow();
+        if (w == null) return;
+        w.setBackgroundDrawable(rounded(card, 20, line));
+        w.setDimAmount(.42f);
+        w.setLayout(Math.min(dp(420), getResources().getDisplayMetrics().widthPixels - dp(36)),
+                WindowManager.LayoutParams.WRAP_CONTENT);
     }
     private void saveBottlePositions(Map<String, android.graphics.PointF> positions) {
         JSONObject clean = new JSONObject();
@@ -947,7 +1029,8 @@ public class MainActivity extends Activity {
         screen = "settings";
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(bg);
+        root.setBackground(rounded(card, 30, line));
+        root.setElevation(dp(8));
         root.addView(topBar("设置", true, this::showHome));
         ScrollView scroll = new ScrollView(this);
         LinearLayout body = new LinearLayout(this);
@@ -998,6 +1081,16 @@ public class MainActivity extends Activity {
         body.addView(version);
         scroll.addView(body);
         root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        setRoot(root);
+        setRoot(wrapPanel(root));
+    }
+    private View wrapPanel(LinearLayout panel) {
+        FrameLayout screen = new FrameLayout(this);
+        screen.setBackground(screenBackground());
+        int w = Math.min(dp(900), getResources().getDisplayMetrics().widthPixels - dp(16));
+        int h = Math.min(dp(620), Math.round(getResources().getDisplayMetrics().heightPixels * .86f));
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, h);
+        lp.gravity = Gravity.CENTER;
+        screen.addView(panel, lp);
+        return screen;
     }
 }
