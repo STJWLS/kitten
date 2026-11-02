@@ -1,0 +1,120 @@
+/* KittenPuppy4Ever 平台 · 子项目视图基础模板（模板继承的"基类"）
+ *
+ * 所有标签页共享：主题变量（由 manifest.ui.theme 覆盖）、卡片、按钮、列表行、
+ * 空态、提示。子项目只写自己的业务片段，不再各抄一份 CSS。
+ */
+:root {
+  --p-accent: #003da5;
+}
+body.user-kitten { --p-accent: #b25e83; }
+body.user-puppy  { --p-accent: #2a5fb8; }
+:root {
+  --p-bg: #f8f4ec;
+  --p-ink: #42392b;
+  --p-muted: #8a7f6d;
+  --p-card: #fffdf8;
+  --p-line: #e8dfd2;
+  --p-pink: #ec9fbe;
+  --p-mint: #9bd1ec;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(160deg, #fbf7f0 0%, var(--p-bg) 55%, #f1e7da 100%);
+  color: var(--p-ink);
+  padding: 18px 20px 40px;
+}
+
+.p-head {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.p-title { display: flex; align-items: center; gap: 10px; }
+.p-title h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+.p-icon { font-size: 22px; }
+.p-badge {
+  font-size: 11px; font-family: ui-monospace, monospace; color: var(--p-muted);
+  border: 1px solid var(--p-line); background: #fff; border-radius: 999px;
+  padding: 2px 8px;
+}
+.p-meta { font-size: 12px; color: var(--p-muted); }
+.p-meta code { background: #f2ecdf; border-radius: 4px; padding: 1px 5px; }
+
+.p-main { display: grid; gap: 14px; }
+
+.p-card {
+  background: var(--p-card); border: 1px solid var(--p-line);
+  border-radius: 16px; padding: 16px 18px;
+  box-shadow: 0 8px 26px rgba(66, 57, 43, 0.06);
+}
+.p-card-h {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 12px; margin-bottom: 10px;
+}
+.p-card-h h2 { font-size: 13px; margin: 0; color: var(--p-muted); font-weight: 600; letter-spacing: 0.04em; }
+.p-rev { font-family: ui-monospace, monospace; font-size: 11px; color: var(--p-muted); }
+
+textarea {
+  width: 100%; min-height: 320px; resize: vertical; border: 1px solid var(--p-line);
+  border-radius: 12px; padding: 12px; font-family: ui-monospace, monospace;
+  font-size: 12px; line-height: 1.5; background: #fffefb; color: var(--p-ink);
+}
+
+.p-actions { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+button {
+  border: 0; border-radius: 999px; padding: 8px 15px; font-size: 13px;
+  font-weight: 600; cursor: pointer; background: var(--p-accent); color: #fff;
+  transition: opacity 0.15s;
+}
+button.ghost { background: #f2ecdf; color: var(--p-ink); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+.p-msg { font-size: 12px; color: var(--p-muted); }
+
+/* ---------- 列表（课表 / 愿望） ---------- */
+.p-list { display: grid; gap: 8px; }
+.p-row {
+  display: flex; align-items: center; gap: 12px;
+  border: 1px solid var(--p-line); border-radius: 12px;
+  padding: 10px 12px; background: #fffdf9;
+}
+.p-row.done { opacity: 0.55; }
+.p-row .k {
+  font-family: ui-monospace, monospace; font-size: 11px; color: #fff;
+  background: var(--p-accent); border-radius: 6px; padding: 3px 6px; min-width: 52px;
+  text-align: center;
+}
+.p-row .t { font-weight: 650; font-size: 14px; }
+.p-row .s { font-size: 11px; color: var(--p-muted); margin-top: 2px; }
+.p-row .grow { flex: 1; min-width: 0; }
+.p-row .dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--p-line); flex: none;
+}
+.p-row .dot.on { background: #43a047; }
+
+.p-empty { color: var(--p-muted); font-size: 13px; padding: 18px 0; text-align: center; }
+.p-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.p-stat { border: 1px solid var(--p-line); border-radius: 12px; padding: 12px; background: #fffefb; }
+.p-stat .n { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.p-stat .l { font-size: 11px; color: var(--p-muted); letter-spacing: 0.04em; }
+.p-tag {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  background: #f2ecdf; color: var(--p-muted); white-space: nowrap;
+}
+.p-tag.warn { background: #f7e2c8; color: #8a5a17; }
+.p-tag.ok { background: #dcefdc; color: #2e6b34; }
+
+/* ---------- SDK 注入 ---------- */
+.kp-toast {
+  position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(14px);
+  background: #2f2a23; color: #fff; font-size: 13px; padding: 10px 16px;
+  border-radius: 999px; opacity: 0; transition: all 0.22s ease; pointer-events: none;
+  max-width: 80vw;
+}
+.kp-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.kp-toast.bad { background: #8a2f28; }
+.kp-fatal {
+  margin: 20px; padding: 16px; border-radius: 12px;
+  background: #f7d9d5; color: #8a2f28; font-size: 13px; line-height: 1.6;
+}

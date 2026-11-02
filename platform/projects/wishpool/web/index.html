@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>猫猫许愿池 · KittenPuppy4Ever</title>
+<link rel="stylesheet" href="/static/template.css">
+<link rel="stylesheet" href="assets/wishpool.css">
+</head>
+<body data-project="wishpool">
+<main class="page">
+
+  <!-- 视图 / 视角切换（纯前端，不做登录校验；身份与项目导航由根壳统一提供） -->
+  <section class="section">
+    <div class="toolbar">
+      <div class="tabs" id="wp-nav">
+        <a class="tab active" href="javascript:;" data-tab="wish">📜 许愿池</a>
+        <a class="tab" href="javascript:;" data-tab="trend">📈 币趋势</a>
+      </div>
+      <span class="spacer"></span>
+      <span class="chip">视角</span>
+      <div class="tabs" id="uswitch">
+        <button type="button" class="tab" data-u="kitten">🐱 kitten</button>
+        <button type="button" class="tab" data-u="puppy">🐶 puppy</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 币趋势视图 -->
+  <div id="trend-view" style="display:none">
+    <section class="section">
+      <div class="section-head">
+        <h2><span id="trend-title">许愿币变动趋势</span></h2>
+        <span class="hint" id="trend-hint"></span>
+      </div>
+      <div id="trend-chart"></div>
+    </section>
+  </div>
+
+  <!-- kitten 视图 -->
+  <div id="kitten-view" style="display:none">
+    <section class="section">
+      <div class="section-head">
+        <h2>我的许愿币</h2>
+        <span class="hint">许愿币经济 · 投币许愿 · 审批结算</span>
+        <div class="actions">
+          <button class="btn primary" id="wish-open">🙏 许一个愿（投入许愿币）</button>
+        </div>
+      </div>
+      <div class="wp-cards">
+        <div class="wp-coin-card">
+          <div class="wp-coin-top"><span class="wp-coin-ico">🪙</span><span class="wp-coin-num" id="wp-balance">0</span></div>
+          <div class="wp-coin-lab">许愿币余额</div>
+          <div class="wp-coin-sub">每天自动到账 10 枚 · 正余额日复利 5% · 完成后按阶梯奖励 puppy</div>
+          <button class="btn ghost sm" onclick="openGift()">🎁 转账给 puppy</button>
+          <div class="wp-fog" id="k-fog"></div>
+        </div>
+        <div class="wp-tier">
+          <div class="wp-tier-t">奖励阶梯（puppy 报酬比例）</div>
+          <div class="wp-tier-r" id="wp-tier"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>我的愿望</h2>
+        <span class="hint" id="w-my-hint"></span>
+      </div>
+      <div class="list" id="w-mylist"></div>
+    </section>
+  </div>
+
+  <!-- puppy 视图 -->
+  <div id="puppy-view" style="display:none">
+    <section class="section">
+      <div class="section-head">
+        <h2>我的报酬</h2>
+        <span class="hint">kitten 标记完成的愿望按阶梯比例结算</span>
+        <div class="actions">
+          <button class="btn ghost sm" onclick="openGift()">🎁 转账给 kitten</button>
+        </div>
+      </div>
+      <div class="wp-cards">
+        <div class="wp-coin-card p">
+          <div class="wp-coin-top"><span class="wp-coin-ico">🪙</span><span class="wp-coin-num" id="wp-earned">0</span></div>
+          <div class="wp-coin-lab">累计报酬（许愿币）</div>
+          <div class="wp-coin-sub">kitten 标记完成的愿望按阶梯比例结算</div>
+          <div class="wp-fog" id="p-fog"></div>
+        </div>
+        <div class="wp-tier">
+          <div class="wp-tier-t">奖励阶梯（puppy 报酬比例）</div>
+          <div class="wp-tier-r" id="wp-tier2"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>审批队列</h2>
+        <span class="hint" id="w-queue-hint">按投入许愿币降序</span>
+      </div>
+      <div class="list" id="w-queue"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>愿望台账</h2>
+        <span class="hint">ALL WISHES</span>
+      </div>
+      <div class="list" id="w-ledger"></div>
+    </section>
+  </div>
+
+</main>
+
+<!-- 许愿弹窗 -->
+<div class="modal" id="wish-modal" style="display:none">
+  <div class="modal-box wish-box">
+    <div class="modal-head">
+      <h3>🙏 许一个愿</h3>
+      <span class="hint">许愿币将投入许愿池，puppy 按币数排序审批</span>
+    </div>
+    <label class="bid-lab" for="w-title">我想要什么</label>
+    <input class="input" id="w-title" placeholder="例如：一杯秋天的奶茶 / 一起去看展">
+    <label class="bid-lab" for="w-date">什么时候（可选）</label>
+    <div class="row2">
+      <input class="input" type="date" id="w-date">
+      <div class="place-row"><select class="select" id="w-h"></select><select class="select" id="w-m"></select></div>
+    </div>
+    <label class="bid-lab" for="w-venue">什么地点（可选）</label>
+    <input class="input" id="w-venue" list="wp-venue-list" placeholder="例如：五角场万达 / FISF310">
+    <datalist id="wp-venue-list"></datalist>
+    <label class="bid-lab" for="w-detail">怎么样（可选）</label>
+    <textarea class="input" id="w-detail" rows="2" placeholder="补充说明：怎么实现、什么标准算完成…"></textarea>
+    <label class="bid-lab">投入许愿币</label>
+    <div class="wp-stepper">
+      <button type="button" class="wp-step-btn" id="w-minus">−</button>
+      <input class="input" type="number" id="w-coins" min="1" value="1">
+      <button type="button" class="wp-step-btn" id="w-plus">＋</button>
+      <span class="wp-step-bal">余额 🪙 <b id="w-bal-in">0</b></span>
+    </div>
+    <div class="wp-ddl-hint" id="w-ddl-hint"></div>
+    <div class="modal-btns">
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="wish-cancel">取消</button>
+      <button class="btn primary" id="w-submit">🙏 投入许愿池</button>
+    </div>
+  </div>
+</div>
+
+<!-- 愿望详情弹窗（字段 + 流程日志 + 操作） -->
+<div class="modal" id="detail-modal" style="display:none">
+  <div class="modal-box detail-box">
+    <div class="d-head">
+      <span class="wp-status" id="d-status">待审批</span>
+      <h3 id="d-title"></h3>
+      <span class="wp-coins" id="d-coins">🪙 0</span>
+    </div>
+    <div id="d-rows"></div>
+    <div class="wp-hist" id="d-hist"></div>
+    <div class="modal-btns" id="d-ops">
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="d-close">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- puppy 审批确认弹窗（含报酬预览） -->
+<div class="modal" id="approve-modal" style="display:none">
+  <div class="modal-box narrow">
+    <h3 id="ap-title">✅ 通过愿望</h3>
+    <p class="status" id="ap-sub">确认通过后进入待完成状态</p>
+    <div class="ap-preview" id="ap-preview"></div>
+    <div class="modal-btns">
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="ap-cancel">取消</button>
+      <button class="btn primary" id="ap-ok">确认通过</button>
+    </div>
+  </div>
+</div>
+
+<!-- 驳回理由弹窗 -->
+<div class="modal" id="note-modal" style="display:none">
+  <div class="modal-box narrow">
+    <h3>↩️ 驳回愿望</h3>
+    <p class="status" id="note-sub">请填写驳回理由（会记录到流程日志，许愿币将退还 kitten）</p>
+    <input class="input" id="note-input" placeholder="理由（可选）">
+    <label class="bid-lab" for="note-fee">驳回费用（许愿币）</label>
+    <div class="wp-stepper wide">
+      <input class="input" type="number" id="note-fee" min="0" value="0">
+      <span class="wp-step-bal" id="note-fee-hint"></span>
+    </div>
+    <div class="modal-btns">
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="note-cancel">取消</button>
+      <button class="btn primary" id="note-ok">确认驳回</button>
+    </div>
+  </div>
+</div>
+
+<!-- 反制出价弹窗（驳回对方的驳回） -->
+<div class="modal" id="ov-modal" style="display:none">
+  <div class="modal-box narrow">
+    <h3 id="ov-title">💥 驳回对方的驳回</h3>
+    <p class="status" id="ov-sub">支付费用把愿望打回待审批（重新投入许愿币）</p>
+    <label class="bid-lab" for="ov-fee">出价（许愿币）</label>
+    <div class="wp-stepper wide">
+      <input class="input" type="number" id="ov-fee" min="1" value="1">
+      <span class="wp-step-bal" id="ov-fee-hint"></span>
+    </div>
+    <div class="modal-btns">
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="ov-cancel">取消</button>
+      <button class="btn primary" id="ov-ok">确认反制</button>
+    </div>
+  </div>
+</div>
+
+<!-- 未实现判定弹窗 -->
+<div class="modal" id="uf-modal" style="display:none">
+  <div class="modal-box narrow">
+    <h3 id="uf-title">❌ 判定未实现</h3>
+    <p class="status" id="uf-sub">确认后：许愿币退还 kitten；puppy 不获报酬并被倒扣</p>
+    <div class="ap-preview" id="uf-preview"></div>
+    <div class="modal-btns">
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="uf-cancel">取消</button>
+      <button class="btn danger" id="uf-ok">确认判定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 转账弹窗 -->
+<div class="modal" id="gift-modal" style="display:none">
+  <div class="modal-box narrow">
+    <h3 id="gift-title">🎁 转账</h3>
+    <p class="status" id="gift-sub">把自己的许愿币分一部分给对方</p>
+    <label class="bid-lab" for="gift-amt">金额（许愿币）</label>
+    <div class="wp-stepper wide">
+      <input class="input" type="number" id="gift-amt" min="0.1" step="0.1" value="1">
+      <span class="wp-step-bal" id="gift-hint"></span>
+    </div>
+    <div class="modal-btns">
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="gift-cancel">取消</button>
+      <button class="btn primary" id="gift-ok">确认转账</button>
+    </div>
+  </div>
+</div>
+
+<!-- 标记完成弹窗（可附实现图片） -->
+<div class="modal" id="done-modal" style="display:none">
+  <div class="modal-box narrow">
+    <h3 id="done-title">🎉 标记完成</h3>
+    <p class="status" id="done-sub">确认后 puppy 获得报酬</p>
+    <label class="bid-lab">📸 实现凭证（可选 · 最多 6 张 · 自动压缩）</label>
+    <input type="file" id="done-file" accept="image/*" multiple style="display:none">
+    <button class="btn ghost sm" id="done-pick">➕ 选择图片</button>
+    <div class="d-imgs" id="done-previews"></div>
+    <div class="modal-btns">
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="done-cancel">取消</button>
+      <button class="btn primary" id="done-ok">确认完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- 图片灯箱 -->
+<div class="lb-back" id="lb-modal" style="display:none" onclick="this.style.display='none'">
+  <img id="lb-img" alt="">
+</div>
+
+<!-- 通用提示弹窗 -->
+<div class="modal" id="msg-modal" style="display:none">
+  <div class="modal-box narrow">
+    <h3 id="msg-title">提示</h3>
+    <p class="status" id="msg-body"></p>
+    <div class="modal-btns">
+      <span style="flex:1"></span>
+      <button class="btn primary" id="msg-ok">知道了</button>
+    </div>
+  </div>
+</div>
+
+<!-- 投币入池：轻量 emoji 小动效（避免大动画卡顿） -->
+<div class="pool-back" id="pool-anim" style="display:none">
+  <div class="pool-mini">
+    <div class="pm-stage">
+      <span class="pm-cat">🐱</span>
+      <span class="pm-arrow">➜</span>
+      <span class="pm-coins" id="pm-coins"></span>
+      <span class="pm-wave" id="pm-wave">🌊</span>
+    </div>
+    <div class="pm-text" id="pool-msg"></div>
+  </div>
+</div>
+
+<script src="assets/venues.js"></script>
+<script>
+const WISH_KEY = "emf_wishes_v1", COIN_KEY = "emf_coins_v1";
+
+/* ---------- 页面外壳（迁移自旧页）：身份只做纯前端视角切换，不做登录校验 ---------- */
+const USERS = {kitten:{emoji:"🐱", role:"主要使用者"}, puppy:{emoji:"🐶", role:"主要维护者"}};
+let currentUser = localStorage.getItem("emf_current_user") || "kitten";
+if (!USERS[currentUser]) currentUser = "kitten";
+function uEmoji(n){ return (USERS[n] && USERS[n].emoji) || "👤"; }
+const STATUS = {
+  pending:   {label:"待审批", color:"var(--warn)", icon:"⏳"},
+  reviewing: {label:"受理中", color:"var(--accent)", icon:"🔍"},
+  approved:  {label:"已通过", color:"var(--good)", icon:"✅"},
+  rejected:  {label:"已驳回", color:"var(--bad)", icon:"↩️"},
+  done:      {label:"已完成", color:"var(--wp-violet)", icon:"🎉"},
+  cancelled: {label:"已撤销", color:"var(--muted)", icon:"🚫"},
+  unfulfilled:{label:"未实现", color:"var(--muted)", icon:"❌"},
+};
+const TIERS = [[1,3,0.40],[4,6,0.50],[7,9,0.60],[10,1e9,0.70]];
+const DDL_TIERS = [[1,3,3],[4,6,2],[7,1e9,1]];   // 币数 → 审批 DDL（整天）
+const INTEREST_RATE = 0.05;                       // puppy 负余额日复利
+function ddlDaysOf(n){ for (const [a,b,d] of DDL_TIERS) if (n >= a && n <= b) return d; return 3; }
+function minNextFee(w){ return 2 * (w.rejFeePaid || 0) + 1; }   // 下次起价 = 2×上次费用+1（可自愿出更高）
+const WAR_TIERS = [[1,0.80],[2,0.60],[3,0.40],[4,0.20]];      // 胜者分成（按战轮阶梯递减，第4轮起 20%）
+function warShare(w){
+  const r = w.rejRound || 0;
+  let p = 0.2;
+  for (const [a, pp] of WAR_TIERS) if (r >= a) p = pp;
+  return p;
+}
+function addDays(dateStr, n){
+  const d = new Date(dateStr + "T00:00:00+08:00");
+  d.setDate(d.getDate() + n);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function ratioOf(n){ for (const [a,b,r] of TIERS) if (n >= a && n <= b) return r; return 0.4; }
+function rewardOf(w){ return Math.round(w.coins * ratioOf(w.coins) * 10) / 10; }   // puppy 报酬精确到一位小数
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function today(){   // 显式 UTC+8（北京时间），与设备时区无关
+  const d = new Date(Date.now() + 8*3600e3);
+  return d.getUTCFullYear() + "-" + String(d.getUTCMonth()+1).padStart(2,"0") + "-" + String(d.getUTCDate()).padStart(2,"0");
+}
+function nowISO8(){ return new Date(Date.now() + 8*3600e3).toISOString(); }   // UTC+8 时间戳（供显示）
+function getWishes(){ try { return JSON.parse(localStorage.getItem(WISH_KEY) || "[]"); } catch(e){ return []; } }
+function saveWishes(arr){ localStorage.setItem(WISH_KEY, JSON.stringify(arr)); AppSync.saveAll(); }
+function getCoins(){ try { return JSON.parse(localStorage.getItem(COIN_KEY) || "{}"); } catch(e){ return {}; } }
+function saveCoins(c){ localStorage.setItem(COIN_KEY, JSON.stringify(c)); AppSync.saveAll(); }
+function balance(){ const c = getCoins(); return (c.kittenGranted||0) + (c.kittenInterest||0) + (c.kittenWon||0) + (c.kittenGift||0) - (c.kittenSpent||0) - (c.kittenSent||0); }
+function rollDebt(){
+  const c = getCoins();
+  if ((c.puppyEarned||0) >= 0) return;
+  const last = c.lastDebt || today();
+  if (last < today()){
+    const days = Math.max(1, Math.floor((new Date(today()) - new Date(last)) / 864e5));
+    const debt0 = -(c.puppyEarned||0);
+    let debt = debt0;
+    for (let i = 0; i < days; i++) debt = Math.round(debt * (1 + INTEREST_RATE) * 10) / 10;   // 精确到一位小数
+    c.puppyEarned = -debt;
+    logCoin(c, "puppy", "interest", -(Math.round((debt - debt0)*10)/10));
+    c.lastDebt = today();
+    saveCoins(c);
+  }
+}
+function rollSave(){
+  const c = getCoins();
+  const bal = balance();   // 含战池分成（kittenWon）一起计息
+  if (bal <= 0) return;
+  const last = c.lastSave || today();
+  if (last < today()){
+    const days = Math.max(1, Math.floor((new Date(today()) - new Date(last)) / 864e5));
+    let b = bal;
+    for (let i = 0; i < days; i++) b = Math.round(b * (1 + INTEREST_RATE) * 10) / 10;   // 一位小数
+    const gain = Math.round((b - bal)*10)/10;
+    c.kittenInterest = (c.kittenInterest||0) + gain;
+    logCoin(c, "kitten", "interest", gain);
+    c.lastSave = today();
+    saveCoins(c);
+  }
+}
+const START_DATE = "2026-06-21";   // kitten 许愿币开户日：每日到账与复利从这天起算
+function dayStr(d){   // 从 +08:00 构造的 Date 取 UTC 分量（即北京时间）
+  const p = x => String(x).padStart(2, "0");
+  return d.getUTCFullYear() + "-" + p(d.getUTCMonth() + 1) + "-" + p(d.getUTCDate());
+}
+function rollStart(){
+  const c = getCoins();
+  if (c.kittenStart) return;   // 只补发一次
+  const end = new Date(today() + "T00:00:00+08:00");
+  const d = new Date(START_DATE + "T00:00:00+08:00");
+  let b = 0, granted = 0, interest = 0;
+  while (d <= end){
+    b += 10; granted += 10;
+    logCoin(c, "kitten", "grant", 10, dayStr(d));
+    if (d < end){   // 最后一天（今天）不再计息，交给 rollSave 正常滚动
+      const gain = Math.round(b * INTEREST_RATE * 10) / 10;
+      b = Math.round((b + gain) * 10) / 10;
+      interest += gain;
+      logCoin(c, "kitten", "interest", gain, dayStr(d));
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  c.kittenGranted = (c.kittenGranted||0) + granted;
+  c.kittenInterest = (c.kittenInterest||0) + interest;
+  c.kittenStart = START_DATE;
+  c.lastGrant = today(); c.lastSave = today();
+  saveCoins(c);
+}
+function rollGrant(){
+  const c = getCoins();
+  const last = c.lastGrant || "";
+  if (!last){
+    c.kittenGranted = (c.kittenGranted||0) + 10;
+    c.lastGrant = today();
+    logCoin(c, "kitten", "grant", 10);
+    saveCoins(c);
+  } else if (last < today()){
+    const days = Math.max(1, Math.floor((new Date(today()) - new Date(last)) / 864e5));
+    c.kittenGranted = (c.kittenGranted||0) + days * 10;
+    for (let i = 0; i < days; i++) logCoin(c, "kitten", "grant", 10);
+    c.lastGrant = today();
+    saveCoins(c);
+  }
+}
+function coinLog(){ try { return (JSON.parse(localStorage.getItem(COIN_KEY) || "{}").coinLog) || []; } catch(e){ return []; } }
+function logCoin(c, user, kind, amount, d){
+  c.coinLog = c.coinLog || [];
+  c.coinLog.push({date: d || today(), user, kind, amount: Math.round(amount*10)/10});
+}
+function settleWar(w, winner, c){
+  const pot = w.warPot || 0;
+  if (!pot) return;
+  const pct = warShare(w);
+  const share = Math.round(pot * pct * 10) / 10;
+  if (winner === "kitten"){
+    c.kittenWon = (c.kittenWon||0) + share;
+    logCoin(c, "kitten", "warwin", share);
+  } else {
+    c.puppyEarned = (c.puppyEarned||0) + share;
+    logCoin(c, "puppy", "warwin", share);
+  }
+  w.warPot = 0;
+  logAct(w, "战争结算", winner + " 获胜，分得战池 " + share + " 枚（" + Math.round(pct*100) + "% 档）");
+}
+function logAct(w, act, note){
+  w.history = w.history || [];
+  w.history.push({at: nowISO8(), by: currentUser, act, note: note || ""});
+}
+function showMsg(title, body){
+  document.getElementById("msg-title").textContent = title;
+  document.getElementById("msg-body").textContent = body;
+  document.getElementById("msg-modal").style.display = "flex";
+}
+
+function applyRole(){
+  document.body.classList.toggle("user-puppy", currentUser === "puppy");
+  document.body.classList.toggle("user-kitten", currentUser === "kitten");
+  document.querySelectorAll("#uswitch .tab[data-u]").forEach(b=>b.classList.toggle("active", b.dataset.u===currentUser));
+  document.getElementById("kitten-view").style.display = (curTab === "wish" && currentUser === "kitten") ? "" : "none";
+  document.getElementById("puppy-view").style.display = (curTab === "wish" && currentUser === "puppy") ? "" : "none";
+  document.getElementById("trend-view").style.display = curTab === "trend" ? "" : "none";
+  renderAll();
+}
+function doSwitchUser(u){
+  currentUser = u;
+  localStorage.setItem("emf_current_user", currentUser);
+  applyRole();
+}
+
+/* ---------- 许愿弹窗 ---------- */
+function openWishModal(){
+  rollGrant();
+  const h = document.getElementById("w-h"), m = document.getElementById("w-m");
+  if (!h.options.length){
+    h.innerHTML = Array.from({length:24},(_,i)=>`<option value="${i}">${String(i).padStart(2,"0")}时</option>`).join("");
+    m.innerHTML = ["00","10","20","30","40","50"].map(v=>`<option value="${v}">${v}分</option>`).join("");
+    h.value = 18; m.value = 0;
+  }
+  const dl = document.getElementById("wp-venue-list");
+  if (!dl.options.length && typeof VenueStore !== "undefined"){
+    dl.innerHTML = VenueStore.allVenues().map(v=>`<option value="${esc(v.name)}">`).join("");
+  }
+  document.getElementById("w-title").value = "";
+  document.getElementById("w-date").value = "";
+  document.getElementById("w-venue").value = "";
+  document.getElementById("w-detail").value = "";
+  document.getElementById("w-coins").value = 1;
+  document.getElementById("w-bal-in").textContent = balance();
+  document.getElementById("w-ddl-hint").textContent =
+    "投入 1 枚 → puppy 需在 " + ddlDaysOf(1) + " 天内完成审批（整天计，超时将被标记）";
+  document.getElementById("wish-modal").style.display = "flex";
+  document.getElementById("w-title").focus();
+}
+function setCoins(v){
+  const el = document.getElementById("w-coins");
+  el.value = Math.max(1, Math.min(v, balance()));
+  document.getElementById("w-ddl-hint").textContent =
+    "投入 " + el.value + " 枚 → puppy 需在 " + ddlDaysOf(parseInt(el.value)||1) + " 天内完成审批（整天计，超时将被标记）";
+}
+function submitWish(){
+  const title = document.getElementById("w-title").value.trim();
+  if (!title){ showMsg("还差一点", "请填写「我想要什么」"); return; }
+  const coins = Math.max(1, parseInt(document.getElementById("w-coins").value) || 1);
+  if (coins > balance()){ showMsg("许愿币不足", "余额只有 " + balance() + " 枚许愿币啦，明天还会到账 10 枚哦"); return; }
+  const h = +document.getElementById("w-h").value, m = +document.getElementById("w-m").value;
+  const wantTime = document.getElementById("w-date").value ? String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0") : "";
+  const w = {
+    id: "w" + Date.now().toString(36) + Math.floor(Math.random()*46656).toString(36),
+    title, wantDate: document.getElementById("w-date").value,
+    wantTime, venue: document.getElementById("w-venue").value.trim(),
+    detail: document.getElementById("w-detail").value.trim(),
+    coins, status: "pending",
+    creator: "kitten",
+    ddlDays: ddlDaysOf(coins),
+    dueDate: addDays(today(), ddlDaysOf(coins)),
+    createdAt: nowISO8(),
+    history: []
+  };
+  logAct(w, "提交", "投入 " + coins + " 枚许愿币（审批 DDL：" + w.dueDate + "）");
+  const arr = getWishes(); arr.push(w); saveWishes(arr);
+  const c = getCoins(); c.kittenSpent = (c.kittenSpent||0) + coins;
+  logCoin(c, "kitten", "spend", -coins);
+  saveCoins(c);
+  document.getElementById("wish-modal").style.display = "none";
+  playPoolAnim(w);
+  renderAll();
+  syncNow();
+}
+
+/* ---------- 投币入池：轻量 emoji 小动效 ---------- */
+let poolTimer = null;
+function playPoolAnim(w){
+  const back = document.getElementById("pool-anim");
+  const coinsBox = document.getElementById("pm-coins");
+  const wave = document.getElementById("pm-wave");
+  const msg = document.getElementById("pool-msg");
+  if (poolTimer) clearTimeout(poolTimer);
+  coinsBox.innerHTML = "";
+  wave.classList.remove("pulse");
+  msg.textContent = "愿望已投入许愿池 · 🪙 " + w.coins + " 枚 · puppy 将按投入币数排序审批";
+  back.style.display = "flex";
+  const n = Math.min(w.coins, 4);   // 最多展示 4 枚，避免大动画
+  for (let i = 0; i < n; i++){
+    const coin = document.createElement("span");
+    coin.className = "pm-coin";
+    coin.textContent = "🪙";
+    coin.style.animationDelay = (i * 0.12) + "s";
+    coinsBox.appendChild(coin);
+  }
+  // 硬币落定后 🌊 小脉冲
+  setTimeout(()=>{
+    wave.classList.remove("pulse");
+    void wave.offsetWidth;
+    wave.classList.add("pulse");
+  }, 400 + n * 120);
+  poolTimer = setTimeout(closePoolAnim, 2000 + n * 120);
+}
+function closePoolAnim(){
+  document.getElementById("pool-anim").style.display = "none";
+  if (poolTimer){ clearTimeout(poolTimer); poolTimer = null; }
+}
+
+/* ---------- 详情弹窗 ---------- */
+let detailId = null;
+function openDetail(id){
+  detailId = id;
+  renderDetail();
+  document.getElementById("detail-modal").style.display = "flex";
+}
+function renderDetail(){
+  const w = getWishes().find(x=>x.id===detailId);
+  if (!w){ document.getElementById("detail-modal").style.display = "none"; return; }
+  const st = STATUS[w.status] || STATUS.pending;
+  const sEl = document.getElementById("d-status");
+  sEl.textContent = st.icon + " " + st.label;
+  sEl.style.background = st.color;
+  document.getElementById("d-title").textContent = w.title;
+  document.getElementById("d-coins").textContent = "🪙 " + w.coins;
+  const rows = [];
+  if (w.wantDate) rows.push(dRow("🕐 什么时候", w.wantDate + (w.wantTime ? " " + w.wantTime : "")));
+  if (w.venue) rows.push(dRow("📍 什么地点", esc(w.venue)));
+  if (w.detail) rows.push(dRow("📝 怎么样", esc(w.detail)));
+  rows.push(dRow("🧾 许愿人", uEmoji(w.creator) + " " + (w.creator||"kitten")));
+  if (w.status === "approved"){
+    const r = rewardOf(w);
+    rows.push(dRow("💰 完成后报酬", "puppy 将获得 " + r + " 枚（比例 " + Math.round(ratioOf(w.coins)*100) + "%）"));
+    rows.push(dRow("❌ 若未实现", "kitten 可判定：退还许愿币，puppy 不获报酬并倒扣 " + r + " 枚"));
+  }
+  if ((w.status === "pending" || w.status === "reviewing") && w.dueDate){
+    rows.push(dRow("⏳ 审批 DDL", ddlLine(w)));
+  }
+  if ((w.warPot||0) > 0){
+    const pct = warShare(w);
+    rows.push(dRow("⚔️ 驳回战池", "已累积 🪙 " + w.warPot + " 枚 · 胜者分成 " + Math.round(pct*100) + "%（第 " + (w.rejRound||0) + " 轮档）"));
+  }
+  if (w.status === "done"){
+    const imgs = w.imgs || [];
+    rows.push(`<div class="d-row"><span class="k">📸 实现凭证</span><span class="v d-imgs">` +
+      (imgs.length ? imgs.map(u=>`<img class="d-img" src="${u}" onclick="viewImg(this.src)" alt="">`).join("")
+                   : `<i style="font-size:11px;color:var(--muted)">暂无图片</i>`) +
+      `<button class="btn ghost sm d-add-img" id="d-add-img">➕ 添加</button>` +
+      `<input type="file" accept="image/*" multiple id="d-img-file" style="display:none"></span></div>`);
+  }
+  document.getElementById("d-rows").innerHTML = rows.join("");
+  const dimg = document.getElementById("d-img-file");
+  if (dimg){
+    document.getElementById("d-add-img").onclick = ()=>dimg.click();
+    dimg.onchange = e=>{ uploadDetailImgs(detailId, e.target.files); e.target.value = ""; };
+  }
+  document.getElementById("d-hist").innerHTML = (w.history||[]).slice().reverse().map(h=>
+    `<div class="wh"><span class="wh-at">${h.at.slice(5,16).replace("T"," ")}</span>
+     <span class="wh-by">${uEmoji(h.by)} ${esc(h.by)}</span>
+     <span class="wh-act">${esc(h.act)}</span>${h.note ? " · " + esc(h.note) : ""}</div>`).join("")
+    || `<div class="empty" style="padding:6px 0">暂无流程日志</div>`;
+  const ops = document.getElementById("d-ops");
+  let btns = `<span style="flex:1"></span><button class="btn ghost" id="d-close">关闭</button>`;
+  if (currentUser === "kitten"){
+    if (w.status === "approved") btns = `<button class="btn primary" id="d-done">✅ 标记完成</button><button class="btn danger" id="d-uf">❌ 判定未实现</button>` + btns;
+    if (w.status === "rejected") btns = `<button class="btn primary" id="d-override">💥 驳回对方的驳回（起价 ${minNextFee(w)} 枚，可加价）</button><button class="btn primary" id="d-resubmit">↻ 重新提交</button>` + btns;
+    if (w.status === "pending") btns = `<button class="btn danger" id="d-cancel">撤销（退币）</button>` + btns;
+  } else {
+    if (w.status === "pending") btns = `<button class="btn primary" id="d-review">🔍 受理</button>` + btns;
+    if (w.status === "reviewing") btns = `<button class="btn primary" id="d-approve">✅ 通过</button>` + btns;
+    if (w.status === "pending" || w.status === "reviewing"){
+      const first = (w.rejRound||0) === 0;
+      btns = `<button class="btn danger" id="d-reject">↩️ 驳回（${first ? "免费" : "起价 " + minNextFee(w) + " 枚，可加价"}）</button>` + btns;
+    }
+  }
+  ops.innerHTML = btns;
+  ops.querySelector("#d-close").onclick = ()=>document.getElementById("detail-modal").style.display = "none";
+  const b = (id2, fn)=>{ const el = ops.querySelector(id2); if (el) el.onclick = fn; };
+  b("#d-done", ()=>approveDone(w));
+  b("#d-uf", ()=>openUf(w));
+  b("#d-resubmit", ()=>actWish(w.id, "resubmit"));
+  b("#d-override", ()=>openOverride(w));
+  b("#d-cancel", ()=>actWish(w.id, "cancel"));
+  b("#d-review", ()=>actWish(w.id, "review"));
+  b("#d-approve", ()=>openApprove(w));
+  b("#d-reject", ()=>openReject(w));
+}
+function dRow(k, v){ return `<div class="d-row"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
+
+/* ---------- puppy 弹窗：通过（报酬预览）/ 驳回 ---------- */
+let pendingWishId = null;
+function openApprove(w){
+  pendingWishId = w.id;
+  const r = rewardOf(w);
+  document.getElementById("ap-title").textContent = "✅ 通过愿望：" + w.title;
+  document.getElementById("ap-preview").innerHTML =
+    `<div class="ap-line">投入 <b>🪙 ${w.coins}</b></div>
+     <div class="ap-line">报酬比例 <b>${Math.round(ratioOf(w.coins)*100)}%</b>（${w.coins} 枚档）</div>
+     <div class="ap-line">完成结算 <b>🪙 ${r}</b></div>`;
+  document.getElementById("approve-modal").style.display = "flex";
+}
+function openReject(w){
+  pendingWishId = w.id;
+  const first = (w.rejRound||0) === 0;
+  const min = minNextFee(w);
+  const feeEl = document.getElementById("note-fee");
+  const hintEl = document.getElementById("note-fee-hint");
+  if (first){
+    feeEl.value = 0;
+    feeEl.disabled = true;
+    hintEl.textContent = "首次驳回免费";
+    document.getElementById("note-sub").textContent = "请填写驳回理由（首次驳回免费，许愿币将退还 kitten）";
+  } else {
+    feeEl.value = min;
+    feeEl.disabled = false;
+    hintEl.textContent = "起价 " + min + " 枚（上次 ×2+1，可自愿加价）· puppy 余额 🪙 " + (getCoins().puppyEarned||0);
+    document.getElementById("note-sub").textContent = "请填写驳回理由（第 " + ((w.rejRound||0)+1) + " 次驳回 · 费用自定，从 puppy 余额扣除）";
+  }
+  document.getElementById("note-input").value = "";
+  document.getElementById("note-modal").style.display = "flex";
+}
+
+/* ---------- 操作 ---------- */
+function actWish(id, act, note, feeArg){
+  const arr = getWishes();
+  const w = arr.find(x=>x.id===id);
+  if (!w) return;
+  const c = getCoins();
+  if (act === "reject"){
+    const first = (w.rejRound||0) === 0;
+    const min = minNextFee(w);
+    let fee = first ? 0 : parseInt(feeArg);
+    if (!first && (!(fee >= min))){ showMsg("出价过低", "本次驳回起价 " + min + " 枚许愿币（上次费用的 2 倍+1）"); return; }
+    if ((c.puppyEarned||0) < fee){
+      showMsg("余额不足", "本次驳回费用 " + fee + " 枚许愿币，puppy 当前余额不足");
+      return;
+    }
+    if (fee > 0){
+      c.puppyEarned = (c.puppyEarned||0) - fee;
+      logCoin(c, "puppy", "fee", -fee);
+    }
+    w.warPot = (w.warPot||0) + fee;
+    w.rejFeePaid = fee;
+    w.rejRound = (w.rejRound||0) + 1;
+    w.status = "rejected";
+    logAct(w, "驳回", (note ? note + " · " : "") + "第 " + w.rejRound + " 次驳回（费用 " + fee + " 枚）");
+    c.kittenSpent = Math.max(0, (c.kittenSpent||0) - w.coins);
+    logCoin(c, "kitten", "refund", w.coins);
+  } else if (act === "override"){
+    const min = minNextFee(w);
+    const fee = parseInt(feeArg);
+    if (!(fee >= min)){ showMsg("出价过低", "反制起价 " + min + " 枚许愿币（上次费用的 2 倍+1），可自愿出更高"); return; }
+    if ((w.coins + fee) > balance()){
+      showMsg("余额不足", "反制需要重新投入 " + w.coins + " 枚 + 费用 " + fee + " 枚，当前余额不足");
+      return;
+    }
+    c.kittenSpent = (c.kittenSpent||0) + w.coins;
+    if (fee > 0){
+      c.kittenSpent = (c.kittenSpent||0) + fee;
+      logCoin(c, "kitten", "fee", -fee);
+    }
+    w.warPot = (w.warPot||0) + fee;
+    w.rejFeePaid = fee;
+    w.rejRound = (w.rejRound||0) + 1;
+    w.status = "pending";
+    logAct(w, "驳回对方的驳回", "支付费用 " + fee + " 枚（第 " + w.rejRound + " 轮）");
+  } else if (act === "review"){ w.status = "reviewing"; logAct(w, "受理"); }
+  else if (act === "approve"){
+    settleWar(w, "kitten", c);   // 驳回战以 kitten 的反制坚持告终 → kitten 分战池
+    w.status = "approved"; logAct(w, "通过");
+  }
+  else if (act === "resubmit"){
+    if (w.coins > balance()){ showMsg("许愿币不足", "重新提交需要 " + w.coins + " 枚，当前余额 " + balance() + " 枚"); return; }
+    settleWar(w, "puppy", c);   // 不反制而重新提交 = 放弃本轮战 → puppy 分战池
+    c.kittenSpent = (c.kittenSpent||0) + w.coins;
+    logCoin(c, "kitten", "spend", -w.coins);
+    w.status = "pending"; logAct(w, "重新提交");
+  }
+  else if (act === "done"){
+    w.status = "done";
+    const reward = rewardOf(w);
+    c.puppyEarned = (c.puppyEarned||0) + reward;
+    logCoin(c, "puppy", "reward", reward);
+    logAct(w, "完成", "puppy 获得报酬 " + reward + " 枚许愿币（比例 " + Math.round(ratioOf(w.coins)*100) + "%）");
+    playDone(reward, w.title);
+  } else if (act === "unfulfilled"){
+    w.status = "unfulfilled";
+    const penalty = rewardOf(w);
+    c.puppyEarned = (c.puppyEarned||0) - penalty;   // 可扣成负数
+    c.lastDebt = today();
+    c.kittenSpent = Math.max(0, (c.kittenSpent||0) - w.coins);   // 退还 kitten
+    logCoin(c, "puppy", "penalty", -penalty);
+    logCoin(c, "kitten", "refund", w.coins);
+    logAct(w, "判定未实现", "puppy 被倒扣 " + penalty + " 枚许愿币（未获报酬）");
+    playPenalty(penalty, w.title);
+  } else if (act === "cancel"){
+    settleWar(w, "puppy", c);   // kitten 放弃 → puppy 分战池
+    const wasRejected = w.status === "rejected";   // 被驳回时已退过币，撤销不再重复退
+    w.status = "cancelled";
+    if (!wasRejected){
+      c.kittenSpent = Math.max(0, (c.kittenSpent||0) - w.coins);
+      logCoin(c, "kitten", "refund", w.coins);
+    }
+    logAct(w, "撤销", wasRejected ? "愿望已撤销（币已在驳回时退还）" : "退还 " + w.coins + " 枚许愿币");
+  }
+  saveCoins(c);
+  saveWishes(arr);
+  renderAll();
+  if (detailId) renderDetail();
+  syncNow();   // 状态变更后立即与服务端对齐（推送刚完成时可能短暂读旧，轮询兜底）
+}
+/* kitten 反制出价弹窗 */
+function openOverride(w){
+  pendingWishId = w.id;
+  const min = minNextFee(w);
+  document.getElementById("ov-title").textContent = "💥 驳回对方的驳回：" + w.title;
+  document.getElementById("ov-fee").value = min;
+  document.getElementById("ov-fee-hint").textContent =
+    "起价 " + min + " 枚（上次 ×2+1，可自愿加价）· 余额 🪙 " + balance() + "（另需重投 " + w.coins + " 枚）";
+  document.getElementById("ov-modal").style.display = "flex";
+}
+/* kitten 判定未实现：确认弹窗（预览倒扣） */
+function openUf(w){
+  pendingWishId = w.id;
+  const penalty = rewardOf(w);
+  document.getElementById("uf-title").textContent = "❌ 判定未实现：" + w.title;
+  document.getElementById("uf-preview").innerHTML =
+    `<div class="ap-line">许愿币退还 kitten <b>🪙 ${w.coins}</b></div>
+     <div class="ap-line">puppy 应得报酬（扣罚） <b style="color:var(--bad)">−🪙 ${penalty}</b></div>
+     <div class="ap-line">若 puppy 余额为负 <b style="color:var(--bad)">日复利 ${Math.round(INTEREST_RATE*100)}%</b>，后续报酬优先填补</div>`;
+  document.getElementById("uf-modal").style.display = "flex";
+}
+/* 倒扣小动画 */
+function playPenalty(penalty, title){
+  const back = document.getElementById("pool-anim");
+  const coinsBox = document.getElementById("pm-coins");
+  const wave = document.getElementById("pm-wave");
+  const msg = document.getElementById("pool-msg");
+  if (poolTimer) clearTimeout(poolTimer);
+  coinsBox.innerHTML = "";
+  wave.classList.remove("pulse");
+  wave.textContent = "🐶";
+  msg.textContent = "⚠️ 愿望未实现，puppy 被倒扣 🪙 " + penalty + " 枚";
+  back.style.display = "flex";
+  const n = Math.min(penalty, 3);
+  for (let i = 0; i < n; i++){
+    const coin = document.createElement("span");
+    coin.className = "pm-coin";
+    coin.textContent = "🪙";
+    coin.style.animationDelay = (i * 0.12) + "s";
+    coinsBox.appendChild(coin);
+  }
+  setTimeout(()=>{
+    wave.classList.remove("pulse"); void wave.offsetWidth; wave.classList.add("pulse");
+  }, 400 + n * 120);
+  poolTimer = setTimeout(closePoolAnim, 2400 + n * 120);
+}
+/* kitten 标记完成：确认弹窗 */
+let doneWishId = null, doneImgs = [];
+function approveDone(w){
+  doneWishId = w.id;
+  doneImgs = [];
+  const r = rewardOf(w);
+  document.getElementById("done-title").textContent = "🎉 标记完成：" + w.title;
+  document.getElementById("done-sub").textContent = "完成后 puppy 将获得 " + r + " 枚许愿币报酬（" + Math.round(ratioOf(w.coins)*100) + "% 档）";
+  document.getElementById("done-previews").innerHTML = "";
+  document.getElementById("done-file").value = "";
+  document.getElementById("done-modal").style.display = "flex";
+}
+function compressImage(file, maxDim, q){
+  maxDim = maxDim || 900; q = q || 0.72;
+  return new Promise((res, rej)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      const sc = Math.min(1, maxDim / Math.max(w, h));
+      w = Math.round(w * sc); h = Math.round(h * sc);
+      const cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      cv.getContext("2d").drawImage(img, 0, 0, w, h);
+      res(cv.toDataURL("image/jpeg", q));
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error("图片读取失败")); };
+    img.src = url;
+  });
+}
+function pickDoneFiles(files){
+  const room = 6 - doneImgs.length;
+  const list = Array.from(files).filter(f=>f.type.startsWith("image/") && f.size <= 8*1024*1024).slice(0, room);
+  if (!list.length){ showMsg("无法添加", "最多 6 张 · 仅图片 · 单张不超过 8MB"); return; }
+  for (const f of list){
+    compressImage(f).then(u=>{
+      doneImgs.push(u);
+      document.getElementById("done-previews").innerHTML =
+        doneImgs.map(x=>`<img class="d-img" src="${x}" alt="">`).join("");
+    }).catch(()=>{});
+  }
+}
+function confirmDone(){
+  const arr = getWishes();
+  const w = arr.find(x=>x.id===doneWishId);
+  if (!w) return;
+  if (doneImgs.length){
+    w.imgs = (w.imgs||[]).concat(doneImgs);
+    logAct(w, "上传凭证", "新增 " + doneImgs.length + " 张实现图片");
+    saveWishes(arr);   // 保存同一数组（改过的 w 在其中）；actWish 之后会重新读取
+  }
+  document.getElementById("done-modal").style.display = "none";
+  actWish(w.id, "done");
+}
+function viewImg(src){
+  document.getElementById("lb-img").src = src;
+  document.getElementById("lb-modal").style.display = "flex";
+}
+async function uploadDetailImgs(id, files){
+  const arr = getWishes();
+  const w = arr.find(x=>x.id===id);
+  if (!w) return;
+  const imgs = w.imgs || [];
+  const room = 9 - imgs.length;
+  const list = Array.from(files).filter(f=>f.type.startsWith("image/") && f.size <= 8*1024*1024).slice(0, room);
+  if (!list.length){ showMsg("无法添加", "最多 9 张 · 仅图片 · 单张不超过 8MB"); return; }
+  for (const f of list){
+    try { imgs.push(await compressImage(f)); } catch(e){}
+  }
+  w.imgs = imgs;
+  logAct(w, "上传凭证", "新增 " + list.length + " 张实现图片");
+  saveWishes(arr);   // 保存同一数组（改过的 w 在其中）
+  renderDetail();
+  renderAll();
+  syncNow();
+}
+/* 完成结算：轻量 emoji 小动效（🎉 弹跳 + 🪙 递出） */
+function playDone(reward, title){
+  const back = document.getElementById("pool-anim");
+  const coinsBox = document.getElementById("pm-coins");
+  const wave = document.getElementById("pm-wave");
+  const msg = document.getElementById("pool-msg");
+  if (poolTimer) clearTimeout(poolTimer);
+  coinsBox.innerHTML = "";
+  wave.classList.remove("pulse");
+  wave.textContent = "🐶";
+  msg.textContent = "🎉 愿望完成！puppy 获得报酬 🪙 " + reward + " 枚";
+  back.style.display = "flex";
+  const n = Math.min(reward, 3);
+  for (let i = 0; i < n; i++){
+    const coin = document.createElement("span");
+    coin.className = "pm-coin";
+    coin.textContent = "🪙";
+    coin.style.animationDelay = (i * 0.12) + "s";
+    coinsBox.appendChild(coin);
+  }
+  setTimeout(()=>{
+    wave.classList.remove("pulse");
+    void wave.offsetWidth;
+    wave.classList.add("pulse");
+  }, 400 + n * 120);
+  poolTimer = setTimeout(closePoolAnim, 2200 + n * 120);
+}
+
+/* ---------- 渲染 ---------- */
+function tierHtml(){
+  return TIERS.map(t=>
+    `<span class="wt2"><b>${t[0]}${t[1]>=1e9?"+":"-"+t[1]} 枚</b><i class="wt-bar"><i style="width:${t[2]*100}%"></i></i>${Math.round(t[2]*100)}%</span>`).join("");
+}
+function ddlLine(w){
+  if (!w.dueDate) return "";
+  const left = Math.floor((new Date(w.dueDate + "T23:59:59+08:00") - new Date()) / 864e5);
+  if (left < 0) return w.dueDate + "（已超时 " + (-left) + " 天）⛔";
+  return w.dueDate + "（剩 " + left + " 天）";
+}
+function wishCard(w){
+  const st = STATUS[w.status] || STATUS.pending;
+  const fields = [];
+  if ((w.status === "pending" || w.status === "reviewing") && w.dueDate) fields.push("⏳ DDL " + ddlLine(w));
+  if (w.wantDate) fields.push("🕐 " + w.wantDate + (w.wantTime ? " " + w.wantTime : ""));
+  if (w.venue) fields.push("📍 " + esc(w.venue));
+  if (w.detail) fields.push("📝 " + esc(w.detail));
+  const top = w.status === "pending" || w.status === "reviewing";
+  return `<div class="wp-card${top?" wp-top":""}" data-id="${w.id}">
+    <div class="wp-head">
+      <span class="wp-status" style="background:${st.color}">${st.icon} ${st.label}</span>
+      <span class="wp-title">${esc(w.title)}</span>
+      <span class="wp-coins">🪙 ${w.coins}</span>
+    </div>
+    ${fields.length ? `<div class="wp-fields">${fields.join(" · ")}</div>` : ""}
+    <div class="wp-viewhint">查看 / 处理 ›</div>
+  </div>`;
+}
+function bindCards(){
+  document.querySelectorAll(".wp-card[data-id]").forEach(c=>{
+    c.addEventListener("click", ()=>openDetail(c.dataset.id));
+  });
+}
+let curTab = "wish";
+function switchTab(t){
+  curTab = t;
+  document.querySelectorAll("#wp-nav a").forEach(a=>a.classList.toggle("active", a.dataset.tab===t));
+  const trend = document.getElementById("trend-view");
+  trend.style.display = t === "trend" ? "" : "none";
+  document.getElementById("kitten-view").style.display = (t === "wish" && currentUser === "kitten") ? "" : "none";
+  document.getElementById("puppy-view").style.display = (t === "wish" && currentUser === "puppy") ? "" : "none";
+  if (t === "trend") renderTrend();
+}
+const KIND_LABEL = {grant:"到账", spend:"投入", refund:"退还", reward:"报酬", penalty:"倒扣", interest:"利息", fee:"驳回费用", warwin:"战争结算", transfer:"转账"};
+const KIND_COLOR = {grant:"var(--good)", refund:"var(--good)", reward:"var(--good)",
+                    spend:"var(--bad)", penalty:"var(--bad)", interest:"var(--warn)", fee:"var(--muted)", warwin:"var(--wp-violet)", transfer:"var(--wp-transfer)"};
+function renderTrend(){
+  const user = currentUser;
+  const log = coinLog().filter(x=>x.user===user).sort((a,b)=>a.date.localeCompare(b.date));
+  document.getElementById("trend-title").textContent =
+    uEmoji(user) + " " + user + " 的许愿币变动趋势";
+  document.getElementById("trend-hint").textContent = log.length ? ("自 " + log[0].date + " 起 · " + log.length + " 笔记录") : "暂无记录";
+  const byDay = {};
+  for (const e of log){ (byDay[e.date] = byDay[e.date] || []).push(e); }
+  const days = Object.keys(byDay).sort();
+  if (!days.length){
+    document.getElementById("trend-chart").innerHTML = `<div class="empty">还没有变动记录——去许一个愿吧 🙏</div>`;
+    return;
+  }
+  const maxPlus = Math.max(1, ...days.map(d=>byDay[d].filter(e=>e.amount>0).reduce((a,b)=>a+b.amount,0)));
+  const maxMinus = Math.max(1, ...days.map(d=>-byDay[d].filter(e=>e.amount<0).reduce((a,b)=>a+b.amount,0)));
+  let cum = 0;
+  const rows = days.map(d=>{
+    const es = byDay[d];
+    const plus = es.filter(e=>e.amount>0).reduce((a,b)=>a+b.amount,0);
+    const minus = -es.filter(e=>e.amount<0).reduce((a,b)=>a+b.amount,0);
+    const net = plus - minus;
+    cum = Math.round((cum + net)*10)/10;
+    const barL = Math.round(minus/maxMinus*100);
+    const barR = Math.round(plus/maxPlus*100);
+    const chips = es.map(e=>
+      `<span class="td-chip" style="color:${KIND_COLOR[e.kind]}">${KIND_LABEL[e.kind]} ${e.amount>0?"+":""}${e.amount}</span>`).join("");
+    return `<div class="td-row">
+      <span class="td-date">${d.slice(5)}</span>
+      <div class="td-bar">
+        <i class="td-neg" style="width:${barL}%"></i>
+        <span class="td-zero"></span>
+        <i class="td-pos" style="width:${barR}%"></i>
+      </div>
+      <span class="td-net" style="color:${net>=0?"var(--good)":"var(--bad)"}">${net>=0?"+":""}${net}</span>
+      <span class="td-cum">余额 ${cum}</span>
+      <span class="td-chips">${chips}</span>
+    </div>`;
+  }).join("");
+  document.getElementById("trend-chart").innerHTML =
+    `<div class="td-legend">← 支出/倒扣 ｜ 0 ｜ 到账/报酬/利息 →</div>` + rows;
+}
+/* 对方余额战争迷雾：均值±标准差（等比 50%），不显示精确数 */
+function fogStr(v){
+  const f = x => { const r = Math.round(x*10)/10; return Number.isInteger(r) ? String(r) : r.toFixed(1); };
+  const lo = v*0.5, hi = v*1.5;
+  return "约 🪙 " + f(Math.min(lo,hi)) + " – " + f(Math.max(lo,hi));
+}
+function renderAll(){
+  rollStart();
+  rollGrant();
+  rollDebt();
+  rollSave();
+  if (currentUser === "kitten") renderKitten(); else renderPuppy();
+  bindCards();
+}
+function renderKitten(){
+  document.getElementById("wp-balance").textContent = balance();
+  const balCard = document.getElementById("wp-balance").closest(".wp-coin-card");
+  if (balCard){
+    const bs = balCard.querySelector(".wp-coin-sub");
+    if (bs) bs.textContent = balance() > 0
+      ? ("每天自动到账 10 枚 · 正余额日复利 " + Math.round(INTEREST_RATE*100) + "% · 完成后按阶梯奖励 puppy ｜ 开户 " + (getCoins().kittenStart || START_DATE))
+      : "每天自动到账 10 枚 · 完成后按阶梯奖励 puppy";
+  }
+  const fogEl = document.getElementById("k-fog");
+  if (fogEl) fogEl.textContent = "🐶 puppy 余额范围：" + fogStr(getCoins().puppyEarned||0) + "（±50% 不确定估计）";
+  document.getElementById("wp-tier").innerHTML = tierHtml() +
+    `<div class="wp-tier-note">正余额日复利 5% ｜ 审批 DDL（整天）：1-3枚→3天 · 4-6枚→2天 · 7+枚→1天 ｜ 驳回战：起价 2×上次+1 可加价 · 战池胜者分成 80%/60%/40%/20%</div>`;
+  const mine = getWishes().filter(w=>w.creator==="kitten").sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  document.getElementById("w-my-hint").textContent = mine.length ? ("共 " + mine.length + " 个愿望") : "还没有愿望，去许一个吧";
+  document.getElementById("w-mylist").innerHTML = mine.length
+    ? mine.map(wishCard).join("")
+    : `<div class="empty">还没有愿望——许一个愿，puppy 会看到并按投入币数排序审批 🙏</div>`;
+}
+function renderPuppy(){
+  const all = getWishes();
+  const earned = getCoins().puppyEarned||0;
+  const earnEl = document.getElementById("wp-earned");
+  const earnStr = earned < 0 ? earned.toFixed(1) : String(earned);   // 负号保留
+  earnEl.textContent = earnStr;
+  earnEl.style.color = earned < 0 ? "var(--bad)" : "";
+  const card = earnEl.closest(".wp-coin-card");
+  const sub = card ? card.querySelector(".wp-coin-sub") : null;
+  if (sub) sub.textContent = earned < 0
+    ? ("欠 " + Math.abs(earned).toFixed(1) + " 枚 · 日复利 " + Math.round(INTEREST_RATE*100) + "% · 后续报酬优先填补")
+    : "kitten 标记完成的愿望按阶梯比例结算";
+  const fogEl2 = document.getElementById("p-fog");
+  if (fogEl2) fogEl2.textContent = "🐱 kitten 余额范围：" + fogStr(balance()) + "（±50% 不确定估计）";
+  document.getElementById("wp-tier2").innerHTML = tierHtml() +
+    `<div class="wp-tier-note">审批 DDL（整天）：1-3枚→3天 · 4-6枚→2天 · 7+枚→1天 ｜ 负余额日复利 ${Math.round(INTEREST_RATE*100)}% ｜ 驳回战：起价 2×上次+1 可加价 · 战池胜者分成 80%/60%/40%/20%</div>`;
+  const queue = all.filter(w=>w.status==="pending" || w.status==="reviewing")
+                   .sort((a,b)=>b.coins-a.coins || a.createdAt.localeCompare(b.createdAt));
+  document.getElementById("w-queue-hint").textContent = queue.length
+    ? ("待办 " + queue.length + " 个 · 按投入许愿币降序") : "队列为空";
+  document.getElementById("w-queue").innerHTML = queue.length
+    ? queue.map(wishCard).join("")
+    : `<div class="empty">审批队列为空 🎉</div>`;
+  const ledger = all.slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  document.getElementById("w-ledger").innerHTML = ledger.length
+    ? ledger.map(wishCard).join("")
+    : `<div class="empty">暂无愿望记录</div>`;
+}
+
+/* ---------- 转账 ---------- */
+function openGift(){
+  const isK = currentUser === "kitten";
+  const c = getCoins();
+  const avail = isK ? balance() : Math.max(0, c.puppyEarned||0);
+  document.getElementById("gift-title").textContent = "🎁 转账给 " + uEmoji(isK ? "puppy" : "kitten") + " " + (isK ? "puppy" : "kitten");
+  document.getElementById("gift-sub").textContent = "把自己的许愿币分一部分给对方（立即到账）";
+  document.getElementById("gift-hint").textContent = "可转 🪙 " + (Math.round(avail*10)/10) + " 枚";
+  document.getElementById("gift-amt").value = avail >= 1 ? 1 : avail;
+  document.getElementById("gift-modal").style.display = "flex";
+}
+function doGift(){
+  const amt = Math.round(parseFloat(document.getElementById("gift-amt").value)*10)/10;
+  const isK = currentUser === "kitten";
+  const c = getCoins();
+  const avail = isK ? balance() : Math.max(0, c.puppyEarned||0);
+  if (!(amt >= 0.1)){ showMsg("金额无效", "请输入至少 0.1 枚（支持一位小数）"); return; }
+  if (amt > avail){ showMsg("余额不足", "最多可转 🪙 " + (Math.round(avail*10)/10) + " 枚"); return; }
+  if (isK){
+    c.kittenSent = (c.kittenSent||0) + amt;
+    logCoin(c, "kitten", "transfer", -amt);
+    c.puppyEarned = (c.puppyEarned||0) + amt;
+    logCoin(c, "puppy", "transfer", amt);
+  } else {
+    c.puppyEarned = (c.puppyEarned||0) - amt;
+    logCoin(c, "puppy", "transfer", -amt);
+    c.kittenGift = (c.kittenGift||0) + amt;
+    logCoin(c, "kitten", "transfer", amt);
+  }
+  saveCoins(c);
+  document.getElementById("gift-modal").style.display = "none";
+  renderAll();
+  syncNow();
+  showMsg("转账成功", "已转账 🪙 " + amt + " 枚给对方");
+}
+
+async function init(){
+  // 页面外壳：不做登录门禁；身份由根壳统一管理，页面内只保留纯前端视角切换
+  currentUser = localStorage.getItem("emf_current_user") || "kitten";
+  if (!USERS[currentUser]) currentUser = "kitten";
+  // 关键：等本机后端完成首次状态仲裁后再渲染/补币。
+  // 新浏览器（localStorage 为空）若先跑 rollStart/rollGrant，会立刻 bump t 并 push
+  // 一份空愿望列表，把服务端已收到的愿望冲掉（同一问题也会清空日程/地点）。
+  try {
+    if (typeof LocalBackend !== "undefined" && LocalBackend.ready) await LocalBackend.ready;
+  } catch(e){}
+  // 许愿弹窗
+  document.getElementById("wish-open").addEventListener("click", openWishModal);
+  document.getElementById("wish-cancel").addEventListener("click", ()=>document.getElementById("wish-modal").style.display = "none");
+  document.getElementById("w-submit").addEventListener("click", submitWish);
+  document.getElementById("w-minus").addEventListener("click", ()=>setCoins((parseInt(document.getElementById("w-coins").value)||1)-1));
+  document.getElementById("w-plus").addEventListener("click", ()=>setCoins((parseInt(document.getElementById("w-coins").value)||1)+1));
+  document.getElementById("w-coins").addEventListener("change", ()=>setCoins(parseInt(document.getElementById("w-coins").value)||1));
+  // 详情弹窗
+  document.getElementById("detail-modal").addEventListener("click", e=>{
+    if (e.target === document.getElementById("detail-modal")) document.getElementById("detail-modal").style.display = "none";
+  });
+  // puppy 弹窗
+  document.getElementById("ap-ok").addEventListener("click", ()=>{
+    document.getElementById("approve-modal").style.display = "none";
+    if (pendingWishId) actWish(pendingWishId, "approve");
+    pendingWishId = null;
+  });
+  document.getElementById("ap-cancel").addEventListener("click", ()=>{ document.getElementById("approve-modal").style.display = "none"; pendingWishId = null; });
+  document.getElementById("note-ok").addEventListener("click", ()=>{
+    document.getElementById("note-modal").style.display = "none";
+    if (pendingWishId) actWish(pendingWishId, "reject",
+      document.getElementById("note-input").value.trim(),
+      parseInt(document.getElementById("note-fee").value) || 0);
+    pendingWishId = null;
+  });
+  document.getElementById("note-cancel").addEventListener("click", ()=>{ document.getElementById("note-modal").style.display = "none"; pendingWishId = null; });
+  // 反制出价
+  document.getElementById("ov-ok").addEventListener("click", ()=>{
+    document.getElementById("ov-modal").style.display = "none";
+    if (pendingWishId) actWish(pendingWishId, "override", "", parseInt(document.getElementById("ov-fee").value) || 0);
+    pendingWishId = null;
+  });
+  document.getElementById("ov-cancel").addEventListener("click", ()=>{ document.getElementById("ov-modal").style.display = "none"; pendingWishId = null; });
+  // 未实现判定
+  document.getElementById("uf-ok").addEventListener("click", ()=>{
+    document.getElementById("uf-modal").style.display = "none";
+    if (pendingWishId) actWish(pendingWishId, "unfulfilled");
+    pendingWishId = null;
+  });
+  document.getElementById("uf-cancel").addEventListener("click", ()=>{ document.getElementById("uf-modal").style.display = "none"; pendingWishId = null; });
+  // 转账
+  document.getElementById("gift-ok").addEventListener("click", doGift);
+  document.getElementById("gift-cancel").addEventListener("click", ()=>{ document.getElementById("gift-modal").style.display = "none"; });
+  // 标记完成（附实现图片）
+  document.getElementById("done-ok").addEventListener("click", confirmDone);
+  document.getElementById("done-cancel").addEventListener("click", ()=>{ document.getElementById("done-modal").style.display = "none"; doneWishId = null; });
+  document.getElementById("done-pick").addEventListener("click", ()=>document.getElementById("done-file").click());
+  document.getElementById("done-file").addEventListener("change", e=>{ pickDoneFiles(e.target.files); e.target.value = ""; });
+  // 通用提示
+  document.getElementById("msg-ok").addEventListener("click", ()=>{ document.getElementById("msg-modal").style.display = "none"; });
+  document.getElementById("msg-modal").addEventListener("click", e=>{
+    if (e.target === document.getElementById("msg-modal")) document.getElementById("msg-modal").style.display = "none";
+  });
+  // 投币动画：点击即关
+  document.getElementById("pool-anim").addEventListener("click", closePoolAnim);
+  // 视角切换（纯前端：只切视图，不做任何登录校验）
+  document.querySelectorAll("#uswitch .tab[data-u]").forEach(b=>b.addEventListener("click", ()=>{
+    if (b.dataset.u !== currentUser) doSwitchUser(b.dataset.u);
+  }));
+  document.querySelectorAll("#wp-nav a").forEach(a=>a.addEventListener("click", ()=>switchTab(a.dataset.tab)));
+  applyRole();
+  // 本地定时渲染（处理每日到账/复利滚动）
+  setInterval(()=>{ renderAll(); }, 5000);
+  // 实时同步：服务端版本更新（另一端/另一设备的改动）→ 采纳并立即刷新
+  setInterval(syncNow, 5000);
+}
+
+/* 立即同步一次：拉取本机后端，服务端版本更新则采纳并重渲染。
+   愿望用并集合并（最新流程日志优先），避免服务端某次空快照覆盖掉本地新愿望；
+   若本地还有服务端缺失的愿望，则把它推回去。 */
+async function syncNow(){
+  try {
+    const r = await fetch("/api/state", {cache:"no-store"});
+    const d = await r.json();
+    const localT = (typeof VenueStore !== "undefined") ? VenueStore.metaT() : 0;
+    if ((d.t || 0) > localT){
+      const serverW = Array.isArray(d.wishes) ? d.wishes : [];
+      const mergedW = (typeof AppSync !== "undefined" && AppSync.mergeWishes)
+        ? AppSync.mergeWishes(getWishes(), serverW) : serverW;
+      localStorage.setItem(WISH_KEY, JSON.stringify(mergedW));
+      localStorage.setItem("emf_schedule_events_v1", JSON.stringify(d.events || []));
+      localStorage.setItem("emf_venues_v1", JSON.stringify(d.venues || []));
+      if (d.coins && typeof d.coins === "object") localStorage.setItem(COIN_KEY, JSON.stringify(d.coins));
+      localStorage.setItem("emf_store_meta", JSON.stringify({t: d.t}));
+      if (typeof AppSync !== "undefined" && AppSync.needsWishPush && AppSync.needsWishPush(mergedW, serverW)){
+        localStorage.setItem("emf_store_meta", JSON.stringify({t: Date.now()}));
+        AppSync.push();
+      }
+      renderAll();
+      if (curTab === "trend") renderTrend();
+    }
+  } catch(e){}
+}
+init().catch(function(e){ console.error(e); });
+</script>
+</body>
+</html>

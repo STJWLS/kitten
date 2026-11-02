@@ -1,0 +1,54 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'android-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK
+        run: |
+          set -e
+          SDK="$RUNNER_TEMP/android-sdk"
+          mkdir -p "$SDK/cmdline-tools"
+          curl -fsSL -o /tmp/cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q /tmp/cmdtools.zip -d "$SDK/cmdline-tools"
+          mv "$SDK/cmdline-tools/cmdline-tools" "$SDK/cmdline-tools/latest"
+          export ANDROID_SDK_ROOT="$SDK"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --licenses >/dev/null || true
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" "platforms;android-34" "build-tools;34.0.0"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+      - name: Decode optional signing key
+        env:
+          KP_KEYSTORE_BASE64: ${{ secrets.KP_KEYSTORE_BASE64 }}
+          KP_KS_PASS: ${{ secrets.KP_KS_PASS }}
+        run: |
+          if [ -n "$KP_KEYSTORE_BASE64" ]; then
+            mkdir -p android/KittenPuppy
+            printf '%s' "$KP_KEYSTORE_BASE64" | base64 -d > android/KittenPuppy/kp.keystore
+            echo "KP_KS_PASS=$KP_KS_PASS" >> "$GITHUB_ENV"
+          fi
+      - name: Build APK
+        run: python3 android/build_apk.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KittenPuppy4Ever-apk
+          path: releases/KittenPuppy4Ever-*.apk
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/android-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: releases/KittenPuppy4Ever-*.apk
+          generate_release_notes: true

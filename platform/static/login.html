@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>登录 · KittenPuppy4Ever</title>
+<style>
+  :root {
+    --bg:#f4ede2; --card:#fdfaf5; --line:#e3d7c7; --ink:#42392b; --muted:#8a7f6d;
+    --accent:#7a6f63; --pink:#d9cfc2; --pink-deep:#8a7a68; --mint:#dfe4e1;
+    --tone-1:#fdfaf5; --tone-2:#f4ede2; --tone-3:#e3d7c7;
+    --tone-4:#d8cbbb; --tone-5:#8f7f6c; --tone-6:#42392b;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink);
+    display: flex; align-items: center; justify-content: center; padding: 18px;
+    background-color: var(--bg);
+    background:
+      radial-gradient(900px 600px at 12% 8%, color-mix(in srgb, var(--pink) 30%, transparent), transparent 60%),
+      radial-gradient(900px 600px at 88% 92%, color-mix(in srgb, var(--mint) 32%, transparent), transparent 60%),
+      linear-gradient(160deg, color-mix(in srgb, var(--bg) 90%, #fff), var(--bg));
+  }
+  .card {
+    width: min(100%, 400px); background: var(--tone-1); border: 1px solid var(--tone-3);
+    border-radius: 20px; padding: 26px 24px; box-shadow: 0 18px 44px rgba(66,57,43,.16);
+  }
+  .logo { font-size: 32px; text-align: center; line-height: 1; }
+  h1 { margin: 8px 0 2px; font-size: 20px; text-align: center; color: var(--tone-6); }
+  .sub { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 18px; }
+  .roles { display: flex; gap: 8px; margin-bottom: 12px; }
+  .role {
+    flex: 1; border: 1px solid var(--tone-3); background: color-mix(in srgb, var(--tone-2) 55%, #fff);
+    border-radius: 12px; padding: 10px 6px; cursor: pointer; font: inherit; color: var(--ink);
+    display: flex; flex-direction: column; align-items: center; gap: 3px; transition: border-color .15s, background .15s;
+  }
+  .role .e { font-size: 22px; }
+  .role small { color: var(--muted); font-size: 10.5px; }
+  .role.active { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 14%, #fff); }
+  input {
+    width: 100%; border: 1px solid var(--tone-3); background: var(--tone-1); color: var(--ink);
+    border-radius: 12px; padding: 11px 12px; font: inherit; font-size: 14px; margin-bottom: 8px; outline: none;
+  }
+  input:focus { border-color: var(--tone-5); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone-5) 16%, transparent); }
+  .go {
+    width: 100%; border: 0; border-radius: 12px; padding: 11px 12px; font: inherit; font-size: 14px;
+    font-weight: 650; color: #fff; cursor: pointer; margin-top: 4px;
+    background: linear-gradient(135deg, var(--accent), var(--pink-deep));
+  }
+  .go:disabled { opacity: .55; cursor: wait; }
+  .err { min-height: 18px; font-size: 12px; color: #a33b32; margin: 6px 0 2px; }
+  .hint { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--muted); margin-top: 12px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  html[data-perf="low"] *, html[data-perf="low"] *::before, html[data-perf="low"] *::after {
+    animation-duration: .001ms !important; transition-duration: .001ms !important;
+  }
+  @supports not (background: color-mix(in srgb, #000 10%, #fff)) {
+    body { background: var(--bg); }
+  }
+</style>
+<script>
+(function () {
+  try {
+    var u = localStorage.getItem("kp_login_user") || "";
+    var t = u && JSON.parse(localStorage.getItem("kp_pubtheme_" + u) || "null");
+    if (!t || !t.accent) return;
+    var s = document.documentElement.style;
+    var v = {"--accent":t.accent,"--pink":t.soft,"--pink-deep":t.deep,"--mint":t.mint,
+      "--bg":t.bg,"--card":t.card,"--line":t.line,"--ink":t.ink,
+      "--tone-1":t.tone[0].color,"--tone-2":t.tone[1].color,"--tone-3":t.tone[2].color,
+      "--tone-4":t.tone[3].color,"--tone-5":t.tone[4].color,"--tone-6":t.tone[5].color};
+    for (var k in v) s.setProperty(k, v[k]);
+  } catch (e) {}
+})();
+</script>
+</head>
+<body>
+<div class="card">
+  <div class="logo">🐱🐶</div>
+  <h1>KittenPuppy4Ever</h1>
+  <div class="sub" id="sub">选择角色，或直接输入用户名登录 / 注册</div>
+  <div class="roles">
+    <button class="role" data-u="kitten"><span class="e">🐱</span>kitten<small>主要使用者</small></button>
+    <button class="role" data-u="puppy"><span class="e">🐶</span>puppy<small>主要维护者</small></button>
+  </div>
+  <input id="user" type="text" placeholder="用户名" autocomplete="username">
+  <input id="pwd" type="password" placeholder="口令" autocomplete="current-password">
+  <input id="confirm" type="password" placeholder="确认口令" autocomplete="new-password" style="display:none">
+  <div class="err" id="err"></div>
+  <button class="go" id="go">登 录</button>
+  <div class="hint"><span>由服务器校验，登录后进入工作台</span><a href="#" id="mode">注册新账号</a></div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const params = new URLSearchParams(location.search);
+const rawNext = params.get("next") || "/home";
+const next = rawNext.charAt(0) === "/" && rawNext.charAt(1) !== "/" ? rawNext : "/home";
+let mode = "login";
+let loginUser = params.get("user") || localStorage.getItem("kp_login_user") || "";
+
+const sub = $("#sub"), userEl = $("#user"), pwdEl = $("#pwd"), confirmEl = $("#confirm"),
+      errEl = $("#err"), goEl = $("#go"), modeEl = $("#mode");
+
+function setMode(m) {
+  mode = m;
+  const reg = m === "register";
+  confirmEl.style.display = reg ? "" : "none";
+  goEl.textContent = reg ? "注 册" : "登 录";
+  modeEl.textContent = reg ? "已有账号？登录" : "注册新账号";
+  sub.textContent = reg ? "注册后自动登录，默认 PinkFDU 主题" : "选择角色，或直接输入用户名登录 / 注册";
+  errEl.textContent = "";
+}
+function setTheme(t) {
+  if (!t) return;
+  const s = document.documentElement.style;
+  const v = {"--accent":t.accent,"--pink":t.soft,"--pink-deep":t.deep,"--mint":t.mint,
+    "--bg":t.bg,"--card":t.card,"--line":t.line,"--ink":t.ink,
+    "--tone-1":t.tone[0].color,"--tone-2":t.tone[1].color,"--tone-3":t.tone[2].color,
+    "--tone-4":t.tone[3].color,"--tone-5":t.tone[4].color,"--tone-6":t.tone[5].color};
+  for (const k in v) s.setProperty(k, v[k]);
+}
+async function loadTheme(name) {
+  if (!name) return;
+  try {
+    const cached = JSON.parse(localStorage.getItem("kp_pubtheme_" + name) || "null");
+    if (cached) setTheme(cached);
+    const r = await fetch("/api/public-theme?user=" + encodeURIComponent(name), {cache:"no-store"});
+    const j = await r.json();
+    if (j.ok && j.theme) {
+      localStorage.setItem("kp_pubtheme_" + name, JSON.stringify(j.theme));
+      setTheme(j.theme);
+    }
+  } catch (e) {}
+}
+function setUser(name) {
+  loginUser = name;
+  userEl.value = name;
+  localStorage.setItem("kp_login_user", name);
+  document.querySelectorAll(".role").forEach(b => b.classList.toggle("active", b.dataset.u === name));
+  loadTheme(name);
+}
+document.querySelectorAll(".role").forEach(b => b.addEventListener("click", () => setUser(b.dataset.u)));
+modeEl.addEventListener("click", (e) => { e.preventDefault(); setMode(mode === "login" ? "register" : "login"); });
+if (params.get("mode") === "register" || location.hash === "#register") setMode("register");
+userEl.value = loginUser;
+if (loginUser) loadTheme(loginUser);
+const cachedMsg = sessionStorage.getItem("kp_login_msg");
+if (cachedMsg) { errEl.textContent = cachedMsg; sessionStorage.removeItem("kp_login_msg"); }
+
+async function doSubmit() {
+  const user = userEl.value.trim();
+  const pwd = pwdEl.value;
+  if (!user) { errEl.textContent = "请输入用户名"; return; }
+  if (!pwd) { errEl.textContent = "请输入口令"; return; }
+  if (mode === "register") {
+    if (pwd.length < 6) { errEl.textContent = "口令至少 6 位"; return; }
+    if (pwd !== confirmEl.value) { errEl.textContent = "两次口令不一致"; return; }
+  }
+  goEl.disabled = true;
+  errEl.textContent = "";
+  try {
+    if (mode === "register") {
+      const rr = await fetch("/api/register", {method:"POST",headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({user, password: pwd})});
+      const rj = await rr.json();
+      if (!rj.ok) throw new Error((rj.error && rj.error.message) || "注册失败");
+    }
+    const r = await fetch("/api/login", {method:"POST",headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({user, password: pwd})});
+    const j = await r.json();
+    if (!j.ok) throw new Error((j.error && j.error.message) || "用户名或口令不正确");
+    if (j.token) {
+      try { sessionStorage.setItem("kp_token", j.token); localStorage.setItem("kp_token", j.token); } catch (e) {}
+    }
+    try {
+      const u = j.session && j.session.user;
+      if (u) localStorage.setItem("kp_login_user", u);
+    } catch (e) {}
+    location.replace(next);
+  } catch (e) {
+    errEl.textContent = e.message;
+    pwdEl.select();
+  } finally { goEl.disabled = false; }
+}
+goEl.addEventListener("click", doSubmit);
+[pwdEl, confirmEl].forEach(el => el.addEventListener("keydown", (e) => { if (e.key === "Enter") doSubmit(); }));
+
+// 已有会话直接回工作台
+const sessionToken = localStorage.getItem("kp_token");
+fetch("/api/session", {cache:"no-store", headers: sessionToken ? {"Authorization": "Bearer " + sessionToken} : {}}).then(r => r.json()).then(j => {
+  if (j && j.session && j.session.user) location.replace(next);
+}).catch(() => {});
+
+// GitHub Pages iframe 承载时同步地址栏路径
+try {
+  if (window.parent !== window) window.parent.postMessage({kpPath: "/login"}, "*");
+} catch (e) {}
+</script>
+</body>
+</html>

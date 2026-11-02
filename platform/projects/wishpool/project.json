@@ -1,0 +1,41 @@
+{
+  "id": "wishpool",
+  "parent": "root",
+  "order": 20,
+  "title": "猫猫许愿池",
+  "icon": "🙏",
+  "desc": "许愿池：投币许愿、审批与许愿币收支记录。",
+  "base": "coin",
+  "capabilities": [
+    "state",
+    "action",
+    "audit",
+    "crud",
+    "coins"
+  ],
+  "acl": {
+    "read": [
+      "kitten",
+      "puppy"
+    ],
+    "write": [
+      "kitten",
+      "puppy"
+    ]
+  },
+  "view": {
+    "kind": "custom",
+    "dir": "web"
+  },
+  "ui": {
+    "theme": {
+      "accent": "#c96a8f"
+    }
+  },
+  "path": "/wishpool/",
+  "tags": [
+    "许愿",
+    "互动",
+    "生活"
+  ]
+}

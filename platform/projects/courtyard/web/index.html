@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>造院 · KittenPuppy4Ever</title>
+<link rel="stylesheet" href="/static/template.css">
+<style>
+  /* 造院：宣纸 + 朱红 + 墨色的中式院落小游戏 */
+  .yard-section { padding: 14px 16px; }
+  .yard-hud { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .yard-hud .req {
+    flex: 1; min-width: 220px; background: #fdf6e6; border: 1px solid #e6d7b8;
+    border-left: 3px solid #9e2a22; border-radius: 10px; padding: 9px 12px;
+    font-size: 12.5px; line-height: 1.7; color: #4a3a2a;
+  }
+  .yard-hud .req b { color: #9e2a22; }
+  .yard-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+  .yard-meta .chip { background: #f3ead6; color: #7a6448; }
+  .yard-wrap { display: flex; justify-content: center; margin-top: 12px; }
+  canvas#yard {
+    width: 100%; max-width: 660px; height: auto; border-radius: 14px;
+    border: 1px solid #e3d5b8; box-shadow: 0 10px 30px rgba(90, 70, 40, .12);
+    background: #f7f1e3; cursor: pointer; touch-action: manipulation;
+  }
+  .yard-tip { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+  .yard-tip kbd {
+    background: #f2ecdf; border: 1px solid var(--line); border-radius: 5px;
+    padding: 0 5px; font-family: ui-monospace, monospace; font-size: 10.5px;
+  }
+  .yard-actions { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  .yard-banner {
+    display: none; text-align: center; font-size: 12px; color: #9e2a22;
+    background: #fbe9e3; border: 1px dashed #d9a79b; border-radius: 10px;
+    padding: 6px 10px; margin-top: 10px;
+  }
+  .yard-banner.show { display: block; animation: fadeUp .3s both; }
+
+  /* 宅院契 */
+  .deed { font-family: "Songti SC", "STSong", "SimSun", serif; }
+  .deed .seal {
+    width: 42px; height: 42px; border: 2px solid #9e2a22; color: #9e2a22;
+    border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 800; transform: rotate(-6deg);
+  }
+  .deed .title { font-size: 20px; font-weight: 800; letter-spacing: .18em; color: #6b1d18; }
+  .deed .sub { color: #8a7358; font-size: 11.5px; letter-spacing: .12em; }
+  .deed .body { margin-top: 12px; font-size: 13px; line-height: 2; color: #4a3a2a; }
+  .deed .row { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed #e3d5b8; padding: 4px 0; }
+  .deed .row b { color: #9e2a22; font-variant-numeric: tabular-nums; }
+  .deed .score { font-size: 34px; color: #9e2a22; font-weight: 800; letter-spacing: .04em; }
+  .deed .lines { margin-top: 10px; font-size: 12px; color: #7a6448; line-height: 1.9; }
+  .iso-wrap {
+    margin: 6px 0 14px; border: 1px solid var(--line); border-radius: 12px;
+    background: #fbf7ef; overflow: hidden;
+  }
+  #iso { display: block; width: 100%; height: auto; }
+  .iso-cap { font-size: 10.5px; color: var(--muted); text-align: center; padding: 4px 0 7px; letter-spacing: .06em; }
+</style>
+</head>
+<body data-project="courtyard">
+<main class="page">
+
+  <section class="section yard-section">
+    <div class="section-head">
+      <h2>宅基地</h2>
+      <span class="hint">吊车在院墙外来回，点一下落下当前构件</span>
+      <div class="actions">
+        <span class="chip" id="round-chip">第 1 座</span>
+        <span class="chip" id="best-chip">最佳 —</span>
+      </div>
+    </div>
+    <div class="yard-hud">
+      <div class="req" id="req">主家要求加载中…</div>
+      <div class="yard-meta">
+        <span class="chip" id="left-chip">余 8 间</span>
+        <span class="chip" id="piece-chip">—</span>
+        <span class="chip" id="crane-chip">—</span>
+      </div>
+    </div>
+    <div class="yard-wrap"><canvas id="yard" width="660" height="760"></canvas></div>
+    <div class="yard-banner" id="banner"></div>
+    <div class="yard-tip">点击画面 / 空格落子 · <kbd>A</kbd><kbd>D</kbd> 手动移动吊车 · 相邻房间自动开门、朝外/朝街墙面自动开窗 · 院门朝南（画面下方）</div>
+    <div class="yard-actions">
+      <button class="btn soft sm" id="restart">重起一座</button>
+      <button class="btn soft sm" id="sound">音效：开</button>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2>营造笔记</h2><span class="hint">每座宅子 8 件构件，落满即验收</span></div>
+    <div class="list" id="notes">
+      <div class="row"><span class="k">01</span><span class="grow"><div class="t">天井</div><div class="s">每格天井都算透气，越多越吉；但别把院子堵死。</div></span></div>
+      <div class="row"><span class="k">02</span><span class="grow"><div class="t">门楼</div><div class="s">落在地界最南（画面最下）一排，才算正经院门。</div></span></div>
+      <div class="row"><span class="k">03</span><span class="grow"><div class="t">正房</div><div class="s">靠北（画面上方）为坐北朝南，主家最看重这一条。</div></span></div>
+      <div class="row"><span class="k">04</span><span class="grow"><div class="t">稀有构件</div><div class="s">月洞门、戏台、太湖石可遇不可求，遇上了记得留位置。</div></span></div>
+      <div class="row"><span class="k">05</span><span class="grow"><div class="t">门窗</div><div class="s">落定后按相邻关系自动开门（带门弧），朝街/朝院墙面自动开窗；门楼临街那面会标红「门」。</div></span></div>
+    </div>
+  </section>
+
+  <!-- 宅院契 -->
+  <div class="modal hidden" id="deed-modal">
+    <div class="modal-box deed">
+      <div class="modal-head">
+        <span class="sub">管家出具的宅院契</span>
+        <button class="btn soft sm" id="deed-close">收起</button>
+      </div>
+      <div style="text-align:center;margin-top:6px">
+        <div class="seal">宅</div>
+        <div class="title" id="deed-title">—</div>
+        <div class="sub" id="deed-sub">—</div>
+        <div class="score" id="deed-score">—</div>
+        <div class="sub">评定</div>
+      </div>
+      <div class="iso-wrap">
+        <canvas id="iso" width="700" height="360"></canvas>
+        <div class="iso-cap">轴测图 · 红线为从入口展开的动线</div>
+      </div>
+      <div class="body">
+        <div class="row"><span>主家委托</span><b id="deed-req">—</b></div>
+        <div class="row"><span>委托达成</span><b id="deed-hit">—</b></div>
+        <div class="row"><span>天井</span><b id="deed-yard">—</b></div>
+        <div class="row"><span>门第</span><b id="deed-gate">—</b></div>
+        <div class="row"><span>估价</span><b id="deed-price">—</b></div>
+        <div class="lines" id="deed-lines"></div>
+      </div>
+      <div class="p-actions" style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+        <button class="btn primary" id="deed-again">再建一座</button>
+        <button class="btn soft" id="deed-flyer">存为传单</button>
+        <button class="btn soft" id="deed-stay">收下</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+<script>
+/* 造院 —— 按 madori（se-n.com/madori）的真实核心规则重写：
+   6×6 地界，构件沿列从上方落到"该列已有堆叠的最高点"，所以房子从街道一侧向上长；
+   非方形构件可旋转；8 件后做图结构分析（相邻自动开门、入口、可达性、夹缝、开敞天井），
+   再按 8 条主家委托与格局瑕疵评分。视觉与文案为中式原创。 */
+(() => {
+  const W = 6, H = 6, TOTAL = 8;
+  const canvas = document.getElementById("yard");
+  const ctx = canvas.getContext("2d");
+  const $ = (s) => document.querySelector(s);
+  const el = {
+    req: $("#req"), left: $("#left-chip"), piece: $("#piece-chip"),
+    crane: $("#crane-chip"), banner: $("#banner"), round: $("#round-chip"),
+    best: $("#best-chip"), modal: $("#deed-modal"),
+  };
+
+  const HOUSES = {
+    zheng: { name: "正房", w: 3, h: 2, color: "#d8b48a", ink: "#6b4a2a" },
+    xiang: { name: "厢房", w: 2, h: 2, color: "#cfd8c4", ink: "#3f5a3a" },
+    shu:   { name: "书房", w: 2, h: 2, color: "#cdd9e2", ink: "#3c5566" },
+    jing:  { name: "净房", w: 1, h: 1, color: "#d8d2c4", ink: "#5a5448" },
+    chu:   { name: "厨房", w: 1, h: 1, color: "#e0c79a", ink: "#6b4a2a" },
+    men:   { name: "门楼", w: 1, h: 1, color: "#b4433a", ink: "#f7e9df" },
+    tian:  { name: "天井", w: 2, h: 1, color: "#e7dcc4", ink: "#7a6448" },
+    lang:  { name: "回廊", w: 1, h: 3, color: "#c9b897", ink: "#5a4a30" },
+    hu:    { name: "影壁", w: 1, h: 1, color: "#b9a48a", ink: "#4a3a2a" },
+    yue:   { name: "月洞门", w: 1, h: 2, color: "#a9bfa5", ink: "#2f4a2c", rare: true },
+    tai:   { name: "戏台", w: 2, h: 2, color: "#c78d7a", ink: "#5c2a20", rare: true },
+    shi:   { name: "太湖石", w: 1, h: 1, color: "#b9c1c6", ink: "#3c4a52", rare: true },
+    chi:   { name: "水池", w: 2, h: 1, color: "#a9c7cf", ink: "#2c4a56", rare: true },
+  };
+  const CORE = ["zheng", "xiang", "shu", "jing", "chu", "men"];
+  const EXTRAS = [["tian", 2], ["lang", 2], ["hu", 1.5], ["jing", 1], ["chu", 1],
+                  ["xiang", 0.8], ["shu", 0.6], ["zheng", 0.5]];
+  const RARE_POOL = ["yue", "tai", "shi", "chi"];
+  const RARE_CHAIN = [0.5, 0.55, 0.4];
+  const BED = ["xiang", "shu"];
+
+  const idOf = (r) => r.t;
+  const isBed = (r) => BED.includes(idOf(r));
+  const sizeOf = (t, rot) => {
+    const R = HOUSES[t];
+    return rot ? [R.h, R.w] : [R.w, R.h];
+  };
+  const nameOf = (t) => HOUSES[t].name;
+
+  function weighted(list) {
+    let r = Math.random() * list.reduce((s, [, w]) => s + w, 0);
+    for (const [v, w] of list) if ((r -= w) < 0) return v;
+    return list[list.length - 1][0];
+  }
+  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+  // 一副 8 件的"料单"：6 件必需 + 2 件补充，偶发 1~3 件稀有构件（替换最不紧要的一件）
+  function makeBag() {
+    let ids = [...CORE];
+    if (Math.random() < 0.22) ids.splice(Math.floor(Math.random() * ids.length), 1);
+    while (ids.length < TOTAL) ids.push(weighted(EXTRAS));
+    const rares = shuffle([...RARE_POOL]);
+    let n = 0;
+    const swap = () => {
+      const spare = ids.map((v, i) => i).filter((i) => !CORE.includes(ids[i]));
+      const i = (spare.length ? spare : ids.map((v, k) => k))[Math.floor(Math.random() * (spare.length || ids.length))];
+      ids[i] = rares[n++];
+    };
+    if (Math.random() < RARE_CHAIN[0]) swap();
+    if (n === 1 && Math.random() < RARE_CHAIN[1]) swap();
+    if (n === 2 && Math.random() < RARE_CHAIN[2]) swap();
+    shuffle(ids);
+    return ids.map((t) => ({
+      t, rot: HOUSES[t].w !== HOUSES[t].h && Math.random() < 0.5 ? 1 : 0,
+    }));
+  }
+
+  // ---- 核心：落点 = 覆盖列上已有堆叠的最高点（房从街面往上长） ----
+  function landing(rooms, x, w) {
+    let y = 0;
+    for (const r of rooms) if (r.x < x + w && x < r.x + r.w) y = Math.max(y, r.y + r.h);
+    return y;
+  }
+  function place(rooms, piece, col) {
+    const [w, h] = sizeOf(piece.t, piece.rot);
+    const x = Math.max(0, Math.min(W - w, col));
+    return { t: piece.t, rot: piece.rot, x, y: landing(rooms, x, w), w, h };
+  }
+
+  // ---- 图结构分析（对齐 madori 的 analyze） ----
+  function analyze(rooms) {
+    const top = Math.max(H, ...rooms.map((r) => r.y + r.h));
+    const owner = Array.from({ length: W }, () => new Array(top).fill(-1));
+    rooms.forEach((r, i) => {
+      for (let x = r.x; x < r.x + r.w; x++) for (let y = r.y; y < r.y + r.h; y++) owner[x][y] = i;
+    });
+    const at = (x, y) => (x < 0 || x >= W || y < 0 || y >= top ? -2 : owner[x][y]);
+
+    // 开敞区（能通到地界边或屋顶上方） vs 夹缝
+    const open = Array.from({ length: W }, () => new Array(top).fill(false));
+    const q = [];
+    for (let x = 0; x < W; x++) for (let y = 0; y < top; y++) {
+      if (owner[x][y] !== -1) continue;
+      if (x === 0 || x === W - 1 || y === 0 || y === top - 1) { open[x][y] = true; q.push([x, y]); }
+    }
+    while (q.length) {
+      const [x, y] = q.pop();
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (at(nx, ny) === -1 && !open[nx][ny]) { open[nx][ny] = true; q.push([nx, ny]); }
+      }
+    }
+    const gaps = [];
+    const seen = Array.from({ length: W }, () => new Array(top).fill(false));
+    for (let x = 0; x < W; x++) for (let y = 0; y < top; y++) {
+      if (owner[x][y] !== -1 || open[x][y] || seen[x][y]) continue;
+      const cells = []; const st = [[x, y]]; seen[x][y] = true;
+      while (st.length) {
+        const [cx, cy] = st.pop(); cells.push([cx, cy]);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = cx + dx, ny = cy + dy;
+          if (at(nx, ny) === -1 && !open[nx][ny] && !seen[nx][ny]) { seen[nx][ny] = true; st.push([nx, ny]); }
+        }
+      }
+      gaps.push(cells);
+    }
+    const outsideAt = (x, y) => { const o = at(x, y); return o === -2 || (o === -1 && open[x][y]); };
+
+    // 相邻房间自动开门：一对相邻房间只开一道门
+    const pairSet = new Map();
+    const addPair = (a, b, seg) => {
+      const k = a < b ? a + "," + b : b + "," + a;
+      if (!pairSet.has(k)) pairSet.set(k, []);
+      pairSet.get(k).push(seg);
+    };
+    for (let x = 0; x < W; x++) for (let y = 0; y < top; y++) {
+      const o = owner[x][y];
+      if (o < 0) continue;
+      if (x + 1 < W && owner[x + 1][y] >= 0 && owner[x + 1][y] !== o) addPair(o, owner[x + 1][y], { v: true, i: x + 1, j: y });
+      if (y + 1 < top && owner[x][y + 1] >= 0 && owner[x][y + 1] !== o) addPair(o, owner[x][y + 1], { v: false, i: y, j: x });
+    }
+    const adj = rooms.map(() => []);
+    const doors = [];
+    for (const [k, segs] of pairSet) {
+      const [a, b] = k.split(",").map(Number);
+      adj[a].push(b); adj[b].push(a);
+      const seg = segs[Math.floor((segs.length - 1) / 2)];
+      doors.push({ a, b, v: seg.v, i: seg.i, j: seg.j });
+    }
+
+    // 每间房哪些面朝街 / 朝外
+    const faces = rooms.map((r) => {
+      let road = 0, out = 0;
+      for (let x = r.x; x < r.x + r.w; x++) {
+        if (r.y === 0) road++;
+        else if (outsideAt(x, r.y - 1)) out++;
+        if (outsideAt(x, r.y + r.h)) out++;
+      }
+      for (let y = r.y; y < r.y + r.h; y++) {
+        if (outsideAt(r.x - 1, y)) out++;
+        if (outsideAt(r.x + r.w, y)) out++;
+      }
+      return { road, out };
+    });
+
+    // 入口：门楼朝街 > 门楼朝院 > 朝街的房间借窗
+    const PREF = ["zheng", "xiang", "shu", "tian", "men", "chu", "jing", "lang", "hu"];
+    let entry = null;
+    const gens = rooms.map((r, i) => i).filter((i) => idOf(rooms[i]) === "men");
+    const roadGen = gens.find((i) => faces[i].road > 0);
+    const yardGen = gens.find((i) => faces[i].out > 0);
+    if (roadGen != null) entry = { room: roadGen, kind: "road" };
+    else if (yardGen != null) entry = { room: yardGen, kind: "yard" };
+    else {
+      const onRoad = rooms.map((r, i) => i).filter((i) => faces[i].road > 0);
+      onRoad.sort((a, b) => PREF.indexOf(idOf(rooms[a])) - PREF.indexOf(idOf(rooms[b])));
+      if (onRoad.length) entry = { room: onRoad[0], kind: "window" };
+    }
+
+    // 朝街 / 朝院墙面开窗（记录墙边位置）
+    const windows = [];
+    rooms.forEach((r, idx) => {
+      for (let x = r.x; x < r.x + r.w; x++) {
+        if (r.y === 0) windows.push({ v: false, i: 0, j: x, road: true, room: idx });
+        else if (outsideAt(x, r.y - 1)) windows.push({ v: false, i: r.y - 1, j: x, road: false, room: idx });
+        if (outsideAt(x, r.y + r.h)) windows.push({ v: false, i: r.y + r.h - 1, j: x, road: false, room: idx });
+      }
+      for (let y = r.y; y < r.y + r.h; y++) {
+        if (outsideAt(r.x - 1, y)) windows.push({ v: true, i: r.x, j: y, road: false, room: idx });
+        if (outsideAt(r.x + r.w, y)) windows.push({ v: true, i: r.x + r.w, j: y, road: false, room: idx });
+      }
+    });
+    // 入口那面墙上的门（优先朝街）
+    if (entry) {
+      const r = rooms[entry.room];
+      const road = [], yard = [];
+      for (let x = r.x; x < r.x + r.w; x++) {
+        if (r.y === 0) road.push({ v: false, i: 0, j: x, road: true });
+        else if (outsideAt(x, r.y - 1)) yard.push({ v: false, i: r.y - 1, j: x, road: false });
+        if (outsideAt(x, r.y + r.h)) yard.push({ v: false, i: r.y + r.h - 1, j: x, road: false });
+      }
+      for (let y = r.y; y < r.y + r.h; y++) {
+        if (outsideAt(r.x - 1, y)) yard.push({ v: true, i: r.x, j: y });
+        if (outsideAt(r.x + r.w, y)) yard.push({ v: true, i: r.x + r.w, j: y });
+      }
+      const segs = road.length ? road : yard;
+      entry.seg = segs[Math.floor((segs.length - 1) / 2)] || null;
+    }
+
+    const dist = rooms.map(() => -1);
+    const prev = rooms.map(() => -1);
+    if (entry) {
+      dist[entry.room] = 0;
+      const bq = [entry.room];
+      while (bq.length) {
+        const a = bq.shift();
+        for (const b of adj[a]) if (dist[b] < 0) { dist[b] = dist[a] + 1; prev[b] = a; bq.push(b); }
+      }
+    }
+    const counts = {};
+    for (const r of rooms) counts[idOf(r)] = (counts[idOf(r)] || 0) + 1;
+    let openYard = 0;
+    for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (open[x][y] && owner[x][y] === -1) openYard++;
+    return { rooms, top, owner, open, gaps, adj, doors, windows, faces, entry, dist, prev, counts, openYard };
+  }
+
+  // ---- 8 条主家委托（对齐 madori 的 REQUESTS） ----
+  const REQUESTS = [
+    { id: "jing-ne", text: "净房要落在东北角", ok: (an) => an.rooms.some((r) => idOf(r) === "jing" && r.x * 2 >= W && r.y * 2 >= H) },
+    { id: "men-road", text: "门楼要正对街面", ok: (an) => an.entry?.kind === "road" },
+    { id: "bed-sun", text: "卧室要见光（朝街或朝院）", ok: (an) => an.rooms.some((r, i) => isBed(r) && (an.faces[i].out > 0 || an.faces[i].road > 0)) },
+    { id: "jing-bed", text: "净房要挨着卧室", ok: (an) => an.rooms.some((r, i) => idOf(r) === "jing" && an.adj[i].some((b) => isBed(an.rooms[b]))) },
+    { id: "short", text: "动线要短，别绕院", ok: (an) => an.entry && !an.dist.includes(-1) && Math.max(...an.dist) <= 3 },
+    { id: "garden", text: "院里要留出空地", ok: (an) => an.openYard >= 6 },
+    { id: "fit", text: "八间都要收进地界", ok: (an) => an.rooms.every((r) => r.y + r.h <= H) },
+    { id: "jing-far", text: "净房要离正房远些", ok: (an) => an.rooms.some((r) => idOf(r) === "jing") && !an.rooms.some((r, i) => idOf(r) === "jing" && an.adj[i].some((b) => idOf(an.rooms[b]) === "zheng")) },
+  ];
+  const ENTRY_CN = { road: "门楼临街", yard: "院门朝内", window: "借窗出入" };
+  const NAMES = ["听雨院", "枕石斋", "半亩园", "抱朴居", "栖霞小筑", "晚香堂", "云水间", "竹里馆", "不系舟", "拾光院", "隅园", "青藤书屋"];
+
+  // ---- 状态 ----
+  const state = {
+    phase: "playing", bag: [], idx: 0, rooms: [], piece: null, x: 0, dir: 1,
+    req: null, round: 1, t: 0, last: 0, muted: false, bannerT: 0,
+    best: Number(localStorage.getItem("kp_yard_best") || 0),
+  };
+
+  const PAD = 46;
+  let cell = 76, cw = 660, LOT_TOP = 210, chh = 720;
+
+  function layout() {
+    const maxW = Math.min(660, canvas.parentElement.clientWidth || 660);
+    cw = maxW;
+    cell = Math.max(44, Math.min(78, Math.floor((cw - PAD * 2) / W), Math.floor(690 / (H + 2))));
+    LOT_TOP = 64 + 2 * cell + 16;
+    chh = LOT_TOP + H * cell + 54;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(cw * dpr);
+    canvas.height = Math.round(chh * dpr);
+    canvas.style.width = cw + "px";
+    canvas.style.height = chh + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener("resize", layout);
+
+  const gx = (x) => PAD + x * cell;
+  const rowTop = (y) => LOT_TOP + (H - 1 - y) * cell;   // 某一行（y）的顶边像素
+  const roomTop = (r) => LOT_TOP + (H - (r.y + r.h)) * cell;
+
+  function sfx(freq, dur, gain = 0.05) {
+    if (state.muted) return;
+    try {
+      state.actx = state.actx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = state.actx.createOscillator(), g = state.actx.createGain();
+      o.type = "sine"; o.frequency.value = freq; g.gain.value = gain;
+      o.connect(g); g.connect(state.actx.destination);
+      o.start(); o.stop(state.actx.currentTime + dur);
+    } catch (e) {}
+  }
+  function banner(text, ms = 2400) {
+    el.banner.textContent = text; el.banner.classList.add("show");
+    clearTimeout(state.bannerT);
+    state.bannerT = setTimeout(() => el.banner.classList.remove("show"), ms);
+  }
+
+  function startRound() {
+    stopIsoAnim();
+    state.cine = null;
+    state.falling = null;
+    state.bag = makeBag();
+    state.idx = 0;
+    state.rooms = [];
+    state.phase = "playing";
+    state.req = REQUESTS[Math.floor(Math.random() * REQUESTS.length)];
+    state.piece = state.bag[0];
+    const [w] = sizeOf(state.piece.t, state.piece.rot);
+    state.x = Math.max(0, Math.min(W - w, Math.floor(W / 2) - 1));
+    state.dir = 1;
+    el.round.textContent = "第 " + state.round + " 座";
+    el.best.textContent = state.best ? "最佳 " + state.best : "最佳 —";
+    updateHud();
+  }
+
+  function updateHud() {
+    if (state.req) el.req.innerHTML = "<b>主家要求</b> · " + state.req.text;
+    el.left.textContent = "余 " + (TOTAL - state.idx) + " 件";
+    if (state.piece) {
+      const [w, h] = sizeOf(state.piece.t, state.piece.rot);
+      el.piece.textContent = nameOf(state.piece.t) + " · " + w + "×" + h + (state.piece.rot ? "（转）" : "");
+    } else el.piece.textContent = "—";
+    el.crane.textContent = state.rooms.length ? "已叠 " + Math.max(...state.rooms.map((r) => r.y + r.h)) + " 层" : "吊车就位";
+  }
+
+  function drop() {
+    if (state.phase !== "playing" || !state.piece) return;
+    const r = place(state.rooms, state.piece, Math.round(state.x));
+    state.falling = { r, piece: state.piece, t0: performance.now(), dur: 420 };
+    state.phase = "falling";
+    sfx(420, 0.05);
+  }
+
+  function commitFalling() {
+    const { r } = state.falling;
+    state.falling = null;
+    if (r.y + r.h > H) banner("这件超地界了，验收时会记一笔");
+    state.rooms.push(r);
+    sfx(HOUSES[r.t].rare ? 720 : 520, 0.07);
+    state.idx++;
+    if (state.idx >= TOTAL) { finish(); return; }
+    state.piece = state.bag[state.idx];
+    const [w] = sizeOf(state.piece.t, state.piece.rot);
+    state.x = Math.max(0, Math.min(W - w, state.x));
+    state.phase = "playing";
+    updateHud();
+  }
+
+  // ---- 评分 / 宅院契 ----
+  function evaluate(an, req) {
+    let score = 52;
+    const notes = [];
+    const overflow = an.rooms.filter((r) => r.y + r.h > H).length;
+    if (overflow) { score -= 8 * overflow; notes.push("有 " + overflow + " 间溢出地界，验收时被扣了分。"); }
+    else { score += 12; notes.push("八间全部收进地界。"); }
+    score += Math.min(18, an.openYard * 2);
+    if (an.openYard >= 4) notes.push("院里留出 " + an.openYard + " 格空地，穿堂风正好。");
+    if (an.entry && an.entry.kind === "road") { score += 10; notes.push("门楼临街，出入体面。"); }
+    else if (an.entry && an.entry.kind === "yard") { score += 3; notes.push("院门朝内，稍显迂回。"); }
+    else if (an.entry && an.entry.kind === "window") notes.push("没有门楼，只能借窗出入。");
+    else { score -= 10; notes.push("四面封死，找不到入口。"); }
+    const gaps = an.gaps.reduce((s, g) => s + g.length, 0);
+    if (gaps) { score -= Math.min(12, gaps * 3); notes.push("有 " + gaps * 2 + " 帖无从进入的夹缝。"); }
+    const lost = an.entry ? an.dist.filter((d) => d < 0).length : 0;
+    if (lost) { score -= 4 * lost; notes.push("有 " + lost + " 间从入口走不到。"); }
+    if (an.rooms.some((r) => HOUSES[r.t].rare)) { score += 5; notes.push("院中有稀罕物，主家面上有光。"); }
+    const hit = req.ok(an);
+    if (hit) score += 20;
+    score = Math.max(20, Math.min(100, Math.round(score)));
+    return { score, hit, notes, overflow, gaps: gaps * 2, lost, doors: an.doors.length, top: an.top, openYard: an.openYard };
+  }
+
+  function finish() {
+    state.phase = "cinematic";
+    state.cine = { t0: performance.now(), an: analyze(state.rooms), opened: false };
+    sfx(660, 0.16, 0.06); setTimeout(() => sfx(880, 0.12, 0.05), 120);
+    if (new URLSearchParams(location.search).get("nokine") === "1") {
+      state.cine.opened = true;
+      openDeed();
+    }
+  }
+
+  function openDeed() {
+    const an = state.cine.an;
+    const res = evaluate(an, state.req);
+    const grade = res.score >= 90 ? "甲" : res.score >= 75 ? "乙" : res.score >= 60 ? "丙" : "丁";
+    const name = NAMES[Math.floor(Math.random() * NAMES.length)];
+    const price = (280 + res.score * 9 + res.openYard * 12 + an.rooms.length * 15) * 10;
+    if (res.score > state.best) {
+      state.best = res.score;
+      localStorage.setItem("kp_yard_best", String(state.best));
+      el.best.textContent = "最佳 " + state.best;
+    }
+    $("#deed-title").textContent = name + " · " + grade + "等宅";
+    $("#deed-sub").textContent = "第 " + state.round + " 座 · 高 " + res.top + " 层 · 八件落成";
+    $("#deed-score").textContent = res.score;
+    $("#deed-req").textContent = state.req.text;
+    $("#deed-hit").textContent = res.hit ? "达成" : "未达成";
+    $("#deed-yard").textContent = res.openYard + " 格空地";
+    $("#deed-gate").textContent = res.doors + " 道门 · " + (an.entry ? ENTRY_CN[an.entry.kind] : "无入口");
+    $("#deed-price").textContent = price.toLocaleString() + " 万";
+    $("#deed-lines").innerHTML = res.notes.map((t) => "<div>· " + t + "</div>").join("");
+    el.modal.classList.remove("hidden");
+    state.phase = "done";
+    state.last = { an, res, name, grade, price };
+    startIsoAnim(an);
+  }
+
+  // ---- 轴测图 + 动线动画（对齐参考站的 iso 视角与 circulation 演示） ----
+  let isoRAF = 0;
+  function isoSetup(g, w, h, an) {
+    const tw = Math.min(150, (w - 70) / 6, (h - 70) / 3.9);
+    const th = tw * 0.5;
+    const zu = tw * 0.42;
+    const raw = (x, u, z) => [(x - u) * tw / 2, (x + u) * th / 2 - z * zu];
+    const pts = [raw(0, 0, 0), raw(W, 0, 0), raw(W, H, 0), raw(0, H, 0)];
+    const minX = Math.min(...pts.map((p) => p[0])), maxX = Math.max(...pts.map((p) => p[0]));
+    const minY = Math.min(...pts.map((p) => p[1])), maxY = Math.max(...pts.map((p) => p[1]));
+    const ox = (w - (maxX - minX)) / 2 - minX;
+    const oy = (h - (maxY - minY)) / 2 - minY + 8;
+    return {
+      tw, th, zu,
+      proj: (x, u, z) => { const p = raw(x, u, z || 0); return [p[0] + ox, p[1] + oy]; },
+    };
+  }
+
+  const ROOF = { zheng: "#465a55", xiang: "#52655d", shu: "#566a63", men: "#7a2f28",
+    jing: "#6b6a60", chu: "#7a6247", tian: "#b9c3a9", lang: "#8a7a5c",
+    hu: "#8a7a66", yue: "#4f6b4b", tai: "#6f3a30", shi: "#6b747a", chi: "#5f8790" };
+  const WALL = { zheng: "#e8d6b6", xiang: "#d9e3cf", shu: "#d5e2ea", men: "#c05a4d",
+    jing: "#e2ded2", chu: "#e7d2a8", tian: "#e9e1cd", lang: "#d6c6a4",
+    hu: "#d3c3ad", yue: "#c2d6bd", tai: "#d8a291", shi: "#c9d0d4", chi: "#b7d2d8" };
+
+  function roomHeight(r) {
+    const id = r.t;
+    if (id === "tian") return 0.12;
+    if (id === "chi") return 0.08;
+    if (id === "zheng") return 1.7;
+    if (id === "xiang" || id === "shu") return 1.35;
+    if (id === "men") return 1.2;
+    if (id === "lang") return 0.85;
+    return 1.0;
+  }
+
+  const ISO_CA = 0.82, ISO_SA = 0.47, ISO_ZK = 0.92;
+  const lerpN = (a, b, t) => a + (b - a) * t;
+  const OPEN_KINDS = ["tian", "chi"];
+
+  function drawIso(g, w, h, an, flow, opts = {}) {
+    const t = Math.max(0, Math.min(1, opts.t == null ? 1 : opts.t));
+    g.clearRect(0, 0, w, h);
+    const bg = g.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, "#fbf7ee"); bg.addColorStop(1, "#f0e8d8");
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+
+    const top = an.top;
+    const rooms = an.rooms;
+    const maxZ = 1.05;
+    const raw = (x, y, z) => [
+      lerpN(x, (x - y) * ISO_CA, t),
+      lerpN(-y, -(x + y) * ISO_SA - z * ISO_ZK, t),
+    ];
+    // 视野
+    let mnx = Infinity, mxx = -Infinity, mny = Infinity, mxy = -Infinity;
+    for (const x of [-1.4, W + 1.4]) for (const y of [-1.2, top + 0.6]) for (const z of [0, maxZ]) {
+      const [a, b] = raw(x, y, z);
+      mnx = Math.min(mnx, a); mxx = Math.max(mxx, a); mny = Math.min(mny, b); mxy = Math.max(mxy, b);
+    }
+    const sc = Math.min(w / (mxx - mnx), h / (mxy - mny)) * 0.88;
+    const ox = w / 2 - sc * (mnx + mxx) / 2, oy = h / 2 - sc * (mny + mxy) / 2;
+    const P = (x, y, z) => { const p = raw(x, y, z || 0); return [ox + p[0] * sc, oy + p[1] * sc]; };
+    const quad = (pts, fill, stroke, lw) => {
+      g.beginPath(); pts.forEach((q, i) => (i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])));
+      g.closePath();
+      if (fill) { g.fillStyle = fill; g.fill(); }
+      if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 1; g.stroke(); }
+    };
+    const line = (a, b, color, lw) => {
+      g.strokeStyle = color; g.lineWidth = lw || 1;
+      g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
+    };
+    const at = (x, y) => (x < 0 || x >= W || y < 0 || y >= top ? -2 : an.owner[x][y]);
+    const isIndoor = (o) => o >= 0 && !OPEN_KINDS.includes(idOf(rooms[o]));
+    const id = idOf;
+    const doorSet = new Set();
+    for (const d of an.doors) doorSet.add((d.v ? "v" : "h") + d.i + "," + d.j);
+    if (an.entry && an.entry.seg) {
+      const e = an.entry.seg;
+      doorSet.add((e.v ? "v" : "h") + e.i + "," + e.j);
+    }
+
+    // ---- 地面 ----
+    quad([P(-1.4, -1.2, 0), P(W + 1.4, -1.2, 0), P(W + 1.4, -0.2, 0), P(-1.4, -0.2, 0)], "#e2ded4", "#c9c4b8", 1);
+    g.setLineDash([sc * 0.28, sc * 0.22]);
+    line(P(-1.4, -0.7, 0), P(W + 1.4, -0.7, 0), "#fff", Math.max(1.5, sc * 0.04));
+    g.setLineDash([]);
+    quad([P(0, 0, 0), P(W, 0, 0), P(W, top, 0), P(0, top, 0)], "#ede9df", "#b9b5ab", 1);
+
+    const FLOOR = { zheng: "#fbf7ee", xiang: "#f3f6ec", shu: "#eef4f7", jing: "#f7f5f0",
+      chu: "#faf4e6", men: "#f6ece7", tian: "#f1ecdf", lang: "#f5efe2", hu: "#f4efe6",
+      yue: "#eef4ea", tai: "#f7e9e3", shi: "#f1f3f4", chi: "#e9f2f4" };
+    for (const r of rooms) {
+      const k = id(r);
+      quad([P(r.x, r.y, 0), P(r.x + r.w, r.y, 0), P(r.x + r.w, r.y + r.h, 0), P(r.x, r.y + r.h, 0)],
+        FLOOR[k] || "#fff", "#cfcabf", 1);
+      // 室内铺装
+      g.strokeStyle = "rgba(70,60,45,.22)"; g.lineWidth = 1;
+      g.beginPath();
+      if (k === "xiang") {
+        for (let cx = 0; cx < r.w; cx++) for (let cy = 0; cy < r.h; cy++) {
+          const bx = r.x + cx, by = r.y + cy;
+          const a0 = P(bx, by, 0), a1 = P(bx + 1, by, 0), a2 = P(bx + 1, by + 1, 0), a3 = P(bx, by + 1, 0);
+          g.moveTo(a0[0], a0[1]); g.lineTo(a1[0], a1[1]); g.lineTo(a2[0], a2[1]); g.lineTo(a3[0], a3[1]);
+          if ((cx + cy) % 2) { const m = P(bx + 0.5, by, 0), n = P(bx + 0.5, by + 1, 0); g.moveTo(m[0], m[1]); g.lineTo(n[0], n[1]); }
+          else { const m = P(bx, by + 0.5, 0), n = P(bx + 1, by + 0.5, 0); g.moveTo(m[0], m[1]); g.lineTo(n[0], n[1]); }
+        }
+      } else if (k === "zheng" || k === "shu") {
+        for (let i = 1; i < r.w * 3; i++) {
+          const a = P(r.x + i / 3, r.y, 0), b = P(r.x + i / 3, r.y + r.h, 0);
+          g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
+        }
+      } else if (k === "lang") {
+        for (let i = 1; i < r.h * 3; i++) {
+          const a = P(r.x, r.y + i / 3, 0), b = P(r.x + r.w, r.y + i / 3, 0);
+          g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
+        }
+      }
+      g.stroke();
+    }
+    // 夹缝
+    for (const gap of an.gaps) for (const [gx0, gy0] of gap) {
+      quad([P(gx0, gy0, 0), P(gx0 + 1, gy0, 0), P(gx0 + 1, gy0 + 1, 0), P(gx0, gy0 + 1, 0)], "#2b2b2e", null);
+    }
+
+    // ---- 动线底稿（地面） ----
+    if (an.entry && flow > 0) {
+      const c0 = (idx) => { const r = rooms[idx]; return P(r.x + r.w / 2, r.y + r.h / 2, 0.03); };
+      const edges = [];
+      for (let i = 0; i < rooms.length; i++) if (an.prev[i] >= 0) edges.push({ a: an.prev[i], b: i, d: an.dist[i] });
+      edges.sort((x, y) => x.d - y.d);
+      g.setLineDash([3, 5]); g.strokeStyle = "rgba(158,42,34,.25)"; g.lineWidth = 1.5;
+      for (const e of edges) { const A = c0(e.a), B = c0(e.b); g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.stroke(); }
+      g.setLineDash([]);
+    }
+
+    // ---- 墙：按单元边拉起，剖切高度 ----
+    const items = [];
+    const wallH = (a, b) => {
+      if (a === b) return 0;                  // 同一间房内部不砌墙，只围四周
+      const ia = isIndoor(a), ib = isIndoor(b);
+      if (!ia && !ib) return 0;
+      if (ia && ib) return 0.55;
+      const front = !ia;
+      return front ? 0.16 : 0.95;
+    };
+    const addWall = (v, x, y, a, b) => {
+      const hh = wallH(a, b);
+      if (!hh) return;
+      const hz = hh * Math.max(0.15, t);
+      const p = (u) => (v ? [x, y + u] : [x + u, y]);
+      const key = v ? x + y + 0.5 : x + y + 0.5;
+      const door = doorSet.has((v ? "v" : "h") + x + "," + y);
+      const segs = door ? [[0, 0.2], [0.8, 1]] : [[0, 1]];
+      for (const [u0, u1] of segs) {
+        const [xa, ya] = p(u0), [xb, yb] = p(u1);
+        items.push({
+          key: key - 0.01,
+          draw() {
+            const A = P(xa, ya, 0), B = P(xb, yb, 0), C = P(xb, yb, hz), D = P(xa, ya, hz);
+            quad([A, B, C, D], "#fff", "#242427", 1.1);
+            // 窗：后墙（非临街）上的内凹窗
+            const both = isIndoor(a) && isIndoor(b);
+            if (!both && hz > 0.6 && !door && (v ? !isIndoor(a) : !isIndoor(a))) {
+              const w0 = 0.28, w1 = 0.72, z0 = 0.42 * hz / Math.max(hz, 1e-6) * 0.42 + 0.3, z1 = 0.78;
+              quad([P(...p(w0), 0.3), P(...p(w1), 0.3), P(...p(w1), 0.8), P(...p(w0), 0.8)], null, "#242427", 1);
+            }
+            line(D, C, "#242427", Math.max(1.8, sc * 0.03));
+          },
+        });
+      }
+    };
+    for (let x = 0; x <= W; x++) for (let y = 0; y < top; y++) addWall(true, x, y, at(x - 1, y), at(x, y));
+    for (let y = 0; y <= top; y++) for (let x = 0; x < W; x++) addWall(false, x, y, at(x, y - 1), at(x, y));
+
+    items.sort((a, b) => b.key - a.key);
+    for (const it of items) it.draw();
+
+    // ---- 标签 ----
+    if (t > 0.45) {
+      g.globalAlpha = Math.min(1, (t - 0.45) / 0.25);
+      for (const r of rooms) {
+        const [x, y] = P(r.x + r.w / 2, r.y + r.h / 2, 0.02);
+        const label = HOUSES[id(r)].name;
+        g.font = "600 " + Math.max(9, Math.min(12, sc * 0.18)) + "px 'Songti SC', serif";
+        const tw = g.measureText(label).width;
+        g.fillStyle = "rgba(255,255,255,.9)";
+        g.fillRect(x - tw / 2 - 3, y - 8, tw + 6, 16);
+        g.strokeStyle = "rgba(36,36,39,.8)"; g.lineWidth = 1;
+        g.strokeRect(x - tw / 2 - 3, y - 8, tw + 6, 16);
+        g.fillStyle = "#242427"; g.textAlign = "center"; g.textBaseline = "middle";
+        g.fillText(label, x, y + 1);
+      }
+      g.globalAlpha = 1;
+    }
+
+    // ---- 动线：屋顶之上的一层示意 ----
+    if (an.entry && flow > 0) {
+      const edges = [];
+      for (let i = 0; i < rooms.length; i++) if (an.prev[i] >= 0) edges.push({ a: an.prev[i], b: i, d: an.dist[i] });
+      edges.sort((x, y) => x.d - y.d);
+      const n = edges.length, cur = Math.min(1, flow) * n;
+      const c1 = (idx) => { const r = rooms[idx]; return P(r.x + r.w / 2, r.y + r.h / 2, 1.12); };
+      g.lineCap = "round";
+      for (let k = 0; k < edges.length; k++) {
+        const e = edges[k], A = c1(e.a), B = c1(e.b);
+        const f = Math.max(0, Math.min(1, cur - k));
+        if (f <= 0) continue;
+        g.strokeStyle = "rgba(158,42,34,.85)"; g.lineWidth = 2.2;
+        g.setLineDash([7, 6]); g.lineDashOffset = -(performance.now() / 45) % 13;
+        const px = A[0] + (B[0] - A[0]) * f, py = A[1] + (B[1] - A[1]) * f;
+        g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(px, py); g.stroke();
+        g.setLineDash([]);
+        if (f < 1) {
+          g.beginPath(); g.arc(px, py, 3.6, 0, Math.PI * 2);
+          g.fillStyle = "#9e2a22"; g.fill();
+        }
+      }
+      const E = c1(an.entry.room);
+      g.beginPath(); g.arc(E[0], E[1], 6, 0, Math.PI * 2);
+      g.fillStyle = "rgba(158,42,34,.95)"; g.fill();
+      g.fillStyle = "#fff"; g.font = "9px 'Songti SC', serif";
+      g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("入", E[0], E[1]);
+    }
+
+    // ---- 红色小人：沿动线（BFS 生成树）走动 ----
+    if (an.entry && flow > 0) {
+      const edges = [];
+      for (let i = 0; i < rooms.length; i++) if (an.prev[i] >= 0) edges.push({ a: an.prev[i], b: i, d: an.dist[i] });
+      edges.sort((x, y) => x.d - y.d);
+      if (edges.length) {
+        const total = edges.length;
+        const cur = Math.max(0, Math.min(0.999, flow)) * total;
+        const k = Math.floor(cur), f = cur - k;
+        const e = edges[Math.min(k, total - 1)];
+        const cA = { x: rooms[e.a].x + rooms[e.a].w / 2, y: rooms[e.a].y + rooms[e.a].h / 2 };
+        const cB = { x: rooms[e.b].x + rooms[e.b].w / 2, y: rooms[e.b].y + rooms[e.b].h / 2 };
+        const wx = cA.x + (cB.x - cA.x) * f;
+        const wy = cA.y + (cB.y - cA.y) * f;
+        const bob = Math.abs(Math.sin(flow * 40)) * 0.05;
+        const foot = P(wx, wy, 0.02 + bob);
+        const hip = P(wx, wy, 0.34 + bob);
+        const head = P(wx, wy, 0.52 + bob);
+        const lw = Math.max(2.1, sc * 0.05);
+        line([foot[0] - sc * 0.04, foot[1]], [hip[0], hip[1]], "#d23a2c", lw);
+        line([foot[0] + sc * 0.04, foot[1]], [hip[0], hip[1]], "#d23a2c", lw);
+        line([hip[0], hip[1]], [head[0], head[1] - Math.max(3.4, sc * 0.09)], "#d23a2c", lw);
+        g.beginPath(); g.arc(head[0], head[1], Math.max(4.2, sc * 0.105), 0, Math.PI * 2);
+        g.fillStyle = "#d23a2c"; g.fill();
+        g.strokeStyle = "#fff"; g.lineWidth = 1.4; g.stroke();
+      }
+    }
+
+    g.fillStyle = "rgba(90,70,40,.5)"; g.font = "10px 'Songti SC', serif";
+    g.textAlign = "left"; g.fillText(t > 0.9 ? "轴测 · 动线" : "平面拉起", 12, h - 12);
+  }
+
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    let r = (n >> 16) + amt, g = ((n >> 8) & 255) + amt, b = (n & 255) + amt;
+    r = Math.max(0, Math.min(255, r)); g = Math.max(0, Math.min(255, g)); b = Math.max(0, Math.min(255, b));
+    return "rgb(" + r + "," + g + "," + b + ")";
+  }
+
+  function downloadFlyer() {
+    const L = state.last;
+    if (!L) return;
+    const art = document.createElement("canvas");
+    art.width = 640; art.height = 450;
+    const ag = art.getContext("2d");
+    drawIso(ag, art.width, art.height, L.an, 1, { t: 1 });
+
+    const c = document.createElement("canvas");
+    c.width = 1200; c.height = 630;
+    const g = c.getContext("2d");
+    const bg = g.createLinearGradient(0, 0, 1200, 630);
+    bg.addColorStop(0, "#fbf6ea"); bg.addColorStop(1, "#efe3ce");
+    g.fillStyle = bg; g.fillRect(0, 0, 1200, 630);
+    // 边框
+    g.strokeStyle = "rgba(158,42,34,.35)"; g.lineWidth = 2;
+    g.strokeRect(18, 18, 1164, 594);
+    // 左栏文字
+    g.fillStyle = "#7a6448"; g.font = "13px 'Songti SC', serif";
+    g.fillText("KittenPuppy4Ever · 造院", 56, 66);
+    g.fillStyle = "#6b1d18"; g.font = "700 40px 'Songti SC', 'SimSun', serif";
+    g.fillText(L.name, 56, 126);
+    const nameW = g.measureText(L.name).width;
+    g.fillStyle = "#9e2a22"; g.font = "700 20px 'Songti SC', serif";
+    g.fillText(L.grade + " 等宅", 56 + nameW + 18, 126);
+    g.fillStyle = "#8a7358"; g.font = "12px 'Songti SC', serif";
+    g.fillText("第 " + state.round + " 座 · 八件落成 · 坐北朝南", 56, 156);
+    // 宣传语
+    const catchText = L.res.hit ? "主家满意，当场添了茶钱。" : "主家还在琢磨，但院子已经立起来了。";
+    g.fillStyle = "#4a3a2a"; g.font = "15px 'Songti SC', serif";
+    g.fillText(catchText, 56, 200);
+    // 规格
+    const rows = [
+      ["占地", L.an.rooms.length + " 间 · 高 " + L.res.top + " 层"],
+      ["天井", L.res.openYard + " 格空地"],
+      ["门第", L.res.doors + " 道门 · " + (L.an.entry ? ENTRY_CN[L.an.entry.kind] : "无入口")],
+      ["委托", L.res.hit ? "达成" : "未达成"],
+      ["估价", L.price.toLocaleString() + " 万"],
+    ];
+    g.font = "13px 'Songti SC', serif";
+    rows.forEach(([k, v], i) => {
+      const y = 246 + i * 30;
+      g.fillStyle = "#8a7358"; g.fillText(k, 56, y);
+      g.fillStyle = "#4a3a2a"; g.fillText(v, 118, y);
+      g.strokeStyle = "rgba(160,130,80,.25)"; g.beginPath(); g.moveTo(56, y + 10); g.lineTo(420, y + 10); g.stroke();
+    });
+    // 评语
+    g.fillStyle = "#7a6448"; g.font = "12px 'Songti SC', serif";
+    L.res.notes.slice(0, 4).forEach((t, i) => g.fillText("· " + t, 56, 418 + i * 21));
+    // 右侧轴测图
+    g.fillStyle = "#fdf9f0";
+    g.fillRect(470, 90, 680, 470);
+    g.strokeStyle = "rgba(160,130,80,.35)"; g.strokeRect(470, 90, 680, 470);
+    g.drawImage(art, 490, 100, 640, 450);
+    // 印章
+    g.save();
+    g.translate(1090, 540); g.rotate(-0.12);
+    g.strokeStyle = "#9e2a22"; g.lineWidth = 3; g.strokeRect(-34, -34, 68, 68);
+    g.fillStyle = "#9e2a22"; g.font = "700 26px 'Songti SC', serif";
+    g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("宅", 0, 2);
+    g.restore();
+
+    c.toBlob((blob) => {
+      if (!blob) return;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "宅院契_" + (L.name || "unnamed") + ".png";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    }, "image/png");
+  }
+
+  function startIsoAnim(an) {
+    const c = document.getElementById("iso");
+    const g = c.getContext("2d");
+    cancelAnimationFrame(isoRAF);
+    const t0 = performance.now();
+    const loop = (now) => {
+      const p = Math.min(1, (now - t0) / 3200);
+      drawIso(g, c.width, c.height, an, p, {});
+      if (p < 1) isoRAF = requestAnimationFrame(loop);
+      else {
+        // 完成后缓慢循环重播动线
+        const t1 = performance.now();
+        const loop2 = (n2) => {
+          const q = ((n2 - t1) % 5000) / 5000;
+          drawIso(g, c.width, c.height, an, q, {});
+          isoRAF = requestAnimationFrame(loop2);
+        };
+        isoRAF = requestAnimationFrame(loop2);
+      }
+    };
+    isoRAF = requestAnimationFrame(loop);
+  }
+
+  function stopIsoAnim() { cancelAnimationFrame(isoRAF); }
+
+  // ---- 绘制 ----
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function drawPaper() {
+    ctx.clearRect(0, 0, cw, chh);
+    const g = ctx.createLinearGradient(0, 0, 0, chh);
+    g.addColorStop(0, "#fbf6ea"); g.addColorStop(1, "#f1e8d4");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, cw, chh);
+    ctx.strokeStyle = "rgba(160,130,80,.05)"; ctx.lineWidth = 1;
+    for (let y = 0; y < chh; y += 7) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke(); }
+  }
+  function drawLot() {
+    // 地界与网格
+    ctx.strokeStyle = "#b08b5a"; ctx.lineWidth = 2;
+    roundRect(gx(0) - 8, LOT_TOP - 8, W * cell + 16, H * cell + 16, 12);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(176,139,90,.05)"; ctx.fill();
+    ctx.strokeStyle = "rgba(120,95,60,.16)"; ctx.lineWidth = 1;
+    for (let x = 0; x <= W; x++) { ctx.beginPath(); ctx.moveTo(gx(x), LOT_TOP); ctx.lineTo(gx(x), LOT_TOP + H * cell); ctx.stroke(); }
+    for (let y = 0; y <= H; y++) { ctx.beginPath(); ctx.moveTo(gx(0), LOT_TOP + y * cell); ctx.lineTo(gx(W), LOT_TOP + y * cell); ctx.stroke(); }
+    // 街道
+    ctx.fillStyle = "rgba(90,110,90,.08)";
+    ctx.fillRect(gx(0) - 8, LOT_TOP + H * cell + 8, W * cell + 16, 18);
+    ctx.fillStyle = "#9e2a22"; ctx.font = "11px 'Songti SC', serif"; ctx.textAlign = "center";
+    ctx.fillText("街 · 院门朝南", gx(W / 2), LOT_TOP + H * cell + 40);
+    // 吊车轨道
+    ctx.strokeStyle = "#9e2a22"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(gx(0) - 12, 54); ctx.lineTo(gx(W) + 12, 54); ctx.stroke();
+    ctx.fillStyle = "#9e2a22";
+    for (let i = 0; i <= 10; i++) {
+      const x = gx(0) - 12 + i * (W * cell + 24) / 10;
+      ctx.beginPath(); ctx.arc(x, 54, 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  function drawRoom(r, alpha = 1, topOverride = null) {
+    const px = gx(r.x), py = (topOverride == null ? roomTop(r) : topOverride);
+    const pw = r.w * cell, ph = r.h * cell;
+    const id = r.t;
+    const FILL = { zheng: "#fbf7ee", xiang: "#f3f6ec", shu: "#eef4f7", jing: "#f7f5f0",
+      chu: "#faf4e6", men: "#f6ece7", tian: "#f1ecdf", lang: "#f5efe2", hu: "#f4efe6",
+      yue: "#eef4ea", tai: "#f7e9e3", shi: "#f1f3f4", chi: "#e9f2f4" };
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = FILL[id] || "#fbf7ee";
+    ctx.fillRect(px, py, pw, ph);
+
+    // 室内纹理：榻榻米 / 地板 / 厨房 / 净房 / 天井 / 水池
+    ctx.save();
+    ctx.beginPath(); ctx.rect(px, py, pw, ph); ctx.clip();
+    ctx.strokeStyle = "rgba(70,60,45,.28)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (id === "xiang") {
+      for (let cx = 0; cx < r.w; cx++) for (let cy = 0; cy < r.h; cy++) {
+        const bx = gx(r.x) + cx * cell + 4, by = (topOverride == null ? roomTop(r) : topOverride) + cy * cell + 4;
+        ctx.rect(bx, by, cell - 8, cell - 8);
+        if ((cx + cy) % 2) { ctx.moveTo(bx + cell / 2 - 4, by + 2); ctx.lineTo(bx + cell / 2 - 4, by + cell - 10); }
+        else { ctx.moveTo(bx + 2, by + cell / 2 - 4); ctx.lineTo(bx + cell - 10, by + cell / 2 - 4); }
+      }
+    } else if (id === "zheng" || id === "shu") {
+      for (let i = 1; i < r.w * 4; i++) {
+        const xx = px + (i * pw) / (r.w * 4);
+        ctx.moveTo(xx, py + 4); ctx.lineTo(xx, py + ph - 4);
+      }
+    } else if (id === "lang") {
+      for (let i = 1; i < r.h * 3; i++) {
+        const yy = py + (i * ph) / (r.h * 3);
+        ctx.moveTo(px + 4, yy); ctx.lineTo(px + pw - 4, yy);
+      }
+    } else if (id === "tian") {
+      for (let i = 0; i < 18; i++) {
+        const xx = px + 6 + Math.random() * Math.max(1, pw - 12);
+        const yy = py + 6 + Math.random() * Math.max(1, ph - 12);
+        ctx.moveTo(xx, yy); ctx.lineTo(xx + 1.2, yy + 1.2);
+      }
+    } else if (id === "chi") {
+      for (let i = 1; i < 5; i++) {
+        const yy = py + (i * ph) / 5;
+        ctx.moveTo(px + 6, yy);
+        for (let xx = px + 6; xx < px + pw - 6; xx += 8) ctx.quadraticCurveTo(xx + 4, yy - 3, xx + 8, yy);
+      }
+    } else if (id === "men") {
+      for (let i = -4; i < 8; i++) {
+        ctx.moveTo(px + (i * cell) / 5, py + ph);
+        ctx.lineTo(px + (i * cell) / 5 + cell * 0.6, py + ph - cell * 0.6);
+      }
+    } else if (id === "hu") {
+      for (let i = 1; i < 4; i++) { ctx.moveTo(px + 4, py + (i * ph) / 4); ctx.lineTo(px + pw - 4, py + (i * ph) / 4); }
+      ctx.moveTo(px + 4, py + 4); ctx.lineTo(px + pw - 4, py + ph - 4);
+    }
+    ctx.stroke();
+
+    // 固定家具
+    ctx.strokeStyle = "#2a2a2c"; ctx.fillStyle = "#fff"; ctx.lineWidth = 1.1;
+    if (id === "chu") {
+      const kx = px + cell * 0.12, ky = py + cell * 0.12;
+      ctx.fillRect(kx, ky, cell * 0.5, cell * 0.28); ctx.strokeRect(kx, ky, cell * 0.5, cell * 0.28);
+      for (const k of [0.3, 0.48]) { ctx.beginPath(); ctx.arc(kx + cell * 0.12 + cell * 0.26 * k, ky + cell * 0.14, cell * 0.05, 0, Math.PI * 2); ctx.stroke(); }
+    } else if (id === "jing") {
+      ctx.strokeRect(px + cell * 0.32, py + cell * 0.08, cell * 0.36, cell * 0.12);
+      ctx.beginPath(); ctx.ellipse(px + cell * 0.5, py + cell * 0.38, cell * 0.13, cell * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
+    } else if (id === "zheng") {
+      // 正厅条案与两把椅
+      ctx.strokeRect(px + pw * 0.36, py + 6, pw * 0.28, cell * 0.24);
+      ctx.strokeRect(px + pw * 0.18, py + cell * 0.42, cell * 0.34, cell * 0.3);
+      ctx.strokeRect(px + pw * 0.62, py + cell * 0.42, cell * 0.34, cell * 0.3);
+    } else if (id === "shu") {
+      ctx.strokeRect(px + pw * 0.4, py + ph * 0.34, pw * 0.2, ph * 0.26);
+    }
+    ctx.restore();
+
+    // 墙：粗黑线
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = "#242427";
+    ctx.lineWidth = Math.max(2.6, cell * 0.052);
+    ctx.strokeRect(px, py, pw, ph);
+    ctx.globalAlpha = 1;
+
+    // 标签：白底文字
+    const name = HOUSES[id].name;
+    ctx.font = "600 " + Math.max(9, Math.min(13, cell * 0.17)) + "px 'Songti SC', 'SimSun', serif";
+    const tw = ctx.measureText(name).width;
+    const cx = px + pw / 2, cy = py + ph / 2;
+    if (pw > tw + 10 && ph > 20) {
+      ctx.fillStyle = "rgba(255,255,255,.88)";
+      ctx.fillRect(cx - tw / 2 - 3, cy - 9, tw + 6, 17);
+      ctx.fillStyle = "#242427";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(name, cx, cy + 1);
+    }
+  }
+
+  function drawGhost() {
+    if (state.phase !== "playing" || !state.piece) return;
+    const [w, h] = sizeOf(state.piece.t, state.piece.rot);
+    const x = Math.max(0, Math.min(W - w, Math.round(state.x)));
+    const y = landing(state.rooms, x, w);
+    const g = { t: state.piece.t, rot: state.piece.rot, x, y, w, h };
+    drawRoom(g, 0.35);
+    // 吊绳
+    const cx = gx(x) + w * cell / 2;
+    ctx.strokeStyle = "rgba(122,100,72,.6)"; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx, 54); ctx.lineTo(cx, roomTop(g)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#9e2a22";
+    ctx.fillRect(cx - 12, 44, 24, 12);
+  }
+  function openingPx(o) {
+    if (o.v) {
+      return { x1: gx(o.i), y1: rowTop(o.j) + cell * 0.2, x2: gx(o.i), y2: rowTop(o.j) + cell * 0.8 };
+    }
+    const yy = o.road ? rowTop(0) + cell : rowTop(o.i);
+    return { x1: gx(o.j) + cell * 0.2, y1: yy, x2: gx(o.j) + cell * 0.8, y2: yy };
+  }
+
+  function drawWindow(o, road) {
+    const p = openingPx(o);
+    // 墙上开洞，再画三条细线窗
+    ctx.strokeStyle = "#fbf7ee";
+    ctx.lineWidth = Math.max(6.4, cell * 0.088);
+    ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
+    ctx.strokeStyle = "#242427";
+    ctx.lineWidth = 1.2;
+    const horiz = p.y1 === p.y2;
+    for (const k of [-2.2, 0, 2.2]) {
+      ctx.beginPath();
+      if (horiz) { ctx.moveTo(p.x1, p.y1 + k); ctx.lineTo(p.x2, p.y2 + k); }
+      else { ctx.moveTo(p.x1 + k, p.y1); ctx.lineTo(p.x2 + k, p.y2); }
+      ctx.stroke();
+    }
+    if (road) {
+      ctx.strokeStyle = "#4e7a8a"; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
+    }
+  }
+
+  function drawDoor(o, entry, side = 1) {
+    const p = openingPx(o);
+    const s = cell, d = 0.6;
+    // 门洞
+    ctx.strokeStyle = "#fbf7ee";
+    ctx.lineWidth = Math.max(6.4, s * 0.088);
+    ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
+
+    const horiz = p.y1 === p.y2;
+    // 铰链就在门洞的一端，门扇长度 = 门洞宽度
+    const hx = p.x1, hy = p.y1;
+    // 门扇：垂直于墙、开向房间
+    const leaf = horiz ? [0, -side] : [side, 0];
+    const tx = hx + leaf[0] * d * s, ty = hy + leaf[1] * d * s;
+    ctx.strokeStyle = entry ? "#9e2a22" : "#242427";
+    ctx.lineWidth = Math.max(1.5, s * 0.028);
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
+
+    // 门弧：从墙方向扫到门扇方向
+    const wallDir = horiz ? [1, 0] : [0, 1];
+    const a0 = Math.atan2(wallDir[1], wallDir[0]);
+    const a1 = Math.atan2(leaf[1], leaf[0]);
+    let da = a1 - a0;
+    while (da > Math.PI) da -= Math.PI * 2;
+    while (da < -Math.PI) da += Math.PI * 2;
+    ctx.setLineDash([s * 0.05, s * 0.05]);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(hx, hy, d * s, a0, a0 + da, da < 0); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 门洞两端各画一小段垂直门垛，长度只等于墙厚，保证与墙体咬合
+    const jamb = Math.max(4, cell * 0.052);
+    ctx.strokeStyle = entry ? "#9e2a22" : "#242427";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    for (const [qx, qy] of [[p.x1, p.y1], [p.x2, p.y2]]) {
+      if (horiz) { ctx.moveTo(qx, qy - jamb / 2); ctx.lineTo(qx, qy + jamb / 2); }
+      else { ctx.moveTo(qx - jamb / 2, qy); ctx.lineTo(qx + jamb / 2, qy); }
+    }
+    ctx.stroke();
+    if (entry) {
+      ctx.fillStyle = "#9e2a22";
+      ctx.font = "600 10px 'Songti SC', serif";
+      ctx.textAlign = "center";
+      ctx.fillText("门", (p.x1 + p.x2) / 2 + (horiz ? 0 : 14), (p.y1 + p.y2) / 2 + (horiz ? 14 : 0));
+    }
+  }
+
+  function doorSide(an, d) {
+    const rb = an.rooms[d.b];
+    // 水平边界 line=rowTop(i) 分隔 row i（南/下）与 row i+1（北/上）
+    return d.v ? (rb.x >= d.i ? 1 : -1) : (rb.y > d.i ? 1 : -1);
+  }
+
+  function drawOpenings(an) {
+    for (const w of an.windows) drawWindow(w, w.road);
+    for (const d of an.doors) drawDoor({ v: d.v, i: d.i, j: d.j }, false, doorSide(an, d));
+    if (an.entry && an.entry.seg) {
+      const seg = an.entry.seg;
+      const r = an.rooms[an.entry.room];
+      const side = seg.road ? 1 : (seg.v ? (r.x >= seg.i ? 1 : -1) : (r.y > seg.i ? 1 : -1));
+      drawDoor(seg, true, side);
+    }
+  }
+
+  function draw() {
+    drawPaper(); drawLot();
+    const an = state.rooms.length ? analyze(state.rooms) : null;
+    for (const r of state.rooms) drawRoom(r, r.y + r.h > H ? 0.92 : 1);
+    if (an) drawOpenings(an);
+    drawGhost();
+  }
+
+  function tick(ts) {
+    const dt = Math.min(50, ts - (state.lastTs || ts));
+    state.lastTs = ts;
+    if (state.phase === "playing" && state.piece) {
+      const [w] = sizeOf(state.piece.t, state.piece.rot);
+      const maxX = Math.max(0, W - w);
+      state.x += state.dir * 0.03 * (dt / 16.7);
+      if (state.x >= maxX) { state.x = maxX; state.dir = -1; }
+      if (state.x <= 0) { state.x = 0; state.dir = 1; }
+      draw();
+    } else if (state.phase === "falling" && state.falling) {
+      const f = state.falling;
+      const p = Math.max(0, Math.min(1, (ts - f.t0) / f.dur));
+      const e = 1 - Math.pow(1 - p, 3);
+      const yNow = H + (f.r.y - H) * e;
+      draw();
+      const topPx = LOT_TOP + (H - (yNow + f.r.h)) * cell;
+      drawRoom(f.r, 0.92, topPx);
+      if (p >= 1) commitFalling();
+    } else if (state.phase === "cinematic" && state.cine) {
+      const el = ts - state.cine.t0;
+      const tilt = Math.min(1, el / 1500);
+      const flow = Math.max(0, Math.min(1, (el - 700) / 1500));
+      drawIso(ctx, cw, chh, state.cine.an, flow, { t: tilt });
+      ctx.fillStyle = "rgba(90,70,40,.8)";
+      ctx.font = "600 18px 'Songti SC', 'SimSun', serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(tilt < 0.6 ? "合上图纸 · 立起墙体" : "宅院落成 · 轴测动线", cw / 2, 44);
+      if (el >= 2500 && !state.cine.opened) {
+        state.cine.opened = true;
+        openDeed();
+      }
+    } else {
+      draw();
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // ---- 交互 ----
+  canvas.addEventListener("click", drop);
+  addEventListener("keydown", (e) => {
+    if (!state.piece) return;
+    const [w] = sizeOf(state.piece.t, state.piece.rot);
+    if (e.code === "Space") { e.preventDefault(); drop(); }
+    if (e.code === "KeyA" || e.code === "ArrowLeft") state.x = Math.max(0, state.x - 1);
+    if (e.code === "KeyD" || e.code === "ArrowRight") state.x = Math.min(W - w, state.x + 1);
+  });
+  $("#restart").onclick = () => { stopIsoAnim(); el.modal.classList.add("hidden"); state.round++; startRound(); };
+  $("#deed-close").onclick = () => { stopIsoAnim(); el.modal.classList.add("hidden"); };
+  $("#deed-stay").onclick = () => { stopIsoAnim(); el.modal.classList.add("hidden"); };
+  $("#deed-flyer").onclick = () => downloadFlyer();
+  $("#deed-again").onclick = () => { stopIsoAnim(); el.modal.classList.add("hidden"); state.round++; startRound(); };
+  $("#sound").onclick = (e) => { state.muted = !state.muted; e.target.textContent = "音效：" + (state.muted ? "关" : "开"); };
+
+  // 调试出口（只读）：给自动化检查用
+  window.__kpYard = { get state() { return state; }, analyze, landing };
+
+  // ---- QA：?auto=1 直接模拟 8 件并出宅院契 ----
+  function autoPlay() {
+    for (let k = 0; k < TOTAL; k++) {
+      const p = state.bag[k];
+      const [w] = sizeOf(p.t, p.rot);
+      state.rooms.push(place(state.rooms, p, Math.floor(Math.random() * (W - w + 1))));
+    }
+    state.idx = TOTAL;
+    finish();
+  }
+
+  layout();
+  startRound();
+  if (new URLSearchParams(location.search).get("auto") === "1") setTimeout(autoPlay, 500);
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

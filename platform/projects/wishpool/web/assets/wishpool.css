@@ -1,0 +1,192 @@
+/* 猫猫许愿池 · 项目专有组件样式
+ * 只放「许愿池专有组件」（余额卡、奖励阶梯、愿望行、审批卡、趋势图、投币动效、详情弹层内容）。
+ * 颜色 / 圆角 / 字号全部引用 /static/template.css 的设计令牌（--card/--line/--ink/--muted/--accent/--pink/--good/--warn/--bad/--shadow）。
+ */
+
+:root {
+  --wp-mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+  --wp-amber: var(--warn);
+  --wp-violet: #8b7fd4;
+  --wp-pink-deep: #b25e83;
+  --wp-dim: #b5a88f;
+  --wp-transfer: #3f8fae;
+}
+
+/* ---------- 顶部：视图/视角切换 ---------- */
+#uswitch { margin-left: 4px; }
+#uswitch .tab { padding: 5px 12px; font-size: 12px; }
+
+/* ---------- 余额卡 + 奖励阶梯 ---------- */
+.wp-cards { display: grid; grid-template-columns: 220px 1fr; gap: 12px; }
+@media (max-width: 720px) { .wp-cards { grid-template-columns: 1fr; } }
+
+.wp-coin-card {
+  background: linear-gradient(135deg, rgba(236, 159, 190, .16), rgba(0, 61, 165, .05));
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.wp-coin-card.p { background: linear-gradient(135deg, rgba(0, 61, 165, .10), rgba(236, 159, 190, .08)); }
+.wp-coin-top { display: flex; align-items: center; gap: 10px; }
+.wp-coin-ico { font-size: 28px; animation: coinBob 3s ease-in-out infinite; }
+.wp-coin-num {
+  font-size: 32px; font-weight: 800; font-family: var(--wp-mono);
+  color: var(--wp-pink-deep); line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.wp-coin-card.p .wp-coin-num { color: var(--accent); }
+.wp-coin-lab { font-size: 12px; color: var(--muted); font-weight: 650; }
+.wp-coin-sub { font-size: 10.5px; color: var(--wp-dim); line-height: 1.7; }
+.wp-fog { margin-top: 8px; font-size: 11.5px; color: var(--wp-dim); font-family: var(--wp-mono); }
+@keyframes coinBob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-5px) rotate(6deg); } }
+
+.wp-tier {
+  background: #fffefb;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.wp-tier-t { font-size: 12px; color: var(--muted); font-weight: 650; }
+.wp-tier-r { display: flex; gap: 8px; flex-wrap: wrap; }
+.wt2 {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--wp-mono); font-size: 11px;
+  background: #fffefb; border: 1px solid var(--line);
+  border-radius: 999px; padding: 3px 12px; color: var(--ink);
+}
+.wt2 b { color: var(--accent); font-weight: 700; }
+.wt-bar { display: inline-block; width: 56px; height: 6px; border-radius: 3px; background: #f2ecdf; overflow: hidden; }
+.wt-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--pink)); }
+.wp-tier-note { font-family: var(--wp-mono); font-size: 10.5px; color: var(--wp-dim); line-height: 1.7; }
+
+/* ---------- 愿望行 / 审批卡 ---------- */
+.wp-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #fffdf9;
+  cursor: pointer;
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+}
+.wp-card:hover { border-color: var(--pink); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(66, 57, 43, .06); }
+.wp-card.wp-top { border-left: 3px solid var(--wp-amber); }
+.wp-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.wp-status {
+  font-size: 10.5px; color: #fff; border-radius: 999px;
+  padding: 1px 10px; font-weight: 600; line-height: 1.7; white-space: nowrap;
+}
+.wp-title { font-size: 13.5px; font-weight: 650; color: var(--ink); flex: 1; min-width: 0; word-break: break-word; }
+.wp-coins { font-family: var(--wp-mono); font-size: 13.5px; font-weight: 700; color: var(--wp-amber); flex: none; }
+.wp-fields { font-family: var(--wp-mono); font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.7; word-break: break-word; }
+.wp-viewhint { font-family: var(--wp-mono); font-size: 10px; color: var(--wp-dim); margin-top: 7px; opacity: 0; transition: opacity .15s; }
+.wp-card:hover .wp-viewhint { opacity: 1; }
+
+/* ---------- 弹层内容（template.css 提供 .modal / .modal-box 骨架） ---------- */
+.modal-box h3 { margin: 0 0 12px; font-size: 15px; color: var(--ink); }
+.modal-box .hint { font-size: 11.5px; color: var(--muted); }
+.modal-box .status { margin: 0 0 10px; }
+.modal-box .input, .modal-box select, .modal-box textarea { width: 100%; }
+.modal-box .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modal-btns { display: flex; gap: 8px; margin-top: 16px; align-items: center; flex-wrap: wrap; }
+.narrow { width: min(380px, 94vw); }
+.wish-box { width: min(600px, 96vw); }
+.detail-box { width: min(520px, 96vw); }
+.bid-lab { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+.place-row { display: flex; gap: 8px; }
+.place-row select { flex: 1; min-width: 0; }
+
+/* 许愿币步进器 */
+.wp-stepper { display: flex; align-items: center; gap: 8px; margin-top: 2px; flex-wrap: wrap; }
+.modal-box .wp-stepper .input { width: 88px; text-align: center; font-family: var(--wp-mono); font-size: 15px; font-weight: 700; }
+.wp-stepper.wide .input { width: 120px; }
+.wp-step-btn {
+  width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 10px;
+  background: #f2ecdf; font-size: 17px; font-weight: 700; color: var(--accent);
+  cursor: pointer; font-family: inherit; flex: none;
+}
+.wp-step-btn:hover { border-color: var(--pink); color: var(--wp-pink-deep); }
+.wp-step-bal { font-family: var(--wp-mono); font-size: 11.5px; color: var(--muted); margin-left: 6px; }
+.wp-step-bal b { color: var(--wp-amber); }
+.wp-ddl-hint { font-family: var(--wp-mono); font-size: 11px; color: var(--wp-pink-deep); margin-top: 6px; }
+
+/* 详情弹层 */
+.detail-box .d-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.detail-box .d-head h3 { margin: 0; font-size: 17px; flex: 1; min-width: 0; color: var(--ink); }
+.d-row {
+  display: flex; gap: 10px; font-size: 12.5px; padding: 6px 2px;
+  border-bottom: 1px dashed var(--line); align-items: baseline;
+}
+.d-row .k { color: var(--muted); flex: none; width: 88px; font-size: 11.5px; }
+.d-row .v { flex: 1; min-width: 0; color: var(--ink); word-break: break-word; }
+.d-row .v b { color: var(--accent); }
+.wp-hist { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 6px; }
+.wh { font-family: var(--wp-mono); font-size: 10.5px; color: var(--wp-dim); line-height: 1.8; }
+.wh-at { color: var(--wp-dim); margin-right: 6px; }
+.wh-by { color: var(--accent); margin-right: 6px; }
+.wh-act { color: var(--ink); font-weight: 600; }
+
+/* 审批预览 */
+.ap-preview { background: #fffefb; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 6px 0; }
+.ap-line { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--muted); padding: 3px 0; }
+.ap-line b { color: var(--accent); font-family: var(--wp-mono); }
+
+/* 实现凭证图片 */
+.d-imgs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.d-img {
+  width: 64px; height: 64px; object-fit: cover; border-radius: 10px;
+  border: 1px solid var(--line); cursor: pointer; transition: transform .15s;
+}
+.d-img:hover { transform: scale(1.06); }
+.d-add-img { padding: 4px 12px; font-size: 12px; border-radius: 9px; }
+.lb-back {
+  position: fixed; inset: 0; z-index: 3000; background: rgba(24, 20, 14, .92);
+  display: flex; align-items: center; justify-content: center; cursor: zoom-out;
+}
+.lb-back img { max-width: 92vw; max-height: 92vh; border-radius: 12px; box-shadow: 0 8px 60px rgba(0, 0, 0, .5); }
+
+/* ---------- 币趋势 ---------- */
+.td-legend { font-family: var(--wp-mono); font-size: 10px; color: var(--wp-dim); text-align: center; margin-bottom: 8px; }
+.td-row { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px dashed var(--line); flex-wrap: wrap; }
+.td-date { font-family: var(--wp-mono); font-size: 11.5px; color: var(--muted); width: 46px; flex: none; }
+.td-bar { display: flex; align-items: center; flex: 1; min-width: 140px; height: 12px; }
+.td-neg { margin-left: auto; height: 10px; background: linear-gradient(90deg, transparent, rgba(201, 106, 90, .75)); border-radius: 4px 0 0 4px; }
+.td-pos { height: 10px; background: linear-gradient(90deg, rgba(46, 139, 87, .75), transparent); border-radius: 0 4px 4px 0; }
+.td-zero { width: 2px; height: 12px; background: var(--line); flex: none; }
+.td-net { font-family: var(--wp-mono); font-size: 12px; font-weight: 700; width: 44px; text-align: right; flex: none; }
+.td-cum { font-family: var(--wp-mono); font-size: 10.5px; color: var(--wp-dim); width: 64px; flex: none; }
+.td-chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; min-width: 160px; }
+.td-chip { font-family: var(--wp-mono); font-size: 10.5px; background: #fffefb; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+
+/* ---------- 投币 / 结算小动效 ---------- */
+.pool-back {
+  position: fixed; inset: 0; z-index: 10002; display: flex;
+  align-items: center; justify-content: center;
+  background: rgba(66, 57, 43, .32); cursor: pointer;
+}
+.pool-mini {
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  padding: 20px 30px; text-align: center; box-shadow: var(--shadow-hi);
+  animation: msgUp .4s cubic-bezier(.22, 1, .36, 1) both; cursor: default;
+}
+@keyframes msgUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.pm-stage { display: flex; align-items: center; gap: 10px; font-size: 26px; }
+.pm-cat { display: inline-block; animation: catNod 1.2s ease-in-out infinite; }
+@keyframes catNod { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-9deg); } }
+.pm-arrow { color: var(--wp-dim); font-size: 16px; }
+.pm-coins { display: inline-flex; gap: 2px; }
+.pm-coin { display: inline-block; opacity: 0; animation: coinDrop .65s cubic-bezier(.3, .7, .5, 1) forwards; }
+@keyframes coinDrop {
+  0% { opacity: 0; transform: translateY(-12px) rotate(-80deg); }
+  60% { opacity: 1; transform: translateY(2px) rotate(8deg); }
+  100% { opacity: 1; transform: translateY(0) rotate(0); }
+}
+.pm-wave { display: inline-block; transform-origin: 50% 80%; }
+.pm-wave.pulse { animation: wavePulse .55s ease-out both; }
+@keyframes wavePulse { 0% { transform: scale(.75); opacity: .6; } 55% { transform: scale(1.18); } 100% { transform: scale(1); opacity: 1; } }
+.pm-text { margin-top: 9px; font-size: 12.5px; color: var(--muted); font-family: var(--wp-mono); }

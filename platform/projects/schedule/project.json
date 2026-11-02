@@ -1,0 +1,41 @@
+{
+  "id": "schedule",
+  "parent": "root",
+  "order": 10,
+  "title": "日程管理",
+  "icon": "📅",
+  "desc": "课程与个人日程：按周查看、提到/参与可见、参与者时段冲突检查。",
+  "base": "json-doc",
+  "capabilities": [
+    "state",
+    "action",
+    "audit",
+    "crud",
+    "remind"
+  ],
+  "acl": {
+    "read": [
+      "kitten",
+      "puppy"
+    ],
+    "write": [
+      "kitten",
+      "puppy"
+    ]
+  },
+  "view": {
+    "kind": "custom",
+    "dir": "web"
+  },
+  "ui": {
+    "theme": {
+      "accent": "#2f6fb5"
+    }
+  },
+  "path": "/dashboard/",
+  "tags": [
+    "日程",
+    "时间管理",
+    "课程"
+  ]
+}

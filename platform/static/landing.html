@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KittenPuppy4Ever</title>
+<style>
+  :root {
+    /* 浅色默认背景 + 固定 PinkFDU 文字色 */
+    --bg: #f8f5f0;
+    --ink: #272c3a;
+    --muted: #7d7787;
+    --pink: #ec9fbe;
+    --pink-deep: #b96fa9;
+    --accent: #657cc4;
+    --deep: #174eae;
+    --tone-1: #e899ba;
+    --tone-2: #d67dab;
+    --tone-3: #b96fa9;
+    --tone-4: #936fb6;
+    --tone-5: #657cc4;
+    --tone-6: #174eae;
+  }
+  * { box-sizing: border-box; }
+  html, body { min-height: 100%; margin: 0; transition: background-color .65s ease, color .65s ease; }
+  #tagline { transition: opacity .18s ease, transform .18s ease; }
+  #tagline.tag-fade { opacity: 0; transform: translateY(6px); }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex; flex-direction: column; min-height: 100vh;
+  }
+  header {
+    width: min(1080px, 94vw); margin: 0 auto;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; padding: 28px 0 0; text-align: center;
+  }
+  .brand { display: flex; align-items: baseline; justify-content: center; gap: 10px; font-weight: 750; font-size: 17px; letter-spacing: .01em; color: var(--deep); }
+  .brand .pets { font-size: 21px; }
+  .brand small { color: var(--muted); font-size: 11px; font-weight: 400; letter-spacing: .04em; }
+  header .who { color: var(--muted); font-size: 11.5px; }
+  main { flex: 1; width: min(1080px, 94vw); margin: 0 auto; padding: clamp(48px, 8vh, 96px) 0 64px; text-align: center; }
+  .kicker {
+    font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--tone-5); margin-bottom: 18px; text-align: center;
+  }
+  .tag-hint { color: var(--muted); letter-spacing: .04em; text-transform: none; }
+  h1 {
+    margin: 0 auto 24px; max-width: 18em; text-align: center;
+    font-size: clamp(36px, 6.2vw, 68px); line-height: 1.14; letter-spacing: -.035em;
+    color: var(--ink);
+    cursor: pointer; user-select: none; transform-origin: center center;
+  }
+  h1 .hanging-punct {
+    display: inline-block; width: 0; overflow: visible;
+    white-space: nowrap; text-align: left;
+  }
+  h1 .blue { color: var(--deep); }
+  h1 em { font-style: normal; color: var(--pink-deep); }
+  h1:hover { opacity: .92; }
+  h1.tag-swap { animation: tagPop .26s cubic-bezier(.22,1,.36,1); }
+  @keyframes tagPop { 0% { transform: scale(.975); opacity: .55; } 100% { transform: scale(1); opacity: 1; } }
+
+  .lead {
+    margin: 0 auto 30px; max-width: 33em; text-align: center;
+    font-size: 15.5px; line-height: 1.9; color: var(--muted);
+  }
+  .actions { display: flex; align-items: center; justify-content: center; gap: 26px; flex-wrap: wrap; }
+  .entry {
+    color: var(--deep); text-decoration: none; font-size: 15px; font-weight: 650;
+    padding-bottom: 3px; border-bottom: 1px solid color-mix(in srgb, var(--deep) 30%, transparent);
+    transition: color .15s, border-color .15s, transform .15s;
+  }
+  .entry:hover { color: var(--pink-deep); border-color: var(--pink-deep); transform: translateY(-1px); }
+  .entry.alt { color: var(--pink-deep); border-color: color-mix(in srgb, var(--pink-deep) 30%, transparent); }
+  .entry.alt:hover { color: var(--deep); border-color: var(--deep); }
+  .note { margin-top: 22px; font-size: 11.5px; color: var(--muted); text-align: center; }
+  footer {
+    width: min(1080px, 94vw); margin: 0 auto;
+    padding: 18px 0 28px; color: var(--muted); font-size: 11px; text-align: center;
+  }
+  html[data-perf="low"] *, html[data-perf="low"] *::before, html[data-perf="low"] *::after {
+    animation-duration: .001ms !important; transition-duration: .001ms !important;
+  }
+
+  #birthday-public {
+    display: none; width: fit-content; max-width: 94vw; margin: 0 auto 26px;
+    padding: 10px 18px; border: 1.5px dashed var(--pink-deep); border-radius: 999px;
+    color: var(--pink-deep); background: color-mix(in srgb, var(--pink) 14%, transparent);
+    font-size: 13px; cursor: pointer; user-select: none;
+    box-shadow: 0 5px 16px color-mix(in srgb, var(--pink) 18%, transparent);
+  }
+  #birthday-public:hover { background: color-mix(in srgb, var(--pink) 22%, transparent); }
+  body.birthday-public-mode { background-image:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--pink) 12%, transparent) 0 2px, transparent 3px),
+    radial-gradient(circle at 82% 72%, color-mix(in srgb, var(--pink-deep) 8%, transparent) 0 3px, transparent 4px);
+    background-size: 110px 110px, 160px 160px;
+  }
+
+  #landing-birthday-stickers { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .landing-sticker { position: absolute; object-fit: contain; pointer-events: none; filter: drop-shadow(0 5px 9px rgba(30,20,30,.16)); }
+  header, main, footer { position: relative; z-index: 1; }
+
+  @keyframes landingPop { 0% { scale:0; opacity:0; } 60% { scale:1.5; opacity:1; } 100% { scale:1; opacity:1; } }
+  @keyframes landingIn { 0% { opacity:0; transform:translateY(-8px); } 100% { opacity:1; transform:translateY(0); } }
+  @keyframes landingOut { 0% { opacity:1; transform:translateY(0); } 100% { opacity:0; transform:translateY(-10px); } }
+  .landing-sticker { animation: landingPop .55s cubic-bezier(.22,1,.36,1) both; }
+  #birthday-public.show { animation: landingIn .6s cubic-bezier(.22,1,.36,1) both; }
+  body.landing-bd-leaving .landing-sticker { animation: landingOut .8s ease forwards !important; }
+  body.landing-bd-leaving #birthday-public { animation: landingOut .8s ease forwards !important; }
+
+@keyframes landingSway { 0% { transform: rotate(-15deg) scale(.9); } 50% { transform: rotate(15deg) scale(1.1); } 100% { transform: rotate(-15deg) scale(.9); } }
+.landing-sticker { transform-origin:50% 50%; animation: landingSway var(--sway-dur, 6s) ease-in-out var(--sway-delay, 0s) infinite; }
+@media (prefers-reduced-motion: reduce) { .landing-sticker { animation: none; } }
+  @media (max-width: 760px) {
+    header { padding-top: 18px; }
+    main { padding-top: 52px; }
+    h1 { font-size: clamp(34px, 10vw, 56px); }
+    .actions { gap: 18px; }
+  }
+</style>
+<script>
+(function () {
+  try {
+    var u = localStorage.getItem("kp_login_user") || "";
+    var tk = localStorage.getItem("kp_token") || "";
+    if (!u || !tk) return;
+    var t = JSON.parse(localStorage.getItem("kp_pubtheme_" + u) || "null");
+    if (!t) return;
+    var vs = {"--bg": t.bg, "--ink": t.ink, "--pink": t.soft, "--pink-deep": t.deep,
+      "--accent": t.accent, "--deep": t.deep, "--card": t.card, "--line": t.line};
+    for (var k in vs) if (vs[k]) document.documentElement.style.setProperty(k, vs[k]);
+  } catch (e) {}
+})();
+</script>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="pets">🐱🐶</span>KittenPuppy4Ever <small>私人工作台</small></div>
+  <div class="who" id="who">未登录</div>
+</header>
+<div id="landing-birthday-stickers" aria-hidden="true"></div>
+<script>
+(function () {
+  try {
+    var u = localStorage.getItem("kp_login_user") || "";
+    var tk = localStorage.getItem("kp_token") || "";
+    if (!u || !tk) return;
+    var who = document.getElementById("who");
+    if (who) who.textContent = "已登录：" + u;
+    var primary = document.getElementById("primary");
+    if (primary) { primary.textContent = "进入工作台 →"; primary.href = "/home"; }
+    var secondary = document.getElementById("secondary");
+    if (secondary) { secondary.textContent = "切换账号 →"; secondary.href = "/login"; }
+    var note = document.getElementById("note");
+    if (note) note.textContent = "你也可以先切换账号，再以其他身份进入工作台。";
+  } catch (e) {}
+})();
+</script>
+
+<main>
+  <div id="birthday-public" role="button" tabindex="0" aria-label="今天的小提示，点击切换" title="点击切换提示">✨ 今天似乎有点特别，记得留意一下</div>
+  <div class="kicker">A QUIET PRIVATE WORKBENCH <span class="tag-hint">· 点击换一句</span></div>
+  <h1 id="tagline" role="button" tabindex="0" aria-label="点击切换题头语">把日常，<br>安静地<em>放在一起。</em></h1>
+  <p class="lead">一个安静、私人的工作台。不喧哗，不催促，把每天的事情安静地放在一起。登录后进入；第一次来可以先注册一个账号。</p>
+  <div class="actions">
+    <a class="entry" id="primary" href="/login?next=%2Fhome">登录 →</a>
+    <a class="entry alt" id="secondary" href="/login?mode=register&next=%2Fhome">注册新账号 →</a>
+  </div>
+  <div class="note" id="note">还没有账号？注册后会自动登录。</div>
+</main>
+<footer>KittenPuppy4Ever · 私有工作台</footer>
+<script>
+(function () {
+  const taglines = [
+    {a: "把日常，", b: "安静地", em: "放在一起。"},
+    {a: "自己的工作台，", b: "慢慢来", em: "就好。"},
+    {a: "只属于你的", b: "一小块", em: "空间。"},
+    {a: "今天也，", b: "在这里", em: "见面。"},
+    {a: "不着急，", b: "一件一件", em: "来。"},
+    {a: "把想记住的，", b: "留在", em: "同一个地方。"}
+  ];
+  const el = document.getElementById("tagline");
+  let idx = Math.floor(Math.random() * taglines.length);
+  let timer = null;
+  let birthdayMode = false;
+  let birthdayIdx = 0;
+  let birthdayUser = "";
+  let birthdayAge = null;
+  let fadeTimer = null;
+  const birthdayLines = [
+    (u, a) => "生日快乐，<br><span class=\"blue\">" + u + "</span>。",
+    (u, a) => "今天，<br><span class=\"blue\">" + u + "</span> 最大。",
+    (u, a) => (a !== null && a !== undefined ? a + " 岁，<br>继续<em>闪闪发光。</em>" : "新的一岁，<br>继续<em>闪闪发光。</em>"),
+    (u, a) => (a !== null && a !== undefined ? "愿 " + a + " 岁的美好，<br><span class=\"blue\">都向你奔来。</span>" : "愿所有美好，<br><span class=\"blue\">都向你奔来。</span>"),
+    (u, a) => (a !== null && a !== undefined ? "第 " + a + " 个生日，<br><em>好好记住。</em>" : "把今天，<br><em>好好记住。</em>")
+  ];
+  function escLanding(v) { return String(v).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+  const HANGING_PUNCT = /[，。、；：！？,.;:!?…—～~」』】）》〉”’'"）]+$/;
+  function applyHangingPunctuation(root) {
+    const lines = [];
+    let current = [];
+    const walk = (node) => {
+      for (const child of node.childNodes) {
+        if (child.nodeType === 3) current.push(child);
+        else if (child.nodeName === "BR") { lines.push(current); current = []; }
+        else if (child.nodeType === 1) walk(child);
+      }
+    };
+    walk(root);
+    lines.push(current);
+    for (const nodes of lines) {
+      let last = null;
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        if ((nodes[i].nodeValue || "").trim()) { last = nodes[i]; break; }
+      }
+      if (!last) continue;
+      const text = last.nodeValue || "";
+      const m = text.match(new RegExp("^(.*?)([，。、；：！？,.;:!?…—～~」』】）》〉”’'\"）]+)([ \t]*)$"));
+      if (!m || !m[1].trim()) continue;
+      const before = m[1], punct = m[2], tail = m[3] || "";
+      last.nodeValue = before;
+      const span = document.createElement("span");
+      span.className = "hanging-punct";
+      span.textContent = punct;
+      last.parentNode.insertBefore(span, last.nextSibling);
+      if (tail) last.parentNode.insertBefore(document.createTextNode(tail), span.nextSibling);
+    }
+  }
+  function render() {
+    if (birthdayMode) {
+      el.innerHTML = birthdayLines[birthdayIdx % birthdayLines.length](escLanding(birthdayUser), birthdayAge);
+      applyHangingPunctuation(el);
+      return;
+    }
+    const t = taglines[idx];
+    el.innerHTML = t.a + "<br><span class=\"blue\">" + t.b + "</span><em>" + t.em + "</em>";
+    applyHangingPunctuation(el);
+  }
+  function fadeSwap(update) {
+    if (fadeTimer) clearTimeout(fadeTimer);
+    el.classList.add("tag-fade");
+    fadeTimer = setTimeout(() => {
+      update();
+      el.classList.remove("tag-fade");
+      fadeTimer = null;
+    }, 180);
+  }
+  function advance(manual) {
+    if (birthdayMode) {
+      birthdayIdx++;
+      fadeSwap(render);
+      return;
+    }
+    let next = idx;
+    while (next === idx) next = Math.floor(Math.random() * taglines.length);
+    fadeSwap(() => { idx = next; render(); });
+    if (manual) restart();
+  }
+  function restart() {
+    if (timer) clearInterval(timer);
+    timer = setInterval(() => advance(false), 6500);
+  }
+  window.__landingLeaveBirthday = function () {
+    document.body.classList.add("landing-bd-leaving");
+    fadeSwap(() => {
+      birthdayMode = false;
+      document.body.classList.remove("landing-bd");
+      document.getElementById("landing-birthday-stickers").innerHTML = "";
+      const bp = document.getElementById("birthday-public"); if (bp) bp.style.display = "none";
+      render(); restart();
+    });
+    setTimeout(() => document.body.classList.remove("landing-bd-leaving"), 850);
+  };
+  window.__landingSetBirthday = function (user, age) {
+    const activate = () => {
+      birthdayMode = true;
+      birthdayUser = user || "";
+      birthdayAge = (age === null || age === undefined || age === "") ? null : age;
+      birthdayIdx = 0;
+      if (timer) clearInterval(timer);
+      document.body.classList.add("landing-bd");
+      render();
+    };
+    if (birthdayMode) { activate(); return; }
+    fadeSwap(activate);
+  };
+  render(); restart();
+  el.addEventListener("click", () => advance(true));
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); advance(true); }
+  });
+})();
+</script>
+<script>
+(async function () {
+  try {
+    const tk = localStorage.getItem("kp_token");
+    const savedUser = localStorage.getItem("kp_login_user") || "";
+    const headers = tk ? {"Authorization": "Bearer " + tk} : {};
+    const sessionP = fetch("/api/session", {cache:"no-store", headers}).then(r => r.json()).catch(() => null);
+    const themeP = tk ? fetch("/api/theme", {cache:"no-store", headers}).then(r => r.json()).catch(() => null) : Promise.resolve(null);
+    const birthdayP = tk ? fetch("/api/birthday", {cache:"no-store", headers}).then(r => r.json()).catch(() => null) : Promise.resolve(null);
+    const [j, tj, bj] = await Promise.all([sessionP, themeP, birthdayP]);
+    const u = j && j.session && j.session.user;
+    if (!u) {
+      // token invalid/expired: restore the public state without touching storage.
+      document.getElementById("who").textContent = "未登录";
+      const primary = document.getElementById("primary");
+      primary.textContent = "登录 →"; primary.href = "/login?next=%2Fhome";
+      const secondary = document.getElementById("secondary");
+      secondary.textContent = "注册新账号 →"; secondary.href = "/login?mode=register&next=%2Fhome";
+      document.getElementById("note").textContent = "还没有账号？注册后会自动登录。";
+      return;
+    }
+    document.getElementById("who").textContent = "已登录：" + (j.session.emoji || "") + " " + u;
+    const primary = document.getElementById("primary");
+    primary.textContent = "进入工作台 →"; primary.href = "/home";
+    const secondary = document.getElementById("secondary");
+    secondary.textContent = "切换账号 →"; secondary.href = "/login";
+    document.getElementById("note").textContent = "你也可以先切换账号，再以其他身份进入工作台。";
+    if (tj && tj.theme) {
+      const t = tj.theme, root = document.documentElement.style;
+      if (t.bg) root.setProperty("--bg", t.bg);
+      if (t.ink) root.setProperty("--ink", t.ink);
+      if (t.soft) root.setProperty("--pink", t.soft);
+      if (t.deep) root.setProperty("--pink-deep", t.deep);
+      if (t.accent) root.setProperty("--accent", t.accent);
+      if (t.deep) root.setProperty("--deep", t.deep);
+      for (const tone of (t.tone || [])) if (tone.name && tone.color) root.setProperty("--" + tone.name, tone.color);
+      try { localStorage.setItem("kp_pubtheme_" + u, JSON.stringify(t)); } catch (e) {}
+    }
+    if (bj && bj.today) {
+      if (window.__landingSetBirthday) window.__landingSetBirthday(u, bj.age);
+      if (window.__landingAddStickers) window.__landingAddStickers();
+      return;
+    }
+    const pr = await fetch("/api/birthday/public", {cache:"no-store"});
+    const pj = await pr.json();
+    if (pj && pj.active) {
+      if (window.__landingShowPublic) window.__landingShowPublic();
+      if (window.__landingAddStickers) window.__landingAddStickers();
+    }
+  } catch (e) {}
+})();
+</script>
+
+<script src="/static/birthday/emoji/emoji.js"></script>
+<script>
+(function () {
+  window.__landingAddStickers = function () {
+    const layer = document.getElementById("landing-birthday-stickers");
+    if (!layer || !window.KP_BIRTHDAY_EMOJI) return;
+    const slots = [
+      {l: 3, t: 13}, {l: 88, t: 15}, {l: 5, t: 72}, {l: 90, t: 70},
+      {l: 24, t: 5}, {l: 74, t: 5}, {l: 12, t: 45}, {l: 92, t: 45}
+    ];
+    const groups = window.KP_BIRTHDAY_EMOJI.filter(g => g && g.variants && g.variants.length);
+    if (!groups.length) return;
+    for (let i = 0; i < 6; i++) {
+      const g = groups[Math.floor(Math.random() * groups.length)];
+      const slug = g.variants[Math.floor(Math.random() * g.variants.length)];
+      const slot = slots[i % slots.length];
+      const size = Math.round(38 + Math.random() * 34);
+      const img = document.createElement("img");
+      img.className = "landing-sticker";
+      img.src = "/static/birthday/emoji/" + slug + ".webp";
+      img.loading = "eager";
+      img.alt = "";
+      img.style.width = size + "px"; img.style.height = size + "px";
+      img.style.left = (slot.l + (Math.random() * 4 - 2)) + "%";
+      img.style.top = (slot.t + (Math.random() * 5 - 2.5)) + "%";
+      img.style.setProperty("--sway-dur", (5.2 + Math.random() * 2.6).toFixed(2) + "s");
+      img.style.setProperty("--sway-delay", (-Math.random() * 6).toFixed(2) + "s");
+      img.style.transform = "rotate(" + (Math.random() * 24 - 12).toFixed(1) + "deg)";
+      layer.appendChild(img);
+    }
+  };
+  const el = document.getElementById("birthday-public");
+  if (!el) return;
+  const msgs = [
+    "✨ 今天似乎有点特别，记得留意一下",
+    "🎈 日历上今天被轻轻圈了一下",
+    "💌 今天适合说一句温柔的祝福",
+    "🎁 有一份小小的心意正在路上",
+    "🕯️ 今天的光会比平时温柔一点"
+  ];
+  let idx = 0;
+  function next() { idx = (idx + 1) % msgs.length; el.textContent = msgs[idx]; }
+  el.addEventListener("click", next);
+  el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); next(); } });
+  window.__landingShowPublic = function () {
+    el.style.display = "block";
+    el.classList.add("show");
+    document.body.classList.add("birthday-public-mode");
+  };
+})();
+</script>
+</body>
+</html>

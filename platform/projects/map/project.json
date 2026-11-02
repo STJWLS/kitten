@@ -1,0 +1,29 @@
+{
+  "id": "map",
+  "parent": "schedule",
+  "order": 5,
+  "title": "地点地图",
+  "icon": "🗺",
+  "desc": "地点地图：课程与自定义地点的位置分布，按地点汇总每周安排。",
+  "base": "json-doc",
+  "capabilities": [
+    "state",
+    "action",
+    "audit",
+    "crud"
+  ],
+  "view": {
+    "kind": "custom",
+    "dir": "web"
+  },
+  "ui": {
+    "theme": {
+      "accent": "#2f6fb5"
+    }
+  },
+  "path": "/dashboard/map/",
+  "tags": [
+    "地图",
+    "地点"
+  ]
+}

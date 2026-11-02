@@ -1,0 +1,6 @@
+{
+  "base": "abstract",
+  "desc": "默认 JSON 文档项目：一份状态 + rev 版本 + set/patch/append/remove/reset",
+  "capabilities": ["state", "action", "audit", "crud"],
+  "view": {"kind": "auto"}
+}

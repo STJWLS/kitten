@@ -1,0 +1,22 @@
+{
+  "id": "ai",
+  "parent": "root",
+  "order": 25,
+  "title": "AI 服务",
+  "icon": "🤖",
+  "desc": "配置服务端或个人的大模型 API，支持常见 OpenAI 兼容服务与本地 DSH。",
+  "base": "json-doc",
+  "capabilities": [
+    "state"
+  ],
+  "tags": [
+    "AI",
+    "服务",
+    "配置"
+  ],
+  "view": {
+    "kind": "custom",
+    "dir": "web"
+  },
+  "path": "/ai/"
+}

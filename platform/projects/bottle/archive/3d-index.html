@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>时光漂流瓶 · KittenPuppy4Ever</title>
+<link rel="stylesheet" href="/static/template.css">
+<style>
+  .bt-hero { display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; padding:6px 0 2px; }
+  .bt-hero h2 { margin:0; }
+  .bt-hero .hint { flex:1; min-width:220px; }
+  .bt-toolbar { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .bt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+  .bt-card {
+    position:relative; overflow:hidden; border:1px solid var(--line); border-radius:16px;
+    background:linear-gradient(160deg, color-mix(in srgb, var(--boat, #d98a9a) 12%, var(--card)), var(--card));
+    padding:12px 13px 11px; min-height:136px; box-shadow:var(--shadow);
+  }
+  .bt-card::after { content:""; position:absolute; inset:auto -20% -55% -20%; height:90px; border-radius:50%;
+    background:color-mix(in srgb, var(--boat, #d98a9a) 12%, transparent); pointer-events:none; }
+  .bt-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .bt-boat { position:relative; width:76px; height:42px; flex:none; }
+  .bt-hull { position:absolute; left:2px; bottom:0; width:72px; height:24px;
+    background:var(--boat,#d98a9a); border-radius:0 0 48% 48% / 0 0 100% 100%;
+    box-shadow:inset 0 -4px 0 rgba(0,0,0,.08); }
+  .bt-hull::before { content:""; position:absolute; left:10px; top:-17px; width:52px; height:20px;
+    background:color-mix(in srgb, var(--boat,#d98a9a) 30%, #fff); clip-path:polygon(50% 0,100% 100%,0 100%);
+    opacity:.9; }
+  .bt-hull::after { content:""; position:absolute; left:34px; bottom:7px; width:2px; height:22px; background:rgba(255,255,255,.7); transform:rotate(18deg); }
+  .bt-emoji { position:absolute; left:30px; top:-8px; font-size:22px; filter:drop-shadow(0 3px 3px rgba(0,0,0,.12)); }
+  .bt-from { font-size:11px; color:var(--muted); }
+  .bt-to { font-size:13px; font-weight:750; margin-top:3px; }
+  .bt-meta { font-size:11px; color:var(--muted); margin-top:5px; line-height:1.5; }
+  .bt-actions { display:flex; gap:7px; align-items:center; flex-wrap:wrap; margin-top:9px; position:relative; z-index:1; }
+  .bt-locked { font-size:11px; color:var(--muted); }
+  .bt-open-btn { animation:btGlow 2.8s ease-in-out infinite; }
+  @keyframes btGlow { 0%,100% { box-shadow:0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); } 50% { box-shadow:0 0 0 5px color-mix(in srgb, var(--accent) 14%, transparent); } }
+  .bt-archive { display:flex; flex-direction:column; gap:9px; }
+  .bt-letter { border:1px solid var(--line); border-left:4px solid var(--boat,#8dbb9a); border-radius:12px; padding:10px 12px; background:var(--card); }
+  .bt-letter .who { font-size:11px; color:var(--muted); }
+  .bt-letter .body { margin-top:6px; white-space:pre-wrap; line-height:1.8; font-size:13px; color:var(--ink); }
+  .bt-letter .when { margin-top:7px; font-size:10.5px; color:var(--muted); }
+  .bt-empty { padding:18px; text-align:center; color:var(--muted); font-size:12px; border:1px dashed var(--line); border-radius:12px; }
+  .bt-modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(40,35,50,.3); backdrop-filter:blur(4px); z-index:50; padding:20px; }
+  .bt-modal.show { display:flex; }
+  .bt-box { width:min(92vw,460px); background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px 18px; box-shadow:var(--shadow-hi); animation:btBoxIn .28s cubic-bezier(.22,1,.36,1) both; }
+  @keyframes btBoxIn { from { opacity:0; transform:translateY(12px) scale(.97); } to { opacity:1; transform:none; } }
+  .bt-box h3 { margin:0 0 3px; }
+  .bt-sub { font-size:11.5px; color:var(--muted); margin-bottom:12px; }
+  .bt-field { margin-top:10px; }
+  .bt-field label { display:block; font-size:11.5px; color:var(--muted); margin-bottom:5px; }
+  .bt-field input, .bt-field select, .bt-field textarea { width:100%; box-sizing:border-box; }
+  .bt-field textarea { min-height:128px; resize:vertical; line-height:1.7; }
+  .bt-msg { min-height:16px; font-size:11.5px; color:var(--pink-deep); margin-top:8px; }
+  .bt-actions-right { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+
+  .bottle-open-stage { position:relative; min-height:150px; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:14px; background:linear-gradient(180deg,#f7f2ee,#ebf1f7); }
+  .bottle-open-boat { font-size:54px; animation:btSail 1.2s cubic-bezier(.22,1,.36,1) both; }
+  @keyframes btSail { 0% { transform:translate(-120px,26px) rotate(-8deg); opacity:0; } 55% { transform:translate(0,0) rotate(3deg); opacity:1; } 100% { transform:translate(0,0) rotate(0); } }
+  .bottle-letter { margin-top:12px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:#fffdf9; white-space:pre-wrap; line-height:1.9; font-size:13px; animation:btLetter .55s .25s both; }
+  @keyframes btLetter { from { opacity:0; transform:translateY(8px) rotateX(-8deg); } to { opacity:1; transform:none; } }
+  .bottle-open-meta { font-size:11px; color:var(--muted); text-align:center; margin-top:7px; }
+  @media (prefers-reduced-motion: reduce) { .bt-box, .bottle-open-boat, .bottle-letter, .bt-open-btn { animation:none !important; } }
+
+  /* —— 更干净的海面卡片 —— */
+  .bt-grid { grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; }
+  .bt-card {
+    padding:0; min-height:0; border-radius:18px; border:1px solid color-mix(in srgb, var(--boat,#8dbb9a) 26%, var(--line));
+    background:linear-gradient(180deg, color-mix(in srgb, var(--boat,#8dbb9a) 8%, #fff) 0%, var(--card) 62%);
+    box-shadow:0 8px 24px color-mix(in srgb, var(--boat,#8dbb9a) 10%, transparent);
+    overflow:hidden; transition:transform .22s cubic-bezier(.22,1,.36,1), box-shadow .22s;
+  }
+  .bt-card:hover { transform:translateY(-3px); box-shadow:0 14px 30px color-mix(in srgb, var(--boat,#8dbb9a) 16%, transparent); }
+  .bt-card::after { display:none; }
+  .bt-scene {
+    position:relative; height:92px; overflow:hidden;
+    background:
+      radial-gradient(110px 42px at 72% 20%, color-mix(in srgb, var(--boat,#8dbb9a) 18%, transparent), transparent 70%),
+      linear-gradient(180deg, color-mix(in srgb, var(--boat,#8dbb9a) 7%, #fbfdff), color-mix(in srgb, var(--boat,#8dbb9a) 14%, #eef4f7));
+    border-bottom:1px solid color-mix(in srgb, var(--boat,#8dbb9a) 14%, var(--line));
+  }
+  .bt-scene::after {
+    content:""; position:absolute; left:-10%; right:-10%; bottom:-18px; height:44px;
+    background:color-mix(in srgb, var(--boat,#8dbb9a) 20%, #fff);
+    border-radius:50% 50% 0 0 / 100% 100% 0 0; opacity:.38;
+  }
+  .bt-svg { position:absolute; left:50%; bottom:12px; width:112px; height:70px; transform:translateX(-50%); z-index:1; filter:drop-shadow(0 6px 5px rgba(40,55,65,.16)); }
+  .bt-svg .hull { fill:var(--boat,#8dbb9a); }
+  .bt-svg .hull-shade { fill:color-mix(in srgb, var(--boat,#8dbb9a) 66%, #1d2a33); opacity:.55; }
+  .bt-svg .sail { fill:color-mix(in srgb, var(--boat,#8dbb9a) 24%, #fff); }
+  .bt-svg .sail-2 { fill:color-mix(in srgb, var(--boat,#8dbb9a) 48%, #fff); }
+  .bt-svg .mast { stroke:color-mix(in srgb, var(--boat,#8dbb9a) 42%, #4b3a2f); stroke-width:2; }
+  .bt-svg .wave { fill:none; stroke:color-mix(in srgb, var(--boat,#8dbb9a) 34%, #fff); stroke-width:1.6; opacity:.9; }
+  .bt-svg .flag { fill:#fff8ec; opacity:.9; }
+  .bt-body { padding:11px 13px 12px; }
+  .bt-line { display:flex; align-items:center; gap:5px; flex-wrap:wrap; font-size:12.5px; font-weight:700; }
+  .bt-line .arrow { color:color-mix(in srgb, var(--boat,#8dbb9a) 72%, var(--muted)); font-weight:400; }
+  .bt-meta { font-size:10.5px; line-height:1.6; color:var(--muted); margin-top:5px; }
+  .bt-actions { margin-top:9px; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+  .bt-status { font-size:10px; font-weight:700; letter-spacing:.03em; padding:3px 7px; border-radius:999px; }
+  .bt-status.openable { color:#1e6b44; background:#e5f5ea; }
+  .bt-status.waiting { color:#8a6a2f; background:#fbf2db; }
+  .bt-status.notmine { color:#8d7e8f; background:#f1edf2; }
+  .bt-status.mine { color:#46627e; background:#eaf1f8; }
+  .bt-letter { position:relative; padding:12px 14px 12px 18px; border:1px solid color-mix(in srgb, var(--boat,#8dbb9a) 24%, var(--line)); border-left:4px solid var(--boat,#8dbb9a); border-radius:14px; background:linear-gradient(180deg,#fffdf8,var(--card)); box-shadow:var(--shadow); }
+  .bt-letter::before { content:"“"; position:absolute; right:12px; top:0; font:700 42px/1 Georgia,serif; color:color-mix(in srgb, var(--boat,#8dbb9a) 28%, transparent); }
+  .bt-letter .body { font-size:13.5px; max-width:60em; }
+  .bt-letter .when { letter-spacing:.02em; }
+  .bt-empty { position:relative; overflow:hidden; background:linear-gradient(180deg, #fbfdff, color-mix(in srgb, var(--accent) 4%, #fff)); }
+  .bt-empty::after { content:""; position:absolute; left:-10%; right:-10%; bottom:-24px; height:44px; border-radius:50%; background:color-mix(in srgb, var(--accent) 8%, #fff); }
+
+  .bottle-open-boat { position:relative; width:150px; height:190px; font-size:0; }
+  .bottle-open-boat .bt-svg { position:absolute; inset:0; width:100%; height:100%; transform:none; }
+  .bottle-open-boat .modal-bottle { display:block; width:100%; height:100%; filter:drop-shadow(0 10px 16px rgba(24,60,70,.18)); }
+
+  /* —— 海面与小船 —— */
+  .bt-sea {
+    position:relative; height:min(48vh, 430px); min-height:300px; border-radius:20px; overflow:visible;
+    border:1px solid color-mix(in srgb, #4a8aa0 25%, var(--line));
+    background:
+      radial-gradient(120% 55% at 20% 8%, rgba(255,255,255,.55), transparent 45%),
+      linear-gradient(180deg, #dceff3 0%, #b7dce4 24%, #78b6c6 45%, #438fa6 67%, #24677e 100%);
+    box-shadow:inset 0 -18px 35px rgba(22,72,86,.2), 0 12px 30px rgba(43,95,110,.12);
+  }
+  .bt-sea-haze {
+    position:absolute; inset:0; pointer-events:none;
+    background:
+      radial-gradient(ellipse 45% 9% at 25% 52%, rgba(255,255,255,.32), transparent 70%),
+      radial-gradient(ellipse 40% 7% at 78% 60%, rgba(255,255,255,.22), transparent 70%),
+      repeating-linear-gradient(176deg, transparent 0 14px, rgba(255,255,255,.09) 15px 16px, transparent 17px 33px);
+    animation:btWater 12s linear infinite;
+    opacity:.8;
+  }
+  @keyframes btWater { from { transform:translateY(0); } to { transform:translateY(28px); } }
+  .bt-sea::after {
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(105deg, transparent 32%, rgba(255,255,255,.5) 45%, rgba(255,255,255,.12) 54%, transparent 66%);
+    background-size:220% 100%; animation:btShimmer 9s ease-in-out infinite; mix-blend-mode:screen;
+  }
+  @keyframes btShimmer { 0%,100% { background-position:130% 0; opacity:.35; } 50% { background-position:-10% 0; opacity:.8; } }
+  .bt-boats { position:absolute; inset:0; }
+  .bt-boat-unit { position:absolute; width:104px; height:78px; cursor:pointer; outline:none; }
+  .bt-boat-unit:focus-visible { filter:drop-shadow(0 0 0 2px var(--accent)); }
+  .bt-boat-btn { all:unset; display:block; width:100%; height:100%; cursor:pointer; animation:btBob var(--bob, 6s) ease-in-out var(--bob-delay, 0s) infinite; transform-origin:50% 80%; }
+  .bt-boat-btn .bt-svg { position:static; width:100%; height:100%; transform:none; }
+  @keyframes btBob { 0%,100% { transform:translateY(0) rotate(-1.2deg); } 50% { transform:translateY(-8px) rotate(1.2deg); } }
+  .bt-pop {
+    position:absolute; left:50%; bottom:calc(100% - 2px); width:238px; z-index:30;
+    transform:translate(-50%, 7px); opacity:0; visibility:hidden; pointer-events:none;
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px 11px;
+    box-shadow:0 16px 36px rgba(26,55,67,.22); transition:opacity .18s ease, transform .18s ease, visibility .18s;
+  }
+  .bt-pop::after { content:""; position:absolute; left:50%; bottom:-6px; width:10px; height:10px; background:var(--card); border-right:1px solid var(--line); border-bottom:1px solid var(--line); transform:translateX(-50%) rotate(45deg); }
+  .bt-boat-unit:hover, .bt-boat-unit:focus-within { z-index:100 !important; }
+  .bt-boat-unit:hover .bt-pop, .bt-boat-unit:focus-within .bt-pop { opacity:1; visibility:visible; transform:translate(-50%, 0); pointer-events:auto; }
+  .bt-pop .bt-line { font-size:12px; }
+  .bt-pop .bt-meta { margin-top:4px; }
+  .bt-pop .bt-actions { margin-top:8px; }
+  .bt-pop .bt-status { margin-left:auto; }
+  .bt-sea-empty { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:5; padding:10px 18px; border-radius:999px; background:rgba(255,255,255,.55); color:#376878; font-size:12px; border:1px dashed rgba(55,104,120,.3); backdrop-filter:blur(4px); }
+  .bt-sea-empty::after { display:none; }
+  @media (prefers-reduced-motion: reduce) { .bt-boat-btn, .bt-sea-haze, .bt-sea::after { animation:none !important; } }
+
+  .bt-sea::before {
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:1;
+    clip-path:inset(38% 0 0 0);
+    background:
+      radial-gradient(1.5px 1.5px at 9% 58%, rgba(255,255,255,.8), transparent 3px),
+      radial-gradient(2px 1.5px at 17% 66%, rgba(255,255,255,.6), transparent 3px),
+      radial-gradient(1.5px 1.5px at 31% 54%, rgba(255,255,255,.8), transparent 3px),
+      radial-gradient(2px 1.5px at 44% 72%, rgba(255,255,255,.55), transparent 3px),
+      radial-gradient(1.5px 1.5px at 57% 60%, rgba(255,255,255,.75), transparent 3px),
+      radial-gradient(2px 1.5px at 68% 78%, rgba(255,255,255,.5), transparent 3px),
+      radial-gradient(1.5px 1.5px at 81% 64%, rgba(255,255,255,.8), transparent 3px),
+      radial-gradient(2px 1.5px at 93% 74%, rgba(255,255,255,.55), transparent 3px);
+    background-size:260px 190px; animation:btSparkle 7.5s ease-in-out infinite alternate; mix-blend-mode:screen;
+  }
+  @keyframes btSparkle { 0% { opacity:.35; background-position:0 0; } 100% { opacity:.95; background-position:48px -12px; } }
+
+  /* —— 无边框伪 3D 海面 —— */
+  .bt-pool-section { border:0 !important; background:transparent !important; box-shadow:none !important; padding:2px 0 0 !important; }
+  .bt-sea {
+    position:relative; height:min(52vh, 500px); min-height:340px; border:0; border-radius:0; background:transparent;
+    box-shadow:none; overflow:visible; perspective:1200px;
+    -webkit-mask-image:radial-gradient(ellipse 94% 88% at 50% 52%, #000 58%, rgba(0,0,0,.94) 73%, rgba(0,0,0,.40) 88%, transparent 98%);
+    mask-image:radial-gradient(ellipse 94% 88% at 50% 52%, #000 58%, rgba(0,0,0,.94) 73%, rgba(0,0,0,.40) 88%, transparent 98%);
+    cursor:grab; touch-action:none;
+  }
+  .bt-sea.dragging { cursor:grabbing; }
+  .bt-world {
+    position:absolute; left:-4%; top:-4%; width:108%; height:108%;
+    transform-style:preserve-3d;
+    transform:rotateX(var(--pitch, 44deg)) rotateZ(var(--yaw, -6deg)) scale(1.06);
+    transition:transform .18s ease-out;
+  }
+  .bt-sea.dragging .bt-world { transition:none; }
+  .bt-water-plane {
+    position:absolute; inset:0; border-radius:45% 55% 48% 52% / 18% 22% 20% 24%;
+    background:
+      radial-gradient(115% 48% at 36% 2%, rgba(255,255,255,.8), transparent 48%),
+      radial-gradient(90% 65% at 72% 12%, rgba(255,241,193,.42), transparent 60%),
+      linear-gradient(180deg, #dff2f4 0%, #b9dce2 19%, #77b4c1 40%, #3d8ba0 69%, #1e6179 100%);
+    box-shadow:inset 0 -22px 45px rgba(12,71,88,.28), inset 0 20px 45px rgba(255,255,255,.16);
+    overflow:hidden; transform:translateZ(-2px);
+  }
+  .bt-world .bt-sea-haze { position:absolute; inset:0; overflow:hidden; border-radius:inherit; opacity:.9; }
+  .bt-world .bt-boats { position:absolute; inset:0; transform-style:preserve-3d; }
+  .bt-boat-unit { transform-style:preserve-3d; }
+  .bt-boat-btn { transform-style:preserve-3d; }
+  .bt-sea-hint {
+    position:absolute; right:5%; bottom:4%; z-index:4; pointer-events:none;
+    color:rgba(29,81,94,.62); font-size:10.5px; letter-spacing:.06em;
+    background:rgba(255,255,255,.25); padding:3px 8px; border-radius:999px; backdrop-filter:blur(3px);
+  }
+  .bt-pop-global {
+    position:fixed; z-index:120; width:250px; padding:11px 12px; display:none;
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    box-shadow:0 18px 40px rgba(26,55,67,.24); animation:btPopIn .16s ease both;
+  }
+  .bt-pop-global.show { display:block; }
+  @keyframes btPopIn { from { opacity:0; transform:translateY(5px) scale(.98); } to { opacity:1; transform:none; } }
+  .bt-pop-global .bt-line { font-size:12px; }
+  .bt-pop-global .bt-meta { margin-top:4px; }
+  .bt-pop-global .bt-actions { margin-top:8px; }
+  .bt-pop-global .bt-status { margin-left:auto; }
+  @media (prefers-reduced-motion: reduce) { .bt-world { transition:none !important; } }
+
+  .bt-svg .hull-l { fill:color-mix(in srgb, var(--boat,#8dbb9a) 64%, #1a3340); }
+  .bt-svg .hull-r { fill:color-mix(in srgb, var(--boat,#8dbb9a) 58%, #fff); }
+  .bt-svg .deck { fill:color-mix(in srgb, var(--boat,#8dbb9a) 20%, #fff); }
+  .bt-svg .sail-l { fill:color-mix(in srgb, var(--boat,#8dbb9a) 34%, #fff); }
+  .bt-svg .sail-r { fill:color-mix(in srgb, var(--boat,#8dbb9a) 52%, #fff); }
+  .bt-svg .bow-fold { fill:color-mix(in srgb, var(--boat,#8dbb9a) 44%, #fff); opacity:.9; }
+  .bt-svg .crease { stroke:rgba(255,255,255,.55); stroke-width:1.2; fill:none; }
+  .bt-svg .paper-shadow { fill:#123b48; opacity:.14; }
+
+  /* true CSS-3D paper boat */
+  .bt-boat-unit { width:136px; height:104px; }
+  .bt-boat-btn { all:unset; display:block; width:100%; height:100%; perspective:700px; transform-style:preserve-3d; cursor:pointer; }
+  .pb3d { position:absolute; left:14px; top:20px; width:108px; height:76px; transform-style:preserve-3d; animation:btBob var(--bob,6s) ease-in-out var(--bob-delay,0s) infinite; transform-origin:50% 78%; }
+  .pb-face { position:absolute; left:50%; top:50%; transform-style:preserve-3d; backface-visibility:visible; }
+  .pb-hull-l { width:70px; height:24px; margin:-12px 0 0 -35px; transform:translate3d(-27px,9px,0) rotateY(90deg); background:linear-gradient(180deg, color-mix(in srgb,var(--boat,#8dbb9a) 74%,#fff), color-mix(in srgb,var(--boat,#8dbb9a) 48%,#173b47)); clip-path:polygon(0 8%,100% 0,100% 78%,0 100%); }
+  .pb-hull-r { width:70px; height:24px; margin:-12px 0 0 -35px; transform:translate3d(27px,9px,0) rotateY(-90deg); background:linear-gradient(180deg, color-mix(in srgb,var(--boat,#8dbb9a) 82%,#fff), color-mix(in srgb,var(--boat,#8dbb9a) 60%,#2d5963)); clip-path:polygon(0 0,100% 8%,100% 100%,0 78%); }
+  .pb-bottom { width:54px; height:70px; margin:-35px 0 0 -27px; transform:translate3d(0,21px,0) rotateX(90deg); background:color-mix(in srgb,var(--boat,#8dbb9a) 42%,#173b47); clip-path:polygon(8% 3%,92% 3%,100% 50%,92% 97%,8% 97%,0 50%); }
+  .pb-bow { width:54px; height:24px; margin:-12px 0 0 -27px; transform:translate3d(0,9px,35px); background:color-mix(in srgb,var(--boat,#8dbb9a) 68%,#fff); clip-path:polygon(0 100%,50% 0,100% 100%); }
+  .pb-stern { width:54px; height:24px; margin:-12px 0 0 -27px; transform:translate3d(0,9px,-35px) rotateY(180deg); background:color-mix(in srgb,var(--boat,#8dbb9a) 54%,#2d5963); clip-path:polygon(0 100%,50% 0,100% 100%); }
+  .pb-sail-l { width:48px; height:62px; margin:-62px 0 0 -48px; transform:translate3d(-3px,-1px,7px) rotateY(-16deg); background:linear-gradient(160deg, color-mix(in srgb,var(--boat,#8dbb9a) 18%,#fff), color-mix(in srgb,var(--boat,#8dbb9a) 52%,#fff)); clip-path:polygon(100% 0,100% 100%,0 100%); }
+  .pb-sail-r { width:48px; height:62px; margin:-62px 0 0 0; transform:translate3d(3px,-1px,7px) rotateY(16deg); background:linear-gradient(200deg, color-mix(in srgb,var(--boat,#8dbb9a) 34%,#fff), color-mix(in srgb,var(--boat,#8dbb9a) 14%,#fff)); clip-path:polygon(0 0,100% 100%,0 100%); }
+  .pb-mast { position:absolute; left:50%; top:50%; width:2px; height:64px; margin:-62px 0 0 -1px; background:#5a4636; transform:translate3d(0,0,7px); opacity:.85; }
+  .pb-flag { position:absolute; left:50%; top:50%; width:13px; height:8px; margin:-62px 0 0 1px; background:#fff2cf; clip-path:polygon(0 0,100% 50%,0 100%); transform:translate3d(0,0,8px); }
+  .bottle-open-boat { perspective:700px; }
+  .bottle-open-boat .pb3d { position:absolute; left:50%; top:50%; width:180px; height:130px; margin:-65px 0 0 -90px; animation:none; transform:scale(1.22) rotateX(-12deg) rotateY(22deg); }
+  .bottle-open-boat .pb3d .pb-face, .bottle-open-boat .pb3d .pb-mast, .bottle-open-boat .pb3d .pb-flag { }
+
+  .pb-shadow { width:92px; height:42px; margin:-21px 0 0 -46px; transform:translate3d(0,26px,0) rotateX(90deg); background:radial-gradient(ellipse at center, rgba(15,54,64,.32), transparent 68%); filter:blur(3px); }
+  .pb-hull-l { background:linear-gradient(180deg, color-mix(in srgb,var(--boat,#8dbb9a) 86%,#fff), color-mix(in srgb,var(--boat,#8dbb9a) 62%,#2c4b55)); }
+  .pb-hull-r { background:linear-gradient(180deg, color-mix(in srgb,var(--boat,#8dbb9a) 94%,#fff), color-mix(in srgb,var(--boat,#8dbb9a) 76%,#2c4b55)); }
+  .pb-bottom { background:color-mix(in srgb,var(--boat,#8dbb9a) 54%,#21434d); }
+  .pb-bow { background:color-mix(in srgb,var(--boat,#8dbb9a) 78%,#fff); }
+  .pb-stern { background:color-mix(in srgb,var(--boat,#8dbb9a) 68%,#2c4b55); }
+  .bottle-open-stage { perspective:700px; }
+
+  .pb-deck { width:54px; height:70px; margin:-35px 0 0 -27px; transform:translate3d(0,-3px,0) rotateX(90deg); background:color-mix(in srgb,var(--boat,#8dbb9a) 26%,#fff); clip-path:polygon(8% 3%,92% 3%,100% 50%,92% 97%,8% 97%,0 50%); opacity:.96; }
+
+  #sea-canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .bt-sea { cursor:grab; touch-action:none; }
+  .bt-sea.dragging { cursor:grabbing; }
+
+  .bt-sea { background:
+    radial-gradient(120% 80% at 50% 0%, #eff9f8 0%, #cbe7e8 25%, #7fb6c0 48%, #2c7386 72%, #155368 100%) !important;
+  }
+  #sea-canvas { z-index:0; }
+  .bt-sea-empty { z-index:5; }
+  .bt-sea-hint { z-index:6; }
+
+  .bt-sea-fade {
+    position:absolute; inset:-2px; z-index:4; pointer-events:none;
+    background:radial-gradient(ellipse 92% 84% at 50% 52%,
+      transparent 58%, color-mix(in srgb, var(--bg) 10%, transparent) 74%,
+      color-mix(in srgb, var(--bg) 52%, transparent) 88%, var(--bg) 100%);
+  }
+
+  #sea-canvas { display:none !important; }
+  #ray-canvas { position:absolute; inset:0; width:100%; height:100%; z-index:1; display:block; }
+</style>
+</head>
+<body data-project="bottle">
+<main class="page">
+
+  <section class="section bt-pool-section">
+    <div class="section-head">
+      <h2>小船池</h2>
+      <span class="hint">所有瓶子都能看见，但只有收件人能在开启日打开；不同颜色的小船代表不同的人写的。</span>
+      <div class="actions">
+        <span class="chip" id="pool-chip">0 个未打开</span>
+        <span class="chip" id="archive-chip">0 个已打开</span>
+        <span class="hint" id="rev">—</span>
+        <button class="btn primary sm" id="compose">＋ 写一个漂流瓶</button>
+        <button class="btn soft sm" id="refresh">刷新</button>
+      </div>
+    </div>
+    <div class="bt-sea" id="sea">
+      <canvas id="sea-canvas"></canvas>
+      <canvas id="ray-canvas"></canvas>
+      <div class="bt-sea-fade"></div>
+      <div class="bt-sea-empty" id="pool-empty" style="display:none">海面很安静，还没有漂流瓶。</div>
+      <div class="bt-sea-hint">右键拖动 · 旋转海面</div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2>已打开</h2><span class="hint">打开后，瓶子会从上面的小船池移到这里</span></div>
+    <div class="bt-archive" id="archive"></div>
+    <div class="bt-empty" id="archive-empty" style="display:none">还没有打开过漂流瓶。</div>
+  </section>
+
+</main>
+
+<div class="bt-pop-global" id="boat-pop"></div>
+
+<div class="bt-modal" id="compose-modal">
+  <div class="bt-box">
+    <h3>写一个漂流瓶</h3>
+    <div class="bt-sub">收件人可以是自己，也可以是别人；到开启日才能打开。</div>
+    <div class="bt-field"><label>收件人</label><select id="c-to"></select></div>
+    <div class="bt-field"><label>开启日期</label><input type="date" id="c-open"></div>
+    <div class="bt-field"><label>想说的话</label><textarea id="c-message" placeholder="写下此刻想留给未来的话…"></textarea></div>
+    <div class="bt-msg" id="c-msg"></div>
+    <div class="bt-actions-right">
+      <button class="btn soft sm" id="c-cancel">先不写</button>
+      <button class="btn primary sm" id="c-save">封进瓶子</button>
+    </div>
+  </div>
+</div>
+
+<div class="bt-modal" id="open-modal">
+  <div class="bt-box">
+    <h3 id="o-title">打开漂流瓶</h3>
+    <div class="bt-sub" id="o-sub">—</div>
+    <div class="bottle-open-stage"><div class="bottle-open-boat" id="o-boat">⛵</div></div>
+    <div class="bottle-letter" id="o-message"></div>
+    <div class="bottle-open-meta" id="o-meta"></div>
+    <div class="bt-actions-right"><button class="btn primary sm" id="o-close">收下这句话</button></div>
+  </div>
+</div>
+
+<script src="/static/bottle-three.min.js"></script>
+<script src="/static/bottle-raytrace.js"></script>
+<script>
+const API = "/api/p/bottle";
+let rev = 0, bottles = [], me = "", people = [], birthday = "";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const fmt = (v) => v ? new Date(v.length === 10 ? v + "T00:00:00" : v).toLocaleDateString("zh-CN") : "—";
+const nameOf = (u) => { const p = people.find(x => x.user === u); return (p && p.emoji ? p.emoji + " " : "") + (u || "—"); };
+
+async function call(url, opts) {
+  const r = await fetch(url, Object.assign({ cache: "no-store" }, opts || {}));
+  const j = await r.json().catch(() => ({ ok:false, error:{message:"非 JSON"} }));
+  if (!j.ok) throw new Error((j.error && j.error.message) || ("HTTP " + r.status));
+  return j;
+}
+
+function localDate(d) {
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function nextBirthday() {
+  const d = new Date();
+  let md = "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(birthday)) md = birthday.slice(5);
+  else if (/^\d{2}-\d{2}$/.test(birthday)) md = birthday;
+  if (!md) { const x = new Date(d); x.setFullYear(x.getFullYear() + 1); return localDate(x); }
+  let y = d.getFullYear();
+  let x = new Date(y + "-" + md + "T00:00:00");
+  if (x <= d) x = new Date((y + 1) + "-" + md + "T00:00:00");
+  return localDate(x);
+}
+
+function themeColor(u) {
+  const p = people.find(x => x.user === u);
+  return (p && p.color) || "#9bd1ec";
+}
+function bottleSvg(color) {
+  const c = esc(color || "#8fb3e8");
+  return '<svg class="modal-bottle" viewBox="0 0 120 190" aria-hidden="true" style="--boat:' + c + '">' +
+    '<defs><linearGradient id="bgU" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".75"/><stop offset=".55" stop-color="' + c + '" stop-opacity=".28"/><stop offset="1" stop-color="#dff8ff" stop-opacity=".62"/></linearGradient></defs>' +
+    '<ellipse cx="60" cy="173" rx="34" ry="7" fill="#0b3541" opacity=".16"/>' +
+    '<path d="M45 25 L45 45 Q30 60 30 88 L30 145 Q30 164 60 164 Q90 164 90 145 L90 88 Q90 60 75 45 L75 25 Z" fill="url(#bgU)" stroke="#f4ffff" stroke-width="2" opacity=".9"/>' +
+    '<path d="M48 20 L48 39 L72 39 L72 20 Z" fill="#fff8e8" stroke="#f4ffff" stroke-width="2"/>' +
+    '<path d="M45 20 L75 20 L75 12 Q60 6 45 12 Z" fill="#b7895f" stroke="#8f6847" stroke-width="1.5"/>' +
+    '<path d="M37 88 L83 88 L83 107 L37 107 Z" fill="' + c + '" opacity=".78"/>' +
+    '<path d="M53 96 L67 96 L67 151 L53 151 Z" fill="#fff0c9" stroke="#dbc894" stroke-width="1"/>' +
+    '<path d="M56 116 Q60 113 64 116 M56 124 Q60 121 64 124 M56 132 Q60 129 64 132 M56 140 Q60 137 64 140" fill="none" stroke="#c3a96f" stroke-width="1.4" opacity=".8"/>' +
+    '<path d="M34 143 Q60 151 86 143" fill="none" stroke="#dffbff" stroke-width="2" opacity=".8"/>' +
+    '</svg>';
+}
+function boat3d(color) {
+  return '<div class="pb3d" style="--boat:' + esc(color || "#9bd1ec") + '">' +
+    '<div class="pb-face pb-shadow"></div>' +
+    '<div class="pb-face pb-hull-l"></div>' +
+    '<div class="pb-face pb-hull-r"></div>' +
+    '<div class="pb-face pb-bottom"></div>' +
+    '<div class="pb-face pb-deck"></div>' +
+    '<div class="pb-face pb-bow"></div>' +
+    '<div class="pb-face pb-stern"></div>' +
+    '<div class="pb-face pb-sail-l"></div>' +
+    '<div class="pb-face pb-sail-r"></div>' +
+    '<div class="pb-mast"></div>' +
+    '<div class="pb-flag"></div>' +
+    '</div>';
+}
+function boatUnit(b, i, n) {
+  const color = themeColor(b.from) || b.color || "#9bd1ec";
+  let status = "";
+  if (b.canOpen) status = '<span class="bt-status openable">可以打开</span>';
+  else if (b.isRecipient) status = '<span class="bt-status waiting">等待开启</span>';
+  else if (b.isMine) status = '<span class="bt-status mine">你写的</span>';
+  else status = '<span class="bt-status notmine">不是给你的</span>';
+  const col = i % 5, row = Math.floor(i / 5);
+  const rows = Math.max(1, Math.ceil((n || 1) / 5));
+  const left = 12 + col * 16 + (row % 2) * 4 + ((i * 13) % 4);
+  const top = 38 + row * (40 / rows) + ((i * 17) % 3);
+  const bob = (5.2 + (i % 5) * 0.8).toFixed(1);
+  const delay = (-(i * 1.3) % 5).toFixed(1);
+  return '<div class="bt-boat-unit" tabindex="0" data-bid="' + esc(b.id) + '" style="left:' + left + '%;top:' + top + '%;--boat:' + esc(color) + ';--bob:' + bob + 's;--bob-delay:' + delay + 's;z-index:' + (20 - i) + '">' +
+    '<button class="bt-boat-btn" aria-label="来自 ' + esc(b.from) + ' 给 ' + esc(b.to) + ' 的漂流瓶">' + boat3d(color) + '</button>' +
+    '</div>';
+}
+function render() {
+  const pool = bottles.filter(b => !b.opened);
+  const archive = bottles.filter(b => b.opened && (b.isMine || b.isRecipient));
+  renderSea(pool);
+  $("#archive").innerHTML = archive.map(b => (
+    '<article class="bt-letter" style="--boat:' + esc(themeColor(b.from) || b.color || "#8dbb9a") + '">' +
+    '<div class="who">' + esc(nameOf(b.from)) + ' → ' + esc(nameOf(b.to)) + ' · 开启日 ' + esc(fmt(b.openAt)) + '</div>' +
+    '<div class="body">' + esc(b.message || "（内容不可见）") + '</div>' +
+    '<div class="when">打开于 ' + esc(fmt(b.openedAt)) + '</div></article>'
+  )).join("");
+  $("#archive-empty").style.display = archive.length ? "none" : "";
+  $("#pool-chip").textContent = pool.length + " 个未打开";
+  $("#archive-chip").textContent = archive.length + " 个已打开";
+  $("#rev").textContent = "rev " + rev;
+}
+let popHideTimer = null;
+function popupHtml(b) {
+  let status = "", action = "";
+  if (b.canOpen) { status = '<span class="bt-status openable">可以打开</span>'; action = '<button class="btn primary sm" data-pop-open="' + esc(b.id) + '">打开瓶子</button>'; }
+  else if (b.isRecipient) { status = '<span class="bt-status waiting">等待开启</span>'; action = '<span class="bt-locked">' + esc(fmt(b.openAt)) + ' 开启</span>'; }
+  else if (b.isMine) { status = '<span class="bt-status mine">你写的</span>'; action = '<span class="bt-locked">等对方打开</span>'; }
+  else { status = '<span class="bt-status notmine">不是给你的</span>'; action = '<span class="bt-locked">不可打开</span>'; }
+  return '<div class="bt-line"><span>' + esc(nameOf(b.from)) + '</span><span class="arrow">→</span><span>' + esc(nameOf(b.to)) + '</span>' + status + '</div>' +
+    '<div class="bt-meta">封存 ' + esc(fmt(b.createdAt)) + '<br>开启 ' + esc(fmt(b.openAt)) + '</div>' +
+    '<div class="bt-actions">' + action + '</div>';
+}
+function showBoatPopAt(b, sx, sy) {
+  if (popHideTimer) { clearTimeout(popHideTimer); popHideTimer = null; }
+  const pop = $("#boat-pop");
+  if (!pop || !b) return;
+  pop.innerHTML = popupHtml(b);
+  pop.classList.add("show");
+  const pw = 250, ph = pop.offsetHeight || 100;
+  let left = Math.max(12, Math.min(innerWidth - pw - 12, sx - pw / 2));
+  let top = sy > ph + 24 ? sy - ph - 12 : sy + 20;
+  top = Math.max(12, Math.min(innerHeight - ph - 12, top));
+  pop.style.left = left + "px"; pop.style.top = top + "px";
+  const ob = pop.querySelector("[data-pop-open]");
+  if (ob) ob.onclick = () => { hideBoatPop(); openBottle(ob.dataset.popOpen); };
+}
+function hideBoatPop() {
+  const pop = $("#boat-pop");
+  if (pop) pop.classList.remove("show");
+}
+function scheduleHidePop() {
+  if (popHideTimer) clearTimeout(popHideTimer);
+  popHideTimer = setTimeout(hideBoatPop, 140);
+}
+const popEl = $("#boat-pop");
+if (popEl) {
+  popEl.addEventListener("mouseenter", () => { if (popHideTimer) { clearTimeout(popHideTimer); popHideTimer = null; } });
+  popEl.addEventListener("mouseleave", scheduleHidePop);
+}
+window.addEventListener("scroll", hideBoatPop, true);
+window.addEventListener("resize", () => { hideBoatPop(); if (sea3d) sea3d.resize(); });
+
+/* ---- Three.js sea / paper boats ---- */
+let sea3d = null;
+const WATER_Y = -0.27;
+const WAVES = [
+  { dx: .93, dz: .37, amp: .11, freq: 1.15, speed: 1.05 },
+  { dx: -.52, dz: .85, amp: .075, freq: 1.85, speed: 1.35 },
+  { dx: .31, dz: -.95, amp: .055, freq: 2.65, speed: 1.65 }
+];
+function waveAt(x, z, t) {
+  let y = 0, nx = 0, nz = 0;
+  for (const w of WAVES) {
+    const ph = (x * w.dx + z * w.dz) * w.freq - t * w.speed;
+    y += w.amp * Math.sin(ph);
+    const c = w.amp * w.freq * Math.cos(ph);
+    nx += w.dx * c; nz += w.dz * c;
+  }
+  return { y, nx, nz };
+}
+function initSea3d() {
+  if (sea3d || !window.THREE) return sea3d;
+  const glCanvas = $("#sea-canvas"), rayCanvas = $("#ray-canvas"), sea = $("#sea");
+  if (!glCanvas || !sea) return null;
+  const canvas = rayCanvas || glCanvas;
+  const renderer = new THREE.WebGLRenderer({canvas: glCanvas, alpha:true, antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.25;
+  const scene = new THREE.Scene();
+  // Procedural sky environment: gives the glass actual reflections/highlights
+  // without depending on an external HDRI.
+  const envCanvas = document.createElement("canvas");
+  envCanvas.width = 512; envCanvas.height = 256;
+  const eg = envCanvas.getContext("2d");
+  const envGrad = eg.createLinearGradient(0, 0, 0, 256);
+  envGrad.addColorStop(0, "#dff6ff"); envGrad.addColorStop(.46, "#a8d7df");
+  envGrad.addColorStop(.55, "#3d8498"); envGrad.addColorStop(1, "#123f50");
+  eg.fillStyle = envGrad; eg.fillRect(0, 0, 512, 256);
+  const sunGlow = eg.createRadialGradient(120, 74, 2, 120, 74, 54);
+  sunGlow.addColorStop(0, "rgba(255,246,205,1)"); sunGlow.addColorStop(1, "rgba(255,246,205,0)");
+  eg.fillStyle = sunGlow; eg.fillRect(0, 0, 512, 256);
+  const envTex = new THREE.CanvasTexture(envCanvas);
+  envTex.mapping = THREE.EquirectangularReflectionMapping;
+  envTex.colorSpace = THREE.SRGBColorSpace;
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  pmrem.compileEquirectangularShader();
+  scene.environment = pmrem.fromEquirectangular(envTex).texture;
+  pmrem.dispose(); envTex.dispose();
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 90);
+
+  // 固定平行光：位置固定，方向固定；阴影/高光都由它计算。
+  const lightDir = new THREE.Vector3(-0.55, 0.72, 0.42).normalize();
+  scene.add(new THREE.HemisphereLight(0xe8faff, 0x245b68, 1.35));
+  scene.add(new THREE.AmbientLight(0xffffff, .38));
+  const sun = new THREE.DirectionalLight(0xfff0cf, 2.7);
+  sun.position.copy(lightDir).multiplyScalar(22);
+  sun.target.position.set(0, 0, 0); scene.add(sun.target);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.camera.left = -8; sun.shadow.camera.right = 8;
+  sun.shadow.camera.top = 8; sun.shadow.camera.bottom = -8;
+  sun.shadow.camera.near = 1; sun.shadow.camera.far = 50;
+  sun.shadow.bias = -0.0004;
+  scene.add(sun);
+
+  // 天空穹顶：和水面分开渲染，地平线来自天空与圆盘水面的交界。
+  const skyGeo = new THREE.SphereGeometry(45, 36, 20);
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false,
+    uniforms: { uSun: { value: lightDir.clone() } },
+    vertexShader: 'varying vec3 vDir; void main(){ vDir=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader: 'varying vec3 vDir; uniform vec3 uSun; void main(){ float h=clamp(vDir.y*1.15+.04,0.0,1.0); vec3 col=mix(vec3(.80,.91,.91),vec3(.25,.55,.69),pow(h,.7)); float sd=max(dot(normalize(vDir),uSun),0.0); col+=vec3(1.0,.83,.48)*pow(sd,220.0)*1.2; col+=vec3(1.0,.88,.62)*pow(sd,16.0)*.08; gl_FragColor=vec4(col,1.0); }'
+  });
+  scene.add(new THREE.Mesh(skyGeo, skyMat));
+
+  // 固定半径的圆形水盘：Gerstner 波模型；CPU 用同一组波参数驱动船的浮力。
+  const waveCode = WAVES.map(w => {
+    const dx=w.dx.toFixed(3), dz=w.dz.toFixed(3), amp=w.amp.toFixed(3), freq=w.freq.toFixed(3), speed=w.speed.toFixed(3);
+    return `{ float ph=(p.x*${dx}+p.z*${dz})*${freq} - uTime*${speed}; y += ${amp}*sin(ph); grad += vec2(${dx},${dz})*${amp*freq}*cos(ph); }`;
+  }).join("\n    ");
+  const waterVertex = `uniform float uTime; varying vec3 vWorld; varying vec3 vNormal;
+    void main(){
+      vec3 p=position; float y=0.0; vec2 grad=vec2(0.0);
+      ${waveCode}
+      p.y += y;
+      vWorld=(modelMatrix*vec4(p,1.0)).xyz;
+      vNormal=normalize(mat3(modelMatrix)*vec3(-grad.x,1.0,-grad.y));
+      gl_Position=projectionMatrix*viewMatrix*vec4(vWorld,1.0);
+    }`;
+  const waterFragment = `uniform float uTime; uniform vec3 uLightDir; uniform int uBoatCount; uniform vec3 uBoats[12];
+    varying vec3 vWorld; varying vec3 vNormal;
+    void main(){
+      float r=length(vWorld.xz); float edge=1.0-smoothstep(14.0,21.0,r);
+      vec3 N=normalize(vNormal + vec3(sin(vWorld.x*3.7+uTime*.9)*.035,0.0,sin(vWorld.z*4.3-uTime*.7)*.035));
+      vec3 V=normalize(cameraPosition-vWorld);
+      vec3 H=normalize(uLightDir+V);
+      float fres=pow(1.0-max(dot(N,V),0.0),3.0);
+      float spec=pow(max(dot(N,H),0.0),120.0)*2.2;
+      float spec2=pow(max(dot(normalize(N+vec3(.16,0.0,-.11)),H),0.0),42.0)*.35;
+      float sunPath=pow(max(dot(reflect(-V,N),uLightDir),0.0),180.0)*2.4;
+      vec3 deep=vec3(.018,.14,.23), shallow=vec3(.16,.60,.66);
+      vec3 col=mix(deep,shallow,smoothstep(0.0,12.0,r)*.62+.12);
+      col=mix(col,vec3(.42,.72,.80),fres*.48);
+      float rip=sin(r*5.4-uTime*1.2)*.5+.5; col+=vec3(.10,.22,.23)*rip*.22;
+      vec2 cell=floor(vWorld.xz*17.0); float hs=fract(sin(dot(cell+floor(uTime*.9),vec2(12.9898,78.233)))*43758.5453);
+      float sp=step(.994,hs)*.55; col+=vec3(.78,.94,.90)*sp;
+      float shadow=1.0;
+      for(int i=0;i<12;i++){ if(i>=uBoatCount) break; vec3 oc=uBoats[i]-vWorld; float t=dot(oc,uLightDir); if(t>0.0){ vec3 q=vWorld+uLightDir*t; float d=distance(q,uBoats[i]); shadow=min(shadow,smoothstep(.20,.64,d)); } }
+      col*=mix(.72,1.0,shadow);
+      col+=vec3(1.0,.92,.68)*(spec+spec2+sunPath);
+      gl_FragColor=vec4(col,edge*(.74+.20*fres));
+    }`;
+  const waterGeo = new THREE.CircleGeometry(22, 180);
+  waterGeo.rotateX(-Math.PI / 2);
+  const waterMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    uniforms: { uTime: { value: 0 }, uLightDir: { value: lightDir.clone() }, uBoatCount: { value: 0 }, uBoats: { value: Array.from({length:12}, () => new THREE.Vector3(999,999,999)) } },
+    vertexShader: waterVertex,
+    fragmentShader: waterFragment
+  });
+  const water = new THREE.Mesh(waterGeo, waterMat);
+  water.position.y = WATER_Y; water.receiveShadow = true; scene.add(water);
+  const boats = new THREE.Group(); scene.add(boats);
+  const world = (window.CANNON ? new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) }) : null);
+  if (world) {
+    world.broadphase = new CANNON.SAPBroadphase(world);
+    world.solver.iterations = 9;
+    world.allowSleep = false;
+    const bm = new CANNON.Material("bottle");
+    world.addContactMaterial(new CANNON.ContactMaterial(bm, bm, { friction: .08, restitution: .18 }));
+  }
+  const state = {renderer, scene, camera, water, waterMat, skyMat, boats, world, bodies: [], lightDir, az:0.0, polar:0.43, dist:9.8, dragging:false, lastX:0, lastY:0, hover:null, t:0, raf:0};
+  function resize() {
+    const r = sea.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    renderer.setSize(Math.round(r.width), Math.round(r.height), false);
+    camera.aspect = r.width / r.height; camera.updateProjectionMatrix();
+    if (state.ray) state.ray.resize();
+  }
+  function updateCamera() {
+    const d = state.dist;
+    const x = d * Math.sin(state.az) * Math.cos(state.polar);
+    const y = 0.45 + d * Math.sin(state.polar);
+    const z = d * Math.cos(state.az) * Math.cos(state.polar);
+    camera.position.set(x, y, z); camera.lookAt(0, 0.35, 0);
+  }
+  updateCamera(); resize();
+  state.resize = resize; state.updateCamera = updateCamera;
+  state.ray = (window.KPBottleRay && rayCanvas) ? window.KPBottleRay(rayCanvas, state) : null;
+  function tri(a, b, c, mat) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute([...a, ...b, ...c], 3));
+    g.computeVertexNormals();
+    return new THREE.Mesh(g, mat);
+  }
+  state.makeBottle = function(color, scale, bid, x, z) {
+    const group = new THREE.Group();
+    const c = new THREE.Color(color || "#8fb3e8");
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: c.clone().lerp(new THREE.Color(0xffffff), .68),
+      metalness: 0, roughness: .035,
+      transmission: .22, thickness: .12, ior: 1.48,
+      attenuationColor: c.clone().lerp(new THREE.Color(0xffffff), .35),
+      attenuationDistance: 1.1,
+      clearcoat: 1, clearcoatRoughness: .06,
+      specularIntensity: 1, specularColor: new THREE.Color(0xffffff),
+      envMapIntensity: 1.55,
+      transparent: true, opacity: .58, side: THREE.DoubleSide, depthWrite: false
+    });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(.20, .17, .68, 20, 1, true), glassMat);
+    body.position.y = -.02;
+    const glassTint = new THREE.Mesh(new THREE.CylinderGeometry(.201, .171, .68, 20, 1, true),
+      new THREE.MeshStandardMaterial({color:0xd9f8ff, roughness:.12, metalness:.18, transparent:true, opacity:.22, side:THREE.DoubleSide, depthWrite:false}));
+    glassTint.position.y = -.02;
+    const bottom = new THREE.Mesh(new THREE.SphereGeometry(.17, 18, 12), glassMat);
+    bottom.position.y = -.36;
+    const shoulder = new THREE.Mesh(new THREE.CylinderGeometry(.10, .19, .12, 18, 1, true), glassMat);
+    shoulder.position.y = .36;
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(.085, .10, .19, 16, 1, true), glassMat);
+    neck.position.y = .49;
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(.088, .012, 8, 24), new THREE.MeshStandardMaterial({color:0xd8edf0, roughness:.25, metalness:.1}));
+    rim.rotation.x = Math.PI / 2; rim.position.y = .59;
+    const cork = new THREE.Mesh(new THREE.CylinderGeometry(.078, .084, .11, 14), new THREE.MeshStandardMaterial({color:0xb7895f, roughness:.85}));
+    cork.position.y = .64;
+    const paper = new THREE.Mesh(new THREE.CylinderGeometry(.070, .070, .40, 10), new THREE.MeshBasicMaterial({color:0xfff0c9, side:THREE.DoubleSide}));
+    paper.position.set(0, -.01, 0); paper.rotation.z = .22; paper.rotation.x = .08;
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(.205, .19, .12, 24, 1, true), new THREE.MeshStandardMaterial({color:c.clone().lerp(new THREE.Color(0xffffff), .15), roughness:.5, side:THREE.DoubleSide, transparent:true, opacity:.92}));
+    band.position.y = .04;
+    const shadow = new THREE.Mesh(new THREE.CircleGeometry(.46, 24), new THREE.MeshBasicMaterial({color:0x0b3541, transparent:true, opacity:.16, depthWrite:false}));
+    shadow.rotation.x = -Math.PI / 2; shadow.position.y = -.44;
+    group.add(body, glassTint, bottom, shoulder, neck, rim, cork, paper, band, shadow);
+    // glass silhouette: edge rings + vertical highlights make a transparent bottle readable.
+    for (const m of [body, bottom, shoulder, neck]) {
+      const eg = new THREE.EdgesGeometry(m.geometry, 24);
+      const line = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({color:0xe9fbff, transparent:true, opacity:.32, depthWrite:false}));
+      line.position.copy(m.position); line.rotation.copy(m.rotation);
+      group.add(line);
+    }
+
+    group.traverse(n => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+    group.scale.setScalar(scale);
+    group.userData.bid = bid;
+    return group;
+  };
+  function hash(s) { let h=2166136261; for (let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);} return ((h>>>0)%10000)/10000; }
+  state.layout = function(pool) {
+    while (boats.children.length) { const o=boats.children.pop(); o.traverse(n=>{ if(n.geometry) n.geometry.dispose(); }); }
+    if (state.world) { state.bodies.forEach(({body}) => state.world.removeBody(body)); }
+    state.bodies = [];
+    const used=[];
+    pool.forEach((b, i) => {
+      const color = themeColor(b.from) || b.color || "#9bd1ec";
+      const scale = 1.78 + hash(b.id+"s")*.20;
+      const bottle = state.makeBottle(color, scale, b.id);
+      bottle.userData.color = color;
+      let x=0,z=0,ok=false;
+      for (let k=0;k<40;k++) {
+        const rx=hash(b.id+"x"+k), rz=hash(b.id+"z"+k);
+        x=(rx*2-1)*4.4; z=(rz*2-1)*2.6;
+        if (!used.some(p=>Math.hypot(p.x-x,p.z-z)<.82)) { ok=true; break; }
+      }
+      if (!ok) { x=((i%5)-2)*1.9; z=(Math.floor(i/5)-0.5)*1.6; }
+      used.push({x,z});
+      const yaw = (hash(b.id+"r")*2-1)*.6;
+      boats.add(bottle);
+      if (state.world) {
+        const body = new CANNON.Body({ mass: .58 });
+        body.material = new CANNON.Material("bottle");
+        body.addShape(new CANNON.Cylinder(.22, .19, 1.0, 14));
+        body.position.set(x, .38, z);
+        body.quaternion.setFromEuler(0, yaw, 0);
+        body.linearDamping = .52;
+        body.angularDamping = .55;
+        body.allowSleep = false;
+        body.userData = { bid: b.id, phase: hash(b.id+"p")*Math.PI*2 };
+        state.world.addBody(body);
+        const paperBody = new CANNON.Body({ mass: .028 });
+        paperBody.addShape(new CANNON.Box(new CANNON.Vec3(.055, .16, .018)));
+        paperBody.position.set(x + (hash(b.id+"px")-.5)*.06, .22, z + (hash(b.id+"pz")-.5)*.06);
+        paperBody.quaternion.setFromEuler(hash(b.id+"pe")*.8, yaw + hash(b.id+"py")*1.5, hash(b.id+"pz2")*.8);
+        paperBody.linearDamping = .32;
+        paperBody.angularDamping = .38;
+        paperBody.collisionFilterGroup = 0;
+        paperBody.collisionFilterMask = 0;
+        paperBody.allowSleep = false;
+        state.world.addBody(paperBody);
+        state.bodies.push({ body, paper: paperBody, mesh: bottle, bid: b.id });
+      } else {
+        bottle.position.set(x, WATER_Y + .2, z);
+        bottle.rotation.y = yaw;
+        bottle.userData.vx = (hash(b.id+"vx")-.5)*.08;
+        bottle.userData.vz = (hash(b.id+"vz")-.5)*.08;
+        bottle.userData.turn = (hash(b.id+"turn")-.5)*.04;
+      }
+    });
+    const arr = Array.from({length:12}, () => new THREE.Vector3(999,999,999));
+    state.bodies.forEach(({body}, idx) => { if (idx < 12) arr[idx].set(body.position.x, .25, body.position.z); });
+    waterMat.uniforms.uBoats.value = arr;
+    waterMat.uniforms.uBoatCount.value = Math.min(12, state.bodies.length);
+  };
+  state.canvas = canvas; state.sea = sea;
+  const raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2(), pickV = new THREE.Vector3();
+  function pick(clientX, clientY) {
+    const r = canvas.getBoundingClientRect();
+    let best = null, bestDist = 78;
+    for (const boat of boats.children) {
+      pickV.set(0, .34, 0); boat.localToWorld(pickV); pickV.project(camera);
+      const sx = r.left + (pickV.x*.5+.5)*r.width, sy = r.top + (-pickV.y*.5+.5)*r.height;
+      const d = Math.hypot(sx-clientX, sy-clientY);
+      if (d < bestDist) {
+        bestDist = d;
+        const b = bottles.find(x=>x.id===boat.userData.bid);
+        if (b) best = {b, boat, x:sx, y:sy};
+      }
+    }
+    return best;
+  }
+  state.pick = pick;
+  canvas.addEventListener("pointermove", (e) => {
+    if (state.dragging) {
+      const dx=e.clientX-state.lastX, dy=e.clientY-state.lastY;
+      state.lastX=e.clientX; state.lastY=e.clientY;
+      state.az += dx*0.006; state.polar = Math.max(.22, Math.min(.95, state.polar + dy*0.005));
+      updateCamera(); return;
+    }
+    const hit = pick(e.clientX,e.clientY);
+    canvas.style.cursor = hit ? "pointer" : "grab";
+    if (hit) { showBoatPopAt(hit.b, hit.x, hit.y); }
+    else scheduleHidePop();
+  });
+  canvas.addEventListener("pointerdown", (e) => {
+    if (e.button !== 2) return;
+    e.preventDefault(); state.dragging=true; state.lastX=e.clientX; state.lastY=e.clientY;
+    sea.classList.add("dragging"); hideBoatPop();
+    try { canvas.setPointerCapture(e.pointerId); } catch(err) {}
+  });
+  const end = () => { state.dragging=false; sea.classList.remove("dragging"); };
+  canvas.addEventListener("pointerup", end);
+  canvas.addEventListener("pointercancel", end);
+  canvas.addEventListener("pointerleave", () => { if (!state.dragging) hideBoatPop(); });
+  canvas.addEventListener("contextmenu", e=>e.preventDefault());
+  sea.addEventListener("contextmenu", e=>e.preventDefault());
+  canvas.addEventListener("dblclick", () => { state.az=0; state.polar=.43; updateCamera(); });
+  function animate(now) {
+    if (!state.prevT) state.prevT = now;
+    const dt = Math.min(.05, Math.max(.001, (now - state.prevT) / 1000));
+    state.prevT = now;
+    state.t = now / 1000;
+    waterMat.uniforms.uTime.value = state.t;
+    if (state.world && state.bodies.length) {
+      // buoyancy: sample several points along the bottle; force applied at the
+      // point, so submerged asymmetry produces torque and a natural roll.
+      for (const { body } of state.bodies) {
+        const samples = [-.44, -.28, -.12, .04, .20, .36];
+        for (const sy of samples) {
+          const local = new CANNON.Vec3(0, sy, 0);
+          const p = body.quaternion.vmult(local);
+          p.x += body.position.x; p.y += body.position.y; p.z += body.position.z;
+          const w = waveAt(p.x, p.z, state.t);
+          const wy = WATER_Y + w.y;
+          const frac = Math.max(0, Math.min(1, (wy - p.y) / .10));
+          if (frac > 0) {
+            const f = new CANNON.Vec3(0, body.mass * 9.82 * .78 * frac, 0);
+            body.applyForce(f, new CANNON.Vec3(p.x, p.y, p.z));
+          }
+        }
+        const wc = waveAt(body.position.x, body.position.z, state.t);
+        body.applyForce(new CANNON.Vec3(-wc.nx * .20, 0, -wc.nz * .20), body.position);
+        const drag = new CANNON.Vec3(-body.velocity.x * .9, -body.velocity.y * 2.8, -body.velocity.z * .9);
+        body.applyForce(drag, body.position);
+        body.velocity.x *= (1 - 2.2 * dt);
+        body.velocity.z *= (1 - 2.2 * dt);
+        const up = body.quaternion.vmult(new CANNON.Vec3(0, 1, 0));
+        body.torque.x += up.z * 3.8;
+        body.torque.z += -up.x * 3.8;
+        body.angularVelocity.scale(1 - 3.2 * dt, body.angularVelocity);
+        const rr = Math.hypot(body.position.x, body.position.z);
+        if (rr > 4.45) {
+          const k = 4.45 / rr;
+          body.position.x *= k; body.position.z *= k;
+          body.velocity.x *= -.45; body.velocity.z *= -.45;
+        }
+      }
+      state.world.step(1 / 60, dt, 3);
+      // Paper is a separate rigid body; keep it inside the bottle cavity and
+      // send reaction impulses back to the bottle.
+      state.bodies.forEach(({ body, paper }) => {
+        if (!paper) return;
+        const q = body.quaternion;
+        const inv = new CANNON.Quaternion(-q.x, -q.y, -q.z, q.w);
+        const rel = paper.position.vsub(body.position);
+        const lp = inv.vmult(rel);
+        let cx = lp.x, cy = lp.y, cz = lp.z;
+        const rad = Math.hypot(cx, cz), maxR = .125;
+        if (rad > maxR) { cx *= maxR / rad; cz *= maxR / rad; }
+        cy = Math.max(-.12, Math.min(.13, cy));
+        const corr = new CANNON.Vec3(cx - lp.x, cy - lp.y, cz - lp.z);
+        if (corr.length() > .001) {
+          const dw = q.vmult(corr);
+          paper.position.vadd(dw, paper.position);
+          paper.velocity.vadd(dw.scale(8), paper.velocity);
+          const imp = dw.scale(-paper.mass * 34);
+          const relPoint = paper.position.vsub(body.position);
+          body.applyImpulse(imp, relPoint);
+          paper.velocity.scale(1 - .18, paper.velocity);
+          paper.angularVelocity.scale(1 - .12, paper.angularVelocity);
+        }
+        paper.velocity.x += (body.velocity.x - paper.velocity.x) * .025;
+        paper.velocity.z += (body.velocity.z - paper.velocity.z) * .025;
+      });
+      // Cannon supplies buoyancy/collision; a damped righting constraint keeps
+      // the bottle neck-up while the local wave slope makes it sway.
+      state.bodies.forEach(({ body, mesh }) => {
+        body.position.y += ((WATER_Y + .18) - body.position.y) * Math.min(1, dt * 2.4);
+        body.velocity.y *= .35;
+        const wc = waveAt(body.position.x, body.position.z, state.t);
+        const ph = (body.userData.phase || 0);
+        const targetX = Math.max(-.20, Math.min(.20, -wc.nz * .38 + Math.sin(state.t * 1.15 + ph) * .045));
+        const targetZ = Math.max(-.20, Math.min(.20, wc.nx * .38 + Math.cos(state.t * .95 + ph) * .045));
+        const e = new CANNON.Vec3(); body.quaternion.toEuler(e);
+        body.quaternion.setFromEuler(targetX, e.y, targetZ);
+        body.angularVelocity.set(0, 0, 0);
+        mesh.position.copy(body.position);
+        mesh.quaternion.copy(body.quaternion);
+      });
+    } else {
+      // fallback for a missing physics lib: simple visual bob
+      boats.children.forEach((b, i) => {
+        const w = waveAt(b.position.x, b.position.z, state.t);
+        b.position.y += ((WATER_Y + w.y + .2) - b.position.y) * Math.min(1, dt * 4);
+        b.rotation.z = Math.sin(state.t*.7 + i) * .03;
+      });
+    }
+    const arr = waterMat.uniforms.uBoats.value;
+    state.bodies.forEach(({ body }, i) => { if (i < 12) arr[i].set(body.position.x, .25, body.position.z); });
+    waterMat.uniforms.uBoatCount.value = Math.min(12, state.bodies.length);
+    if (state.ray) state.ray.render(state);
+    else renderer.render(scene, camera);
+    state.raf = requestAnimationFrame(animate);
+  }
+  state.raf = requestAnimationFrame(animate);
+  sea3d = state;
+  window.__sea3d = state;
+  return state;
+}
+function renderSea(pool) {
+  if (!window.THREE) return;
+  if (!sea3d) initSea3d();
+  if (!sea3d) return;
+  $("#pool-empty").style.display = pool.length ? "none" : "";
+  sea3d.layout(pool);
+  sea3d.resize();
+}
+async function load() {
+  const j = await call(API + "/state");
+  rev = j.rev; bottles = (j.data && j.data.bottles) || [];
+  render();
+}
+
+function fillRecipients() {
+  const sel = $("#c-to");
+  sel.innerHTML = people.map(p => '<option value="' + esc(p.user) + '">' + esc((p.emoji || "👤") + " " + p.user) + '</option>').join("");
+  if (people.some(p => p.user === me)) sel.value = me;
+}
+
+function openCompose(quick) {
+  fillRecipients();
+  $("#c-open").value = quick ? nextBirthday() : nextBirthday();
+  $("#c-message").value = "";
+  $("#c-msg").textContent = quick ? "这是给未来自己的生日愿望；到明年生日当天才能打开。" : "";
+  $("#compose-modal").classList.add("show");
+  setTimeout(() => $("#c-message").focus(), 80);
+}
+
+async function saveCompose() {
+  const to = $("#c-to").value;
+  const openAt = $("#c-open").value;
+  const message = $("#c-message").value.trim();
+  if (!message) { $("#c-msg").textContent = "写点什么再封进瓶子吧。"; return; }
+  $("#c-save").disabled = true;
+  try {
+    const j = await call(API + "/action", { method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"create", rev:rev, payload:{to:to, openAt:openAt, message:message}}) });
+    rev = j.rev; bottles = (j.data && j.data.bottles) || [];
+    $("#compose-modal").classList.remove("show"); render();
+  } catch(e) { $("#c-msg").textContent = "封存失败：" + e.message; }
+  finally { $("#c-save").disabled = false; }
+}
+
+async function openBottle(id) {
+  hideBoatPop();
+  const b = bottles.find(x => x.id === id);
+  if (!b) return;
+  try {
+    const j = await call(API + "/action", { method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"open", rev:rev, payload:{id:id}}) });
+    rev = j.rev; bottles = (j.data && j.data.bottles) || [];
+    const opened = bottles.find(x => x.id === id) || b;
+    const openColor = themeColor(opened.from) || opened.color || "#9bd1ec";
+    $("#o-title").textContent = "来自 " + nameOf(opened.from) + " 的漂流瓶";
+    $("#o-sub").textContent = "开启日 " + fmt(opened.openAt);
+    const ob = $("#o-boat");
+    if (ob) ob.innerHTML = bottleSvg(openColor);
+    $("#o-message").textContent = opened.message || "";
+    $("#o-meta").textContent = "打开于 " + fmt(opened.openedAt);
+    $("#open-modal").classList.add("show");
+    render();
+  } catch(e) { alert(e.message); }
+}
+
+async function boot() {
+  try {
+    if (!window.CANNON) {
+      try { window.CANNON = await import("/static/cannon-es.js"); } catch(e) { console.warn("cannon unavailable", e); }
+    }
+    const s = await call("/api/session");
+    me = (s.session && s.session.user) || "";
+    const who = $("#who"); if (who) who.textContent = me ? "你是 " + nameOf(me) : "未登录";
+    const u = await call("/api/users/public"); people = (u.users || []);
+    const b = await call("/api/birthday"); birthday = b.birthday || "";
+    await load();
+    const quick = sessionStorage.getItem("kp_bottle_birthday") === "1";
+    sessionStorage.removeItem("kp_bottle_birthday");
+    if (quick) openCompose(true);
+  } catch(e) {
+    $("#pool-empty").style.display = ""; $("#pool-empty").textContent = "加载失败：" + e.message;
+  }
+}
+$("#compose").onclick = () => openCompose(false);
+$("#refresh").onclick = () => load().catch(e => alert(e.message));
+$("#c-cancel").onclick = () => $("#compose-modal").classList.remove("show");
+$("#c-save").onclick = () => saveCompose();
+$("#o-close").onclick = () => { $("#open-modal").classList.remove("show"); };
+$("#compose-modal").onclick = (e) => { if (e.target === $("#compose-modal")) $("#compose-modal").classList.remove("show"); };
+$("#open-modal").onclick = (e) => { if (e.target === $("#open-modal")) $("#open-modal").classList.remove("show"); };
+boot();
+</script>
+</body>
+</html>

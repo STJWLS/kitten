@@ -1,0 +1,21 @@
+{
+  "base": "abstract",
+  "protocol": "kp/1",
+  "capabilities": ["state", "action", "audit"],
+  "acl": {
+    "read": ["kitten", "puppy"],
+    "write": ["kitten", "puppy"]
+  },
+  "ui": {
+    "theme": {
+      "accent": "#003da5",
+      "bg": "#f8f4ec",
+      "ink": "#42392b",
+      "muted": "#8a7f6d",
+      "card": "#fffdf8",
+      "line": "#e8dfd2"
+    },
+    "template": "base@1"
+  },
+  "view": {"kind": "auto"}
+}

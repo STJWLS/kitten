@@ -1,0 +1,17 @@
+{
+  "id": "scratchpad",
+  "parent": "root",
+  "order": 40,
+  "title": "临时便签",
+  "icon": "📝",
+  "desc": "临时便签：随手记录与整理文本条目。",
+  "view": {
+    "kind": "custom",
+    "dir": "web"
+  },
+  "tags": [
+    "记录",
+    "写作",
+    "工具"
+  ]
+}

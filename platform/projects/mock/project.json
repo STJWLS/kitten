@@ -1,0 +1,30 @@
+{
+  "id": "mock",
+  "parent": "root",
+  "order": 15,
+  "title": "MS 面试 Mock",
+  "icon": "🎙️",
+  "desc": "投行电话面试模拟：按轮次提问、录音转写、追问与评分报告。",
+  "base": "json-doc",
+  "capabilities": [
+    "state",
+    "action",
+    "audit",
+    "upstream"
+  ],
+  "view": {
+    "kind": "custom",
+    "dir": "web"
+  },
+  "ui": {
+    "theme": {
+      "accent": "#4f8f5f"
+    }
+  },
+  "path": "/mock/",
+  "tags": [
+    "面试",
+    "AI",
+    "练习"
+  ]
+}

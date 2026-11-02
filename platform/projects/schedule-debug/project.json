@@ -1,0 +1,26 @@
+{
+  "id": "schedule-debug",
+  "parent": "root",
+  "order": 30,
+  "title": "日程调试",
+  "icon": "🛠️",
+  "desc": "superadmin 专用：查看和管理所有用户的日程。",
+  "base": "json-doc",
+  "roles": [
+    "superadmin"
+  ],
+  "capabilities": [
+    "state"
+  ],
+  "tags": [
+    "调试",
+    "日程",
+    "superadmin"
+  ],
+  "view": {
+    "kind": "custom",
+    "dir": "web"
+  },
+  "path": "/schedule-debug/",
+  "hidden": true
+}

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>临时便签 · KittenPuppy4Ever</title>
+<link rel="stylesheet" href="/static/template.css">
+</head>
+<body data-project="scratchpad">
+<main class="page">
+
+  <section class="section">
+    <div class="section-head">
+      <h2>便签</h2>
+      <span class="hint">随手记录，保存在工作台里</span>
+      <div class="actions">
+        <span class="chip" id="count">0 条</span>
+        <button class="btn soft sm" id="refresh">刷新</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <input class="input" id="new-text" placeholder="写一条新便签，回车添加…" style="flex:1;min-width:220px">
+      <button class="btn primary" id="add">添加</button>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2>全部便签</h2><span class="hint" id="rev">—</span></div>
+    <div class="list" id="list"></div>
+    <div class="empty" id="empty" style="display:none">还没有便签，上面写一条吧。</div>
+  </section>
+
+</main>
+<script>
+const API = "/api/p/scratchpad";
+let rev = 0, items = [];
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => (
+  { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function call(url, opts) {
+  const r = await fetch(url, Object.assign({ cache: "no-store" }, opts || {}));
+  const j = await r.json().catch(() => ({ ok: false, error: { message: "非 JSON" } }));
+  if (!j.ok) throw new Error((j.error && j.error.message) || ("HTTP " + r.status));
+  return j;
+}
+
+function render() {
+  const list = $("#list");
+  list.innerHTML = items.map((it) => (
+    '<div class="row">' +
+      '<span class="k">' + esc((it.id || "").slice(0, 6)) + "</span>" +
+      '<span class="grow"><div class="t">' + esc(it.title || "") + "</div>" +
+      '<div class="s">' + esc(it.at ? new Date(it.at).toLocaleString("zh-CN") : "") + "</div></span>" +
+      '<button class="btn soft sm" data-del="' + esc(it.id) + '">删除</button>' +
+    "</div>"
+  )).join("");
+  $("#empty").style.display = items.length ? "none" : "";
+  $("#count").textContent = items.length + " 条";
+  $("#rev").textContent = "rev " + rev;
+  list.querySelectorAll("[data-del]").forEach((b) => {
+    b.onclick = () => action("remove", { id: b.dataset.del });
+  });
+}
+
+async function load() {
+  const j = await call(API + "/state");
+  rev = j.rev;
+  items = (j.data && j.data.items) || [];
+  render();
+}
+
+async function action(name, payload) {
+  const j = await call(API + "/action", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: name, payload: payload, rev: rev }),
+  });
+  rev = j.rev;
+  items = (j.data && j.data.items) || [];
+  render();
+}
+
+async function add() {
+  const el = $("#new-text");
+  const title = el.value.trim();
+  if (!title) return;
+  el.value = "";
+  await action("append", { item: { title: title, at: new Date().toISOString() } });
+}
+
+$("#add").onclick = () => add().catch((e) => alert(e.message));
+$("#new-text").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") add().catch((err) => alert(err.message));
+});
+$("#refresh").onclick = () => load().catch((e) => alert(e.message));
+load().catch((e) => { $("#empty").style.display = ""; $("#empty").textContent = "加载失败：" + e.message; });
+
+window.addEventListener("message", async (e) => {
+  const a = e.data && e.data.kpAiAction; if (!a) return;
+  if (a.type === "focus" || a.type === "click") {
+    const el = document.querySelector(a.selector || "#new-text");
+    if (el && el.focus) el.focus();
+  }
+  if (a.type === "refresh") { try { await load(); } catch(e) {} }
+});
+</script>
+</body>
+</html>

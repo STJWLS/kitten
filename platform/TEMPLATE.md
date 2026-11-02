@@ -1,0 +1,71 @@
+# KittenPuppy4Ever · 统一页面模板 v1
+
+所有工作台项目（课表、地图、许愿池、Mock、便签）**必须**用同一套页面模板渲染。
+模板只规定"页面骨架 + 组件语言"，各项目只提供内容；不允许项目自带页头、页脚、登录门禁或独立主题。
+
+## 1. 页面骨架
+
+```html
+<link rel="stylesheet" href="/static/template.css">
+<body data-project="<id>">
+  <main class="page">
+    <section class="section">                     <!-- 可以有多张 -->
+      <div class="section-head">
+        <h2>区块标题</h2>
+        <span class="hint">一句说明</span>
+        <div class="actions"><button class="btn soft">操作</button></div>
+      </div>
+      <div class="toolbar">…筛选/开关…</div>        <!-- 可选 -->
+      <div class="grid">…卡片/统计…</div>           <!-- 可选 -->
+      <div class="list">…行…</div>                  <!-- 可选 -->
+    </section>
+  </main>
+</body>
+```
+
+- 页面**不出现**全局标题：标题/描述/返回由根壳的项目栏统一提供；
+- 页面**不出现**登录框、身份切换、退出按钮：身份由根壳统一管理；
+- 页面**不出现**项目间导航（工作台/其它项目链接）：导航由根壳统一提供。
+
+## 2. 设计令牌
+
+| 令牌 | 值 | 用途 |
+| --- | --- | --- |
+| `--bg` | `#f8f4ec` | 页面底色（由根壳统一铺） |
+| `--card` | `#fffdf8` | 区块卡片 |
+| `--line` | `#e8dfd2` | 描边/分隔 |
+| `--ink` / `--muted` | `#42392b` / `#8a7f6d` | 主文字 / 次文字 |
+| `--accent` | `#003da5` | 主行动色 |
+| 圆角 | 卡片 16px · 控件 10px · 胶囊 999px | |
+| 间距 | 页面 18px · 区块间 14px · 卡片内 16/18px | |
+| 阴影 | `0 8px 26px rgba(66,57,43,.06)` | 卡片 |
+| 字号 | 标题 15px · 区块标题 13px · 正文 13px · 辅助 11.5px | |
+
+## 3. 组件清单（template.css）
+
+| 组件 | 类名 |
+| --- | --- |
+| 页面容器 | `.page` |
+| 区块卡片 | `.section` |
+| 区块头 | `.section-head`（`h2` + `.hint` + `.actions`） |
+| 工具条 | `.toolbar` |
+| 栅格 | `.grid` / `.grid.two` / `.grid.three` |
+| 统计卡 | `.stat`（`.k` 标签 / `.v` 数值） |
+| 列表 | `.list` + `.row`（`.k` 主键 / `.grow` / `.t` 标题 / `.s` 辅助） |
+| 胶囊标签 | `.chip`（`.ok` / `.warn` / `.bad`） |
+| 按钮 | `.btn` + `.primary` / `.soft` / `.danger` / `.ghost` / `.sm` |
+| 页签 | `.tabs` + `.tab.active` |
+| 空态 | `.empty` |
+| 弹层 | `.modal` + `.modal-box` + `.modal-head` |
+| 输入 | `.input` / `.select` |
+| 提示条 | `.note` |
+| 动效 | 卡片入场 `fadeUp`、行悬停、按钮按压缩放、`prefers-reduced-motion` 关闭 |
+
+## 4. 迁移规则（原页面 → 模板视图）
+
+1. 页面放入 `projects/<id>/web/index.html`，manifest 用 `"view": {"kind": "custom", "dir": "web"}`；
+2. 删除原页的 `<header>`、页脚、返回链接、登录门禁、`loginState()` 判断；
+3. 原业务 JS **尽量原样保留**（录音、课表渲染、许愿币规则等），只删除与"页面外壳"相关的代码；
+4. 内容结构改为 `.page > .section…`；卡片/按钮/标签统一用模板组件类；
+5. 项目专有组件（课表网格、转录气泡、评分卡）保留自己的类，但颜色/圆角/字号必须引用模板令牌；
+6. 数据接口不变：课表/许愿池继续用 `/api/state`、`/api/save`；Mock 用 `/mock/api/*`；地图用查看器数据源。

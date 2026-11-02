@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MS 面试 Mock · KittenPuppy4Ever</title>
+<link rel="stylesheet" href="/static/template.css">
+<style>
+  /* Mock 专有组件：颜色/圆角/字号全部引用 template.css 变量 */
+  #main { display: flex; flex-direction: column; gap: 14px; }
+  #finalCard { order: -1; }
+  #turns { order: 0; }
+  #debugCard { order: 1; }
+  .toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .toolbar-actions { display: flex; align-items: center; gap: 8px; }
+  .voice-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+  .voice-row label { font-size: 11px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+  .voice-row select { border-radius: 999px; padding: 5px 9px; font-size: 12px; }
+  .mic { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #d9d0c2; display: inline-block; }
+  .dot.live { background: var(--bad); box-shadow: 0 0 0 6px rgba(201,106,90,.14); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+  .meter { flex: 1; min-width: 160px; height: 8px; background: #f0e8db; border-radius: 999px; overflow: hidden; }
+  .meter > span { display: block; height: 100%; width: 0%; background: linear-gradient(90deg,var(--mint),var(--pink));
+    border-radius: 999px; transition: width .08s linear; }
+  .score-brief { display: flex; align-items: center; gap: 7px; white-space: nowrap; overflow-x: auto;
+    margin-top: 10px; padding-top: 9px; border-top: 1px dashed var(--line);
+    font-size: 12px; color: var(--muted); cursor: pointer; }
+  .score-brief:hover { background: rgba(155,209,236,.10); }
+  .score-brief .sb { display: inline-block; padding: 2px 7px; border-radius: 999px; background: #f2ecdf;
+    font-variant-numeric: tabular-nums; }
+  .score-brief .sb.good { background: rgba(46,139,87,.13); color: var(--good); }
+  .score-brief .sb.warn { background: rgba(201,143,47,.14); color: var(--warn); }
+  .score-brief .sb.bad { background: rgba(201,106,90,.14); color: var(--bad); }
+  .score-brief .sb.pending { background: #f0e8db; color: var(--muted); }
+  .score-brief .sbd { color: var(--accent); margin-left: auto; font-size: 11px; }
+  .score-detail-body { font-size: 13px; line-height: 1.7; }
+  .sd-item { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 12px 0; background: #fff; }
+  .sd-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .sd-q { font-weight: 700; font-size: 14px; }
+  .sd-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .sd-transcript { background: rgba(155,209,236,.15); border-left: 3px solid var(--mint); border-radius: 7px;
+    padding: 8px 10px; margin: 9px 0; line-height: 1.65; }
+  .sd-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; margin: 8px 0; }
+  .sd-metric { background: #fbf7ef; border-radius: 8px; padding: 6px 8px; }
+  .sd-metric .k { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+  .sd-metric .v { font-weight: 700; font-size: 12px; }
+  details.section > summary { cursor: pointer; font-weight: 700; }
+  pre { white-space: pre-wrap; word-break: break-word; background: #fbf7ef; border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px; font-size: 11px; line-height: 1.5; max-height: 320px; overflow: auto; }
+  .report-body { font-size: 14px; line-height: 1.8; color: var(--ink); }
+  .report-body h1 { font-size: 20px; margin: 18px 0 8px; }
+  .report-body h2 { font-size: 17px; margin: 16px 0 8px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  .report-body h3 { font-size: 15px; margin: 12px 0 6px; }
+  .report-body table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 12px;
+    display: block; overflow: auto; }
+  .report-body th, .report-body td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  .report-body th { background: #f2ecdf; }
+  .report-body ul { padding-left: 20px; }
+  .report-body p { margin: 6px 0; }
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .hero { flex-direction: column; align-items: flex-start; }
+    .sd-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  }
+</style>
+</head>
+<body data-project="mock">
+<main class="page">
+
+  <!-- 面试设置：与其它看板一致的控制卡片（根壳已提供标题/描述，此处不再重复） -->
+  <section class="section">
+    <div class="toolbar-row">
+      <div id="voiceRow" class="voice-row hidden">
+        <label>面试官声音
+          <select id="voiceSel">
+            <option value="female_pro" selected>F5 职业女声（自然断句）</option>
+            <option value="female">ChatTTS 自然女声</option>
+            <option value="male_pro">F5 职业男声（自然断句）</option>
+            <option value="male">ChatTTS 自然男声</option>
+            <option value="puppy" id="puppyVoiceOption" disabled>Puppy（本人声纹，待生成）</option>
+            <option value="piper">机械（Piper，调试）</option>
+          </select>
+        </label>
+        <label>识音语言
+          <select id="langSel">
+            <option value="auto" selected>自动（中/英）</option>
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <label>面试难度
+          <select id="difficultySel">
+            <option value="easy">基础</option>
+            <option value="medium" selected>标准</option>
+            <option value="hard">进阶</option>
+            <option value="stress">压力面</option>
+          </select>
+        </label>
+        <label>总轮次（含追问）
+          <select id="lengthSel">
+            <option value="6">6 轮</option>
+            <option value="8" selected>8 轮</option>
+            <option value="10">10 轮</option>
+          </select>
+        </label>
+        <span id="engineInfo" class="chip">voice pack</span>
+        <span class="status">接通前选择</span>
+      </div>
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn danger hidden" id="hangupBtn">挂断</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="callGate" class="section hidden" style="text-align:center">
+    <div class="status">📞 来电</div>
+    <div class="q">Morgan Stanley · MSSC IB Summer Analyst</div>
+    <div class="status">2027 Summer · Round 1 电话面试</div>
+    <div class="status" style="margin-top:10px;line-height:1.8">
+      点“接听”后全程连续：面试官提问 → 你直接回答 → 说完停顿约 3 秒自动进入下一题。<br>
+      浏览器需要这一次点击来开启麦克风和语音，之后不需要再点“开始回答”。<br>
+      8/10 轮会把一个项目主题的 5 步追问完整问完，6 轮为短版；总轮次包含所有追问。<br>
+      面试官声音可在页面顶部切换：<b>F5 职业女声 / F5 职业男声 / ChatTTS 自然声 / Puppy 本人声纹 / Piper</b>（默认 F5 职业女声）；识音语言可选 <b>自动 / 中文 / English</b>。
+    </div>
+    <button class="btn primary" id="callBtn" style="margin-top:14px">接听电话</button>
+  </div>
+
+  <div id="puppyVoiceCard" class="section hidden">
+    <div class="status" style="font-size:14px"><b>🐶 Puppy 声纹录入</b></div>
+    <div class="status" style="margin:6px 0 10px">用不同语料多次朗读，保存后会把所有样本作为 F5 参考，生成 “Puppy 本人声纹” 角色。仅接受男声频段（约 65–190 Hz）；女声/过高的样本会被拒绝。建议安静环境、自然语速，不要刻意播音。</div>
+    <div id="puppyVoiceStatus" class="status">读取中…</div>
+    <div style="height:10px;background:#f0e8db;border-radius:999px;overflow:hidden;margin:8px 0 4px">
+      <div id="puppyProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--mint),var(--pink));transition:width .25s"></div>
+    </div>
+    <div id="puppyProgressText" class="status" style="margin-bottom:8px">语音生成进度：—</div>
+    <div id="puppyPrompts" style="display:grid;gap:8px;margin:10px 0"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" id="puppyBuildBtn" disabled>生成 / 更新 Puppy 音色</button>
+      <button class="btn soft" id="puppyRefreshCorpusBtn">刷新语料</button>
+      <button class="btn soft" id="puppyRefreshBtn">刷新状态</button>
+      <span id="puppyBuildMsg" class="status"></span>
+    </div>
+  </div>
+
+  <div id="main" class="hidden">
+    <div class="section hero" id="heroCard">
+      <div>
+        <div class="status" id="progress">等待接通</div>
+        <div class="q" id="question">电话接通后，面试官会直接开始提问。</div>
+        <div class="status" id="hint">接通后全程自动：面试官说完 → 你直接回答；回答完停顿约 3 秒进入下一题。</div>
+      </div>
+    </div>
+
+    <div class="section" id="micCard">
+      <div class="mic">
+        <span class="dot" id="dot"></span>
+        <b id="micState">未接通</b>
+        <div class="meter"><span id="meter"></span></div>
+        <button class="btn danger" id="stopBtn" disabled>结束回答</button>
+      </div>
+      <div class="status" id="live" style="margin-top:10px">麦克风未开启。</div>
+    </div>
+
+    <div class="section" id="liveCard">
+      <div class="status"><b>实时转写</b> <span id="liveScore" class="chip">等待接通</span></div>
+      <div class="score-brief" id="scoreBrief" role="button" tabindex="0" title="点击查看已答题目的转写和得分细节">已答：— <span class="sbd">点击查看详情</span></div>
+      <div class="quote" id="liveTranscript">—</div>
+    </div>
+
+    <div id="turns"></div>
+
+    <details class="section hidden" id="debugCard">
+      <summary>🐶 Puppy 调试</summary>
+      <div class="grid">
+        <div class="stat"><div class="k">Session</div><div class="v" id="dbgSid">—</div></div>
+        <div class="stat"><div class="k">Voice</div><div class="v" id="dbgVoice">—</div></div>
+        <div class="stat"><div class="k">Engine</div><div class="v" id="dbgEngine">—</div></div>
+        <div class="stat"><div class="k">Language</div><div class="v" id="dbgLang">—</div></div>
+        <div class="stat"><div class="k">Progress</div><div class="v" id="dbgProgress">—</div></div>
+      </div>
+      <div class="status" id="dbgQuestion">—</div>
+      <div class="mic">
+        <button class="btn soft" id="replayBtn" disabled>🔁 重播当前问题</button>
+        <a class="btn soft" id="sessionLink" href="#" target="_blank" rel="noopener">查看 session JSON</a>
+      </div>
+      <details><summary>最近一轮完整 JSON</summary><pre id="dbgJson">—</pre></details>
+    </details>
+
+    <div class="section hidden" id="finalCard">
+      <div class="hero">
+        <div>
+          <div class="status">Overall</div>
+          <div class="q" id="finalScore">—</div>
+          <div class="status" id="finalVerdict"></div>
+        </div>
+        <div class="status" id="finalMeta"></div>
+      </div>
+      <div class="mic" style="margin-top:14px">
+        <button class="btn primary" id="viewReportBtn" disabled>查看完整报告</button>
+        <span id="reportStatus" class="chip">报告生成中…</span>
+        <button class="btn soft" id="restartBtn">再面一次</button>
+        <button class="btn soft" id="reviewBtn">查看本轮记录</button>
+      </div>
+    </div>
+
+    <div id="reportModal" class="modal hidden">
+      <div class="modal-box">
+        <div class="modal-head"><b>MS Mock 评分报告</b><button class="btn soft" id="closeReportBtn">关闭</button></div>
+        <div id="reportHtml" class="report-body"></div>
+      </div>
+    </div>
+
+    <div id="scoreDetailModal" class="modal hidden">
+      <div class="modal-box">
+        <div class="modal-head"><b>已答题目 · 转写与得分</b><button class="btn soft" id="closeScoreDetailBtn">关闭</button></div>
+        <div id="scoreDetailBody" class="score-detail-body"></div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+const API = "/mock/api";
+let user = "kitten";   // 由根壳会话决定（puppy 可见声纹录入）
+let sid = null, total = 0, currentIndex = 0, busy = false, speaking = false;
+let callActive = false, phase = "idle", currentSource = null;
+let lastAudioB64 = null, lastAudioText = "";
+let audioCtx = null, stream = null, source = null, analyser = null, processor = null, silentGain = null;
+let recording = false, chunks = [], speechStarted = false, lastVoice = 0, recordStart = 0, vadTimer = null, noiseFloor = 0.003, speechPeak = 0, lastPartialText = "", onsetFrames = 0;
+let streamMode = false, streamQueue = [], streamTimer = null, streamPoll = null, reportPoll = null, streamSending = false;
+let streamSeq = 0;
+let sessionPoll = null, renderedQids = new Set(), reportMarkdown = "", scoreDetailPoll = null;
+let followupChunks = null, followupRate = null;
+let simplePlanMode = true, plan = [], planIndex = 0;
+const VAD_THRESHOLD = 0.006;   // minimum RMS threshold
+const SILENCE_MS = 3000;       // allow mid-length pauses before ending a turn
+const MAX_WAIT_MS = 30000;
+
+const $ = id => document.getElementById(id);
+const show = el => el.classList.remove("hidden");
+const hide = el => el.classList.add("hidden");
+
+function scoreClass(x){ return x >= 4.2 ? "good" : x >= 3.5 ? "warn" : "bad"; }
+function planProgressText(i){
+  const p = plan[i] || {};
+  const labels = {easy:"基础", medium:"标准", hard:"进阶", stress:"压力"};
+  const d = labels[p.difficulty] || "";
+  const suffix = (d ? ` · 难度 ${d}` : "") + (p.depth ? ` · 追问 ${p.depth}` : "");
+  return `第 ${i+1} / ${total} 题${suffix}`;
+}
+function fmt(x){ return (Math.round(x*100)/100).toFixed(2); }
+
+function ensureCtx(){
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+async function fetchT(url, opts = {}, ms = 30000){
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), ms);
+  try {
+    return await fetch(url, {...opts, signal: ctl.signal});
+  } finally {
+    clearTimeout(timer);
+  }
+}
+function updateControls(){
+  const stop = $("stopBtn"), replay = $("replayBtn");
+  if (stop) stop.disabled = !recording;
+  if (replay) replay.disabled = !lastAudioText || busy || recording || speaking || !callActive;
+  const hangup = $("hangupBtn");
+  if (hangup) hangup.disabled = !callActive;
+}
+
+async function playAudioB64(b64, fallbackText, onDone){
+  if (!callActive) return;
+  lastAudioB64 = b64 || null;
+  lastAudioText = fallbackText || "";
+  // Stop a previous clip cleanly; do not let its onended trigger the next turn.
+  if (currentSource){
+    try { currentSource.onended = null; currentSource.stop(); } catch(e){}
+    currentSource = null;
+  }
+  if (b64){
+    try {
+      const ctx = ensureCtx();
+      if (ctx.state === "suspended"){
+        try { await Promise.race([ctx.resume(), new Promise(r => setTimeout(r, 300))]); } catch(e){}
+      }
+      const bin = atob(b64);
+      const arr = new Uint8Array(bin.length);
+      for (let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+      const buf = await Promise.race([
+        ctx.decodeAudioData(arr.buffer),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("audio decode timeout")), 2000))
+      ]);
+      if (!callActive) return;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      // Slight take-to-take variation: the same question is not byte-identical
+      // every time, but stays within ±1% so the interviewer's identity is stable.
+      src.playbackRate.value = 0.985 + Math.random() * 0.03;
+      if ("detune" in src) src.detune.value = (Math.random() * 40) - 20;
+      src.connect(ctx.destination);
+      currentSource = src;
+      speaking = true;
+      updateControls();
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        if (currentSource === src) currentSource = null;
+        speaking = false;
+        updateControls();
+        if (onDone) onDone();
+      };
+      src.onended = finish;
+      // If mobile Safari suspends Web Audio, onended may never fire; do not
+      // leave the interview stuck. The timeout is a safety net.
+      const waitMs = Math.max(1200, (buf.duration / src.playbackRate.value) * 1000 + 1500);
+      setTimeout(() => { if (currentSource === src) finish(); }, waitMs);
+      src.start();
+      return;
+    } catch(e){ console.warn("TTS playback failed", e); }
+  }
+  speechFallback(fallbackText, onDone);
+}
+
+function speechFallback(text, onDone){
+  let finished = false;
+  const done = () => {
+    if (finished) return;
+    finished = true;
+    speaking = false;
+    updateControls();
+    if (onDone) onDone();
+  };
+  if ("speechSynthesis" in window && text){
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "zh-CN";
+    u.rate = 0.985 + Math.random() * 0.03;
+    u.pitch = 0.985 + Math.random() * 0.03;
+    u.onend = done;
+    speaking = true;
+    updateControls();
+    speechSynthesis.speak(u);
+    setTimeout(done, 5000 + text.length * 250);
+  } else {
+    done();
+  }
+}
+
+function updateDebug(d){
+  if (!d) return;
+  if (d.session_id){
+    $("dbgSid").textContent = d.session_id;
+    $("sessionLink").href = `${API}/session/${d.session_id}`;
+  }
+  if (d.voice) $("dbgVoice").textContent = d.voice;
+  if (d.language) $("dbgLang").textContent = d.language;
+  if (d.tts_engine){
+    $("dbgEngine").textContent = d.tts_engine;
+    $("engineInfo").textContent =
+      d.tts_engine === "chattts_male_pro" ? "F5 职业男声" :
+      d.tts_engine === "chattts_male" ? "ChatTTS 自然男声" :
+      d.tts_engine === "chattts_female_pro" ? "F5 职业女声" :
+      d.tts_engine === "chattts_female" ? "ChatTTS 自然女声" : "Piper 离线声";
+  }
+  if (d.done) $("dbgProgress").textContent = "done";
+  else if (d.total != null && d.index != null) $("dbgProgress").textContent = `${d.index+1} / ${d.total}`;
+  const q = d.followup || d.next_question || d.question;
+  if (q) $("dbgQuestion").textContent = q;
+  const copy = {...d};
+  if (copy.audio_b64) copy.audio_b64 = `<${copy.audio_b64.length} base64 chars>`;
+  if (Array.isArray(copy.plan)){
+    copy.plan = copy.plan.map(p => ({...p,
+      audio_b64: p.audio_b64 ? `<${p.audio_b64.length} base64 chars>` : null}));
+  }
+  $("dbgJson").textContent = JSON.stringify(copy, null, 2);
+}
+
+async function startCall(){
+  if ($("puppyVoiceCard")) hide($("puppyVoiceCard"));
+  if (callActive) return;
+  hide($("callGate")); show($("main"));
+  show($("heroCard")); show($("micCard")); show($("liveCard"));
+  callActive = true; phase = "connecting"; busy = true;
+  $("hangupBtn").classList.remove("hidden");
+  $("progress").textContent = "正在接通…";
+  $("question").textContent = "面试官正在接入…";
+  $("hint").textContent = "接通后全程自动，不需要再点“开始回答”。";
+  $("turns").innerHTML = ""; hide($("finalCard")); hide($("reportModal")); closeScoreDetail();
+  $("liveTranscript").textContent = "—"; $("liveScore").textContent = "等待接通";
+  $("scoreBrief").innerHTML = `已答：— <span class="sbd">点击查看详情</span>`;
+  reportMarkdown = ""; $("viewReportBtn").disabled = true; $("reportStatus").textContent = "报告生成中…";
+  followupChunks = null; followupRate = null;
+  plan = []; planIndex = 0;
+  renderedQids.clear();
+  if (sessionPoll) clearInterval(sessionPoll);
+  sessionPoll = setInterval(pollSession, 1200);
+  updateControls();
+  try {
+    // The click on “接听” is the only user gesture; start mic + audio inside it.
+    const ctx = ensureCtx();
+    const micPromise = ensureMic();
+    if (ctx.state === "suspended") ctx.resume().catch(()=>{});
+    await micPromise;
+    if (!callActive) return;
+    await startSession();
+  } catch(e) {
+    callActive = false; busy = false; phase = "idle";
+    releaseAudio();
+    $("progress").textContent = "接通失败";
+    $("question").textContent = "麦克风或后端不可用：" + e.message;
+    $("hangupBtn").classList.add("hidden");
+    hide($("main")); show($("callGate")); updateControls();
+  }
+}
+
+async function startSession(){
+  busy = true; updateControls();
+  $("progress").textContent = "正在加载面试官语音…";
+  try {
+    const voice = $("voiceSel") ? $("voiceSel").value : "female_pro";
+    const language = $("langSel") ? $("langSel").value : "auto";
+    const difficulty = $("difficultySel") ? $("difficultySel").value : "medium";
+    const length = $("lengthSel") ? Number($("lengthSel").value) : 8;
+    const r = await fetchT(`${API}/start`, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({voice, language, difficulty, length, include_plan: true})
+    }, 60000);
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    if (!callActive) return;
+    sid = d.session_id;
+    plan = Array.isArray(d.plan) && d.plan.length ? d.plan : [{index:0, text:d.question, audio_b64:d.audio_b64}];
+    planIndex = 0; total = plan.length; currentIndex = 0;
+    $("progress").textContent = planProgressText(0);
+    $("question").textContent = plan[0].text;
+    $("hint").textContent = "全部面试官音频已预生成；听完直接回答。";
+    updateDebug(d);
+    busy = false; phase = "speaking"; updateControls();
+    $("micState").textContent = "聆听中";
+    $("live").textContent = "全部面试官音频已预生成；听完直接回答。";
+    playAudioB64(plan[0].audio_b64, plan[0].text, () => setTimeout(beginListening, 250));
+  } catch(e) {
+    busy = false; updateControls();
+    throw e;
+  }
+}
+
+async function ensureMic(){
+  if (stream) return;
+  stream = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true}});
+  ensureCtx();
+  if (audioCtx.state === "suspended") await audioCtx.resume();
+  source = audioCtx.createMediaStreamSource(stream);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 1024;
+  source.connect(analyser);
+  processor = audioCtx.createScriptProcessor(4096, 1, 1);
+  silentGain = audioCtx.createGain();
+  silentGain.gain.value = 0;
+  source.connect(processor);
+  processor.connect(silentGain);
+  silentGain.connect(audioCtx.destination);
+  processor.onaudioprocess = (ev) => {
+    if (!recording) return;
+    const f = new Float32Array(ev.inputBuffer.getChannelData(0));
+    chunks.push(f);
+    pushStreamAudio(f);
+  };
+}
+
+function floatToInt16(f){
+  const out = new Int16Array(f.length);
+  for (let i=0;i<f.length;i++){
+    const x = Math.max(-1, Math.min(1, f[i]));
+    out[i] = x < 0 ? x * 0x8000 : x * 0x7fff;
+  }
+  return out;
+}
+
+function pushStreamAudio(f){
+  if (streamMode) streamQueue.push(floatToInt16(f));
+}
+
+async function startStream(){
+  streamMode = false; streamQueue = []; streamSeq = 0;
+  $("liveTranscript").textContent = "正在听…";
+  $("liveScore").textContent = "实时预估中…";
+  try {
+    const r = await fetchT(`${API}/stream/start`, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({session_id: sid, sample_rate: audioCtx ? audioCtx.sampleRate : 48000})
+    }, 20000);
+    if (!r.ok) throw new Error(await r.text());
+    streamMode = true;
+    streamTimer = setInterval(flushStream, 250);
+    streamPoll = setInterval(pollPartial, 800);
+  } catch(e) {
+    console.warn("stream start failed, fallback to upload", e);
+    $("liveScore").textContent = "本轮结束后转写";
+  }
+}
+
+async function flushStream(){
+  if (!streamMode || streamSending || !streamQueue.length) return;
+  streamSending = true;
+  const parts = streamQueue; streamQueue = [];
+  let total = 0; for (const p of parts) total += p.length;
+  const buf = new Int16Array(total); let off = 0;
+  for (const p of parts){ buf.set(p, off); off += p.length; }
+  const seq = streamSeq++;
+  const url = `${API}/stream/chunk?sid=${encodeURIComponent(sid)}&sr=${audioCtx ? audioCtx.sampleRate : 48000}&seq=${seq}`;
+  const payload = new Blob([buf]);
+  try {
+    await fetchT(url, {method:"POST", headers:{"Content-Type":"application/octet-stream"}, body: payload}, 3000);
+  } catch(e) {
+    // One short retry; do not let a bad chunk block the whole turn.
+    await new Promise(r => setTimeout(r, 120));
+    try {
+      await fetchT(url, {method:"POST", headers:{"Content-Type":"application/octet-stream"}, body: payload}, 3000);
+    } catch(e2) { console.warn("stream chunk failed", e2); }
+  } finally {
+    streamSending = false;
+  }
+}
+
+async function pollPartial(){
+  if (!streamMode || !sid) return;
+  try {
+    const r = await fetch(`${API}/stream/partial?sid=${encodeURIComponent(sid)}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.partial){
+      lastPartialText = d.partial;
+      $("liveTranscript").innerHTML = sentenceLines(d.partial);
+    }
+    const s = (d.provisional || {}).scores;
+    if (s) $("liveScore").textContent = `实时预估 ${fmt(s.overall)} / 5`;
+  } catch(e) {}
+}
+
+async function stopStream(){
+  if (streamTimer){ clearInterval(streamTimer); streamTimer = null; }
+  if (streamPoll){ clearInterval(streamPoll); streamPoll = null; }
+  // Do not wait for a slow last chunk/tunnel retry. The next question must
+  // start immediately; the background ASR can use the chunks already received.
+  const finalFlush = flushStream();
+  await Promise.race([finalFlush, new Promise(r => setTimeout(r, 250))]);
+  streamMode = false;
+  try {
+    const r = await fetchT(`${API}/stream/stop`, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({session_id: sid})
+    }, 8000);
+    if (!r.ok) throw new Error(await r.text());
+    return await r.json();
+  } catch(e) {
+    console.warn("stream stop failed, fallback to upload", e);
+    return null;
+  }
+}
+
+function beginListening(){
+  if (!callActive || phase === "done" || recording) return;
+  if (busy) { setTimeout(beginListening, 200); return; }
+  startRecording();
+}
+
+async function startRecording(){
+  if (!callActive || !sid || recording) return;
+  phase = "listening";
+  $("micState").textContent = "录音中";
+  $("live").textContent = "现在轮到你：直接回答，说完停顿约 3 秒自动进入下一题。";
+  $("dot").classList.add("live");
+  updateControls();
+  try {
+    await ensureMic();
+    if (!callActive) return;
+    if (audioCtx.state === "suspended") await audioCtx.resume();
+    chunks = []; speechStarted = false; noiseFloor = 0.003; speechPeak = 0; lastPartialText = ""; onsetFrames = 0;
+    recording = true;
+    recordStart = performance.now(); lastVoice = recordStart;
+    updateControls();
+    // Plan mode records the complete turn and uploads it after stop; no
+    // live streaming is needed anymore.
+    if (!simplePlanMode){
+      startStream().then(() => {
+        if (streamMode) for (const c of chunks) streamQueue.push(floatToInt16(c));
+      });
+    }
+    const buf = new Float32Array(analyser.fftSize);
+    vadTimer = setInterval(() => {
+      if (!recording) return;
+      analyser.getFloatTimeDomainData(buf);
+      let sum = 0;
+      for (let i=0;i<buf.length;i++) sum += buf[i]*buf[i];
+      const rms = Math.sqrt(sum / buf.length);
+      $("meter").style.width = Math.min(100, rms * 900) + "%";
+      const now = performance.now();
+      if (!speechStarted){
+        if (rms < 0.03) noiseFloor = noiseFloor * 0.97 + rms * 0.03;
+        const onset = Math.max(VAD_THRESHOLD, noiseFloor * 2.5);
+        if (rms > onset * 1.2){
+          onsetFrames++;
+          if (onsetFrames >= 3){ speechStarted = true; speechPeak = rms; lastVoice = now; }
+        } else {
+          onsetFrames = 0;
+        }
+      } else {
+        speechPeak = Math.max(speechPeak, rms);
+        // Hysteresis: noise below ~18% of the speech peak must not keep the
+        // turn alive forever. This is what caused the previous stuck turns.
+        const hold = Math.max(0.004, speechPeak * 0.18);
+        if (rms > hold) lastVoice = now;
+      }
+      // At least 1 second; a little more when the partial has no clear sentence end.
+      const endPause = SILENCE_MS;
+      if (speechStarted && now - lastVoice > endPause){
+        $("live").textContent = "检测到停顿，正在转写…";
+        stopAnswer();
+      } else if (speechStarted && now - recordStart > 90000){
+        $("live").textContent = "录音超过 90 秒，自动结束…";
+        stopAnswer();
+      } else if (!speechStarted && now - recordStart > MAX_WAIT_MS){
+        $("live").textContent = "还没听到声音，请靠近麦克风直接回答（或点“结束回答”）。";
+        recordStart = now;
+      }
+    }, 100);
+  } catch(e) {
+    recording = false; clearInterval(vadTimer); vadTimer = null;
+    $("live").textContent = "麦克风不可用：" + e.message;
+    $("micState").textContent = "麦克风错误";
+    $("dot").classList.remove("live");
+    updateControls();
+  }
+}
+
+function stopAnswer(){
+  if (!recording) return;
+  recording = false;
+  clearInterval(vadTimer); vadTimer = null;
+  phase = "thinking"; busy = true;
+  $("dot").classList.remove("live");
+  $("micState").textContent = "聆听中";
+  $("live").textContent = "识别中…"; $("liveScore").textContent = "识别中…";
+  $("meter").style.width = "0%";
+  updateControls();
+  const rate = audioCtx ? audioCtx.sampleRate : 48000;
+  const turnChunks = chunks;
+  const blob = encodeWav(turnChunks, rate);
+  chunks = [];
+  if (simplePlanMode){
+    finalizePlanAnswer(blob, rate);
+    return;
+  }
+  finalizeAnswer(blob, turnChunks, rate);
+}
+
+function encodeWav(chunks, sampleRate){
+  let length = 0;
+  for (const c of chunks) length += c.length;
+  const buffer = new ArrayBuffer(44 + length * 2);
+  const view = new DataView(buffer);
+  const wstr = (off, s) => { for (let i=0;i<s.length;i++) view.setUint8(off+i, s.charCodeAt(i)); };
+  wstr(0,"RIFF"); view.setUint32(4, 36 + length*2, true); wstr(8,"WAVE");
+  wstr(12,"fmt "); view.setUint32(16,16,true); view.setUint16(20,1,true);
+  view.setUint16(22,1,true); view.setUint32(24,sampleRate,true);
+  view.setUint32(28,sampleRate*2,true); view.setUint16(32,2,true); view.setUint16(34,16,true);
+  wstr(36,"data"); view.setUint32(40,length*2,true);
+  let off = 44;
+  for (const c of chunks){
+    for (let i=0;i<c.length;i++){
+      let s = Math.max(-1, Math.min(1, c[i]));
+      view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      off += 2;
+    }
+  }
+  return new Blob([buffer], {type:"audio/wav"});
+}
+
+function handleAnswerResponse(d){
+  if (!callActive) return;
+  updateDebug(d);
+  if (!d.result_pending && d.transcript) addTurn("你（ASR）", d.transcript, d.result || null);
+  if (!d.result_pending && d.result){
+    renderResult(d.result);
+    if (d.result.question_id) renderedQids.add(d.result.question_id);
+  }
+  busy = false; updateControls();
+
+  if (d.followup){
+    currentIndex = Math.max(currentIndex, 0);
+    phase = "speaking";
+    $("micState").textContent = "聆听中";
+    $("live").textContent = "听完直接回答，不用点按钮。";
+    $("question").textContent = d.followup;
+    $("progress").textContent = `第 ${currentIndex+1} / ${total} 题 · 追问`;
+    $("hint").textContent = "面试官在追问，听完直接回答。";
+    $("liveTranscript").textContent = "—";
+    $("liveScore").textContent = "评分中…";
+    playAudioB64(d.audio_b64, d.followup, () => setTimeout(beginListening, 250));
+  } else if (d.done){
+    finishCall(d.overall);
+  } else if (d.next_question){
+    currentIndex = d.index;
+    phase = "speaking";
+    $("micState").textContent = "聆听中";
+    $("live").textContent = "听完直接回答，不用点按钮。";
+    $("progress").textContent = `第 ${currentIndex+1} / ${total} 题`;
+    $("question").textContent = d.next_question;
+    $("hint").textContent = "面试官正在提问，听完直接回答。";
+    $("liveTranscript").textContent = "—";
+    $("liveScore").textContent = d.result_pending ? "评分中…" : "等待下一轮";
+    playAudioB64(d.audio_b64, d.next_question, () => setTimeout(beginListening, 250));
+  }
+}
+
+async function uploadAnswer(blob){
+  busy = true; updateControls();
+  try {
+    const fd = new FormData();
+    fd.append("session_id", sid);
+    fd.append("audio", blob, "answer.wav");
+    const r = await fetchT(`${API}/answer`, {method:"POST", body:fd}, 120000);
+    if (!r.ok) throw new Error(await r.text());
+    handleAnswerResponse(await r.json());
+  } catch(e) {
+    busy = false; updateControls();
+    $("live").textContent = "这一轮没听清：" + e.message + "；继续听下一轮…";
+    if (callActive) setTimeout(beginListening, 900);
+  }
+}
+
+function combineChunks(a, b, rate){
+  const gap = Math.max(0, Math.floor(0.3 * rate));
+  const out = new Float32Array(a.length + gap + b.length);
+  out.set(a, 0); out.set(b, a.length + gap);
+  return out;
+}
+
+async function uploadFullFinal(answerId, audioChunks, rate){
+  if (!answerId || !audioChunks || !audioChunks.length) return;
+  try {
+    const wav = encodeWav(audioChunks, rate);
+    const fd = new FormData();
+    fd.append("session_id", sid);
+    fd.append("answer_id", answerId);
+    fd.append("audio", wav, "answer.wav");
+    await fetchT(`${API}/stream/finalize`, {method:"POST", body:fd}, 120000);
+  } catch(e) {
+    console.warn("full finalize upload failed; server fallback will be used", e);
+  }
+}
+
+async function uploadAnswerBg(blob, questionIndex){
+  for (let attempt = 0; attempt < 2; attempt++){
+    try {
+      const fd = new FormData();
+      fd.append("session_id", sid);
+      fd.append("question_index", String(questionIndex));
+      fd.append("audio", blob, "answer.wav");
+      const r = await fetchT(`${API}/answer-bg`, {method:"POST", body:fd}, 120000);
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    } catch(e) {
+      console.warn("answer-bg failed", e, "attempt", attempt + 1);
+      if (attempt === 0) await new Promise(r => setTimeout(r, 300));
+      else { $("live").textContent = "本轮回传失败：" + e.message; return null; }
+    }
+  }
+}
+
+function finalizePlanAnswer(blob, rate){
+  const answerIndex = planIndex;
+  // Process the previous recording in the background while the next
+  // pre-generated interviewer audio starts immediately.
+  uploadAnswerBg(blob, answerIndex);
+  busy = false; updateControls();
+  if (answerIndex + 1 < plan.length){
+    planIndex = answerIndex + 1;
+    currentIndex = planIndex;
+    const p = plan[planIndex];
+    phase = "speaking";
+    $("progress").textContent = planProgressText(planIndex);
+    $("question").textContent = p.text;
+    $("hint").textContent = p.depth ? "面试官在追问，听完直接回答。" : "上一轮录音在后台转写/评分；听完直接回答。";
+    $("micState").textContent = "聆听中";
+    $("live").textContent = "上一轮录音后台处理中…";
+    $("liveScore").textContent = "上一轮评分中…";
+    $("liveTranscript").textContent = "—";
+    updateScoreBrief([], planIndex);
+    playAudioB64(p.audio_b64, p.text, () => setTimeout(beginListening, 250));
+  } else {
+    planIndex = plan.length;
+    phase = "done";
+    finishCall(null);
+  }
+}
+
+async function finalizeAnswer(blob, turnChunks, rate){
+  if (!callActive) return;
+  const hadStream = !!(streamTimer || streamPoll || streamMode);
+  try {
+    if (hadStream){
+      let d = await stopStream();
+      if (!d){
+        // The server may have accepted the first stop and the response got
+        // lost. Retry: /stream/stop is idempotent and returns the recovered
+        // next question + answer_id instead of processing the next question.
+        await new Promise(r => setTimeout(r, 250));
+        d = await stopStream();
+      }
+      if (d){
+        if (d.followup){
+          followupChunks = turnChunks;
+          followupRate = rate;
+          handleAnswerResponse(d);
+          return;
+        }
+        let allChunks = turnChunks, allRate = rate;
+        if (followupChunks){
+          allChunks = combineChunks(followupChunks, turnChunks, rate);
+          followupChunks = null; followupRate = null;
+        }
+        handleAnswerResponse(d);
+        if (d.answer_id) uploadFullFinal(d.answer_id, allChunks, allRate);
+        return;
+      }
+      // Never fall back to /api/answer after a stream stop attempt: the stop
+      // may already have advanced the session, which would double-process the
+      // next question and corrupt the transcript.
+      busy = false; updateControls();
+      $("micState").textContent = "聆听中";
+      $("live").textContent = "网络异常，未能确认本轮结束；请点“结束回答”重试或挂断。";
+      $("liveScore").textContent = "网络异常";
+      return;
+    }
+    followupChunks = null; followupRate = null;
+    await uploadAnswer(blob);
+  } catch(e) {
+    console.warn("finalize answer failed", e);
+    busy = false; updateControls();
+    $("live").textContent = "这一轮处理超时，继续听下一轮…";
+    if (callActive) setTimeout(beginListening, 900);
+  }
+}
+
+function releaseAudio(){
+  if (currentSource){
+    currentSource.onended = null;
+    try { currentSource.stop(); } catch(e){}
+    currentSource = null;
+  }
+  speaking = false;
+  try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch(e){}
+  if (streamTimer){ clearInterval(streamTimer); streamTimer = null; }
+  if (streamPoll){ clearInterval(streamPoll); streamPoll = null; }
+  if (reportPoll){ clearInterval(reportPoll); reportPoll = null; }
+  streamMode = false; streamQueue = [];
+  if (vadTimer){ clearInterval(vadTimer); vadTimer = null; }
+  recording = false;
+  if (stream){
+    try { stream.getTracks().forEach(t => t.stop()); } catch(e){}
+    stream = null;
+  }
+  try { if (processor) processor.disconnect(); } catch(e){}
+  try { if (source) source.disconnect(); } catch(e){}
+  processor = null; source = null; analyser = null; silentGain = null;
+  $("dot").classList.remove("live");
+  $("stopBtn").disabled = true;
+  $("meter").style.width = "0%";
+}
+
+window.hangUp = hangUp;
+function hangUp(){
+  if (!callActive) return;
+  const wasActive = callActive;
+  if (sessionPoll){ clearInterval(sessionPoll); sessionPoll = null; }
+  if (reportPoll){ clearInterval(reportPoll); reportPoll = null; }
+  releaseAudio();
+  callActive = false; phase = "done"; busy = false;
+  followupChunks = null; followupRate = null;
+  $("hangupBtn").classList.add("hidden");
+  $("micState").textContent = "已挂断";
+  $("live").textContent = wasActive ? "电话已挂断。点“接听电话”重新开始。" : "未接通。";
+  if (wasActive) $("question").textContent = "电话已挂断。";
+  updateControls();
+  hide($("main")); show($("callGate"));
+}
+
+function finishCall(overall){
+  releaseAudio();
+  callActive = false; phase = "done"; busy = false;
+  followupChunks = null; followupRate = null;
+  $("hangupBtn").classList.add("hidden");
+  $("question").textContent = "面试结束。";
+  $("hint").textContent = "可以查看本轮记录，或“再面一次”。";
+  $("micState").textContent = "已完成"; $("live").textContent = "电话已结束，评分/报告在后台生成。";
+  hide($("heroCard")); hide($("micCard")); hide($("liveCard"));
+  showFinal(overall);
+  startReportPolling();
+  updateControls();
+}
+
+async function pollSession(){
+  if (!sid) return;
+  try {
+    const r = await fetch(`${API}/session/${encodeURIComponent(sid)}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    for (const item of (d.results || [])){
+      if (item.pending || renderedQids.has(item.question_id)) continue;
+      renderedQids.add(item.question_id);
+      if (item.transcript) addTurn("你（ASR）", item.transcript, null);
+      if (item.scores) renderResult(item);
+    }
+    updateScoreBrief(d.results || [], planIndex);
+    if (d.overall) showFinal(d.overall);
+    if (d.overall && ["ready", "error"].includes(d.report_status)){
+      if (sessionPoll){ clearInterval(sessionPoll); sessionPoll = null; }
+    }
+  } catch(e){}
+}
+
+function startReportPolling(){
+  if (!sid) return;
+  $("reportStatus").textContent = "报告生成中…";
+  $("viewReportBtn").disabled = true;
+  if (reportPoll) clearInterval(reportPoll);
+  const tick = async () => {
+    try {
+      const r = await fetch(`${API}/report/${encodeURIComponent(sid)}`);
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d.markdown){
+        reportMarkdown = d.markdown;
+        $("reportStatus").textContent = d.status === "ready" ? "报告已生成" : "报告已生成（降级）";
+        $("viewReportBtn").disabled = false;
+        clearInterval(reportPoll); reportPoll = null;
+      } else {
+        $("reportStatus").textContent = d.status === "running" ? "报告生成中…" : "报告排队中…";
+      }
+    } catch(e){}
+  };
+  tick();
+  reportPoll = setInterval(tick, 2000);
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+const PROMPT_LEAKS = [
+  /以下是王静怡[^。！？!?；;]*[。！？!?；;]?/g,
+  /Morgan Stanley MSSC[^。！？!?；;]*[。！？!?；;]?/g,
+  /涉及鸥贝云[^。！？!?；;]*[。！？!?；;]?/g,
+  /三表模型、GMV[^。！？!?；;]*[。！？!?；;]?/g,
+  /take rate、紫金黄金[^。！？!?；;]*[。！？!?；;]?/g,
+  /摩根士丹利、DCF[^。！？!?；;]*[。！？!?；;]?/g
+];
+
+function stripPromptLeak(text){
+  let t = String(text || "");
+  for (const re of PROMPT_LEAKS) t = t.replace(re, "");
+  return t.trim();
+}
+
+function sentenceLines(text){
+  // One answer = one paragraph. Keep ASR punctuation, never insert <br>.
+  const raw = stripPromptLeak(String(text || "").trim());
+  return raw ? escapeHtml(raw) : "—";
+}
+
+function updateScoreBrief(results, answeredCount){
+  const list = Array.isArray(results) ? results : [];
+  const byIndex = new Map();
+  list.forEach((r, i) => byIndex.set(r.question_index != null ? r.question_index : i, r));
+  const parts = [];
+  for (let i = 0; i < Math.max(0, answeredCount); i++){
+    const r = byIndex.get(i);
+    const sc = r && r.scores ? r.scores.overall : null;
+    const cls = sc == null ? "pending" : scoreClass(sc);
+    parts.push(`<span class="sb ${cls}">Q${i+1} ${sc == null ? "…" : fmt(sc)}</span>`);
+  }
+  const hint = `<span class="sbd">点击查看详情</span>`;
+  $("scoreBrief").innerHTML = (parts.length ? `已答：${parts.join("")}` : "已答：—") + hint;
+}
+
+function scoreChip(label, val, cls){
+  return `<span class="chip ${cls || ""}">${label} ${val == null ? "—" : fmt(val)}</span>`;
+}
+
+function renderScoreDetail(session, answeredCount){
+  const results = Array.isArray(session.results) ? session.results : [];
+  const byIndex = new Map();
+  results.forEach((r, i) => byIndex.set(r.question_index != null ? r.question_index : i, r));
+  const count = Math.max(0, Math.min(answeredCount, plan.length || answeredCount));
+  if (!count){
+    $("scoreDetailBody").innerHTML = `<div class="status">还没有已回答的题目。</div>`;
+    return;
+  }
+  const html = [];
+  for (let i = 0; i < count; i++){
+    const r = byIndex.get(i);
+    const qtext = (plan[i] && plan[i].text) || (r && r.question) || `第 ${i+1} 题`;
+    html.push(`<div class="sd-item"><div class="sd-head"><span class="sd-q">Q${i+1} · ${escapeHtml(qtext)}</span>`);
+    if (!r || r.pending){
+      html.push(`<span class="chip">评分中…</span></div><div class="status">这一轮的完整录音正在转写/评分，完成后自动刷新。</div></div>`);
+      continue;
+    }
+    const sc = r.scores || {};
+    const ai = r.agent_scoring && r.agent_scoring.consensus;
+    html.push(`<span class="sd-chips">${scoreChip("Overall", sc.overall, scoreClass(sc.overall || 0))}${scoreChip("Content", sc.content)}${scoreChip("Delivery", sc.delivery)}${ai ? scoreChip("AI", ai.overall) : ""}</span></div>`);
+    html.push(`<div class="sd-transcript">${escapeHtml(stripPromptLeak(r.transcript || r.answer || "—"))}</div>`);
+    const m = r.metrics || {};
+    html.push(`<div class="sd-metrics">
+      <div class="sd-metric"><div class="k">Pace</div><div class="v">${m.pace == null ? "—" : m.pace} ${m.pace_unit || ""}</div></div>
+      <div class="sd-metric"><div class="k">Filler</div><div class="v">${m.filler_count == null ? "—" : m.filler_count}</div></div>
+      <div class="sd-metric"><div class="k">Speech</div><div class="v">${m.speech_ratio == null ? "—" : Math.round(m.speech_ratio * 100) + "%"}</div></div>
+      <div class="sd-metric"><div class="k">ASR logprob</div><div class="v">${m.avg_logprob == null ? "—" : m.avg_logprob}</div></div>
+    </div>`);
+    if (r.feedback && r.feedback.length){
+      html.push(`<div class="status"><b>反馈</b><ul>${r.feedback.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul></div>`);
+    }
+    if (r.missing && r.missing.length){
+      html.push(`<div class="status">缺失关键点：${escapeHtml(r.missing.slice(0, 8).join("、"))}</div>`);
+    }
+    if (r.agent_scoring && r.agent_scoring.third_agent){
+      html.push(`<div class="status">AI 双评委分歧超过 1.0，已启用第三评委。</div>`);
+    }
+    html.push(`</div>`);
+  }
+  $("scoreDetailBody").innerHTML = html.join("\n")
+}
+
+async function openScoreDetail(){
+  if (!sid) return;
+  show($("scoreDetailModal"));
+  $("scoreDetailBody").innerHTML = `<div class="status">正在读取已答题目…</div>`;
+  const tick = async () => {
+    try {
+      const r = await fetchT(`${API}/session/${encodeURIComponent(sid)}`, {}, 15000);
+      if (!r.ok) return;
+      renderScoreDetail(await r.json(), planIndex);
+    } catch(e){}
+  };
+  await tick();
+  if (scoreDetailPoll) clearInterval(scoreDetailPoll);
+  scoreDetailPoll = setInterval(tick, 1500);
+}
+
+function closeScoreDetail(){
+  if (scoreDetailPoll){ clearInterval(scoreDetailPoll); scoreDetailPoll = null; }
+  hide($("scoreDetailModal"));
+}
+
+function mdToHtml(md){
+  const lines = (md || "").replace(/\r\n/g, "\n").split("\n");
+  const out = [];
+  let i = 0;
+  const inline = t => escapeHtml(t)
+    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+  while (i < lines.length){
+    const line = lines[i];
+    if (!line.trim()){ i++; continue; }
+    const h = line.match(/^(#{1,3})\s+(.*)$/);
+    if (h){ out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); i++; continue; }
+    if (line.trim().startsWith("|") && i + 1 < lines.length && /^\s*\|?\s*:?-{3,}/.test(lines[i+1])){
+      const rows = [];
+      while (i < lines.length && lines[i].trim().startsWith("|")){ rows.push(lines[i]); i++; }
+      const cells = r => r.trim().replace(/^\||\|$/g, "").split("|").map(x => x.trim());
+      let html = "<table>";
+      if (rows.length){
+        html += "<thead><tr>" + cells(rows[0]).map(x=>`<th>${inline(x)}</th>`).join("") + "</tr></thead><tbody>";
+        for (let j=2;j<rows.length;j++) html += "<tr>" + cells(rows[j]).map(x=>`<td>${inline(x)}</td>`).join("") + "</tr>";
+      }
+      out.push(html + "</tbody></table>");
+      continue;
+    }
+    if (/^\s*[-*]\s+/.test(line)){
+      out.push("<ul>");
+      while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])){
+        out.push(`<li>${inline(lines[i].replace(/^\s*[-*]\s+/, ""))}</li>`); i++;
+      }
+      out.push("</ul>");
+      continue;
+    }
+    out.push(`<p>${inline(line)}</p>`);
+    i++;
+  }
+  return out.join("\n");
+}
+
+function openReport(){
+  if (!reportMarkdown) return;
+  $("reportHtml").innerHTML = mdToHtml(stripPromptLeak(reportMarkdown));
+  show($("reportModal"));
+}
+
+function addTurn(who, text, result){
+  const div = document.createElement("div");
+  div.className = "section";
+  div.innerHTML = `<div class="status"><b>${who}</b></div><div class="quote">${sentenceLines(text)}</div>`;
+  $("turns").appendChild(div);
+}
+function renderResult(r){
+  const s = r.scores || {};
+  const div = document.createElement("div");
+  div.className = "section";
+  const fb = (r.feedback || []).map(x=>`<li>${escapeHtml(x)}</li>`).join("");
+  div.innerHTML = `
+    <div class="hero">
+      <div><div class="status">本题得分</div><div class="q score ${scoreClass(s.overall||0)}">${fmt(s.overall||0)} / 5</div></div>
+      <div><span class="chip">content ${fmt(s.content||0)}</span><span class="chip">delivery ${fmt(s.delivery||0)}</span></div>
+    </div>
+    <div class="grid">
+      <div class="stat"><div class="k">Pace</div><div class="v">${r.metrics?.pace ?? "—"} ${r.metrics?.pace_unit || ""}</div></div>
+      <div class="stat"><div class="k">Filler</div><div class="v">${r.metrics?.filler_count ?? 0}</div></div>
+      <div class="stat"><div class="k">Speech</div><div class="v">${Math.round((r.metrics?.speech_ratio || 0)*100)}%</div></div>
+      <div class="stat"><div class="k">ASR logprob</div><div class="v">${r.metrics?.avg_logprob ?? "—"}</div></div>
+    </div>
+    ${fb ? `<div class="status"><b>Feedback</b><ul>${fb}</ul></div>` : ""}
+    ${r.ideal ? `<details class="status"><summary>参考要点</summary><div style="line-height:1.7">${escapeHtml(r.ideal)}</div></details>` : ""}
+  `;
+  $("turns").appendChild(div);
+}
+function showFinal(overall){
+  show($("finalCard"));
+  if (!overall){
+    $("finalScore").textContent = "评分中…";
+    $("finalVerdict").textContent = "转写、规则分和 AI 双评在后台进行，不会影响下一题。";
+    $("finalMeta").innerHTML = "";
+    return;
+  }
+  $("finalScore").innerHTML = `<span class="${scoreClass(overall.overall)}">${fmt(overall.overall)} / 5</span>`;
+  $("finalVerdict").textContent = overall.verdict || "";
+  $("finalMeta").innerHTML = `<span class="chip">content ${fmt(overall.content)}</span><span class="chip">delivery ${fmt(overall.delivery)}</span><span class="chip">${overall.questions} questions</span>`;
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && audioCtx && audioCtx.state === "suspended"){
+    audioCtx.resume().catch(()=>{});
+  }
+});
+
+let puppyRec = null, puppyStream = null, puppyChunks = [], puppyPrompt = null, puppyPoll = null;
+
+function puppySetStatus(text){
+  const el = $("puppyVoiceStatus"); if (el) el.textContent = text;
+}
+function puppySetMsg(text){
+  const el = $("puppyBuildMsg"); if (el) el.textContent = text;
+}
+function renderPuppyPrompts(prompts, force=false){
+  const box = $("puppyPrompts");
+  if (!box || !Array.isArray(prompts)) return;
+  if (box.dataset.rendered && !force) return;
+  box.innerHTML = "";
+  prompts.forEach(p => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff";
+    const t = document.createElement("div");
+    t.className = "status";
+    t.style.flex = "1";
+    t.textContent = p.text;
+    const b = document.createElement("button");
+    b.className = "btn btn-soft";
+    b.textContent = "开始录音";
+    b.addEventListener("click", () => togglePuppyRecord(p, b));
+    row.appendChild(t); row.appendChild(b); box.appendChild(row);
+  });
+  box.dataset.rendered = "1";
+}
+async function refreshPuppyStatus(){
+  try {
+    const r = await fetchT(`${API}/voice/puppy/status`, {cache:"no-store"}, 60000);
+    if (!r.ok) throw new Error("status " + r.status);
+    const d = await r.json();
+    const opt = $("puppyVoiceOption");
+    if (opt){
+      if (d.pack_ready){
+        opt.disabled = false;
+        opt.textContent = "Puppy（本人声纹）";
+      } else {
+        opt.disabled = true;
+        opt.textContent = "Puppy（本人声纹，待生成）";
+        if (opt.selected && $("voiceSel")) $("voiceSel").value = "female_pro";
+      }
+    }
+    const batch = (d.batch_count ? ` · 语料 ${d.batch_index + 1}/${d.batch_count}` : "");
+    const pr = d.progress || {done:0,total:0,percent:0};
+    puppySetStatus(`${d.sample_count || 0} 段样本 · ${d.pack_ready ? "Puppy 音色可用" : "Puppy 音色尚未可用"}${batch}${d.building ? " · 正在后台生成…" : ""}`);
+    const bar = $("puppyProgressBar"), ptxt = $("puppyProgressText");
+    if (bar) bar.style.width = `${pr.percent || 0}%`;
+    if (ptxt) ptxt.textContent = `语音生成进度：${pr.done || 0}/${pr.total || 0} 条（${(pr.percent || 0).toFixed ? pr.percent.toFixed(1) : pr.percent}%）`;
+    renderPuppyPrompts(d.prompts, false);
+    const build = $("puppyBuildBtn");
+    if (build) build.disabled = !d.sample_count || !!d.building;
+    if (d.building){
+      puppySetMsg("正在生成全部题目的 Puppy 音频，约需几分钟…");
+      if (!puppyPoll) puppyPoll = setInterval(refreshPuppyStatus, 4000);
+    } else {
+      if (puppyPoll){ clearInterval(puppyPoll); puppyPoll = null; }
+      if (d.pack_ready) puppySetMsg("全部题目语音已生成，Puppy 音色可在顶部声音里选择。");
+      else if (d.build_status === "done") puppySetMsg("生成结束，但仍有缺失音频；请重新生成或查看后台日志。");
+      else if (d.build_status === "error") puppySetMsg("生成失败，请查看后台日志。");
+    }
+  } catch(e){
+    puppySetStatus("无法读取声纹状态：" + e.message);
+  }
+}
+async function togglePuppyRecord(prompt, btn){
+  if (puppyRec && puppyRec.state === "recording"){
+    puppyRec.stop();
+    return;
+  }
+  try {
+    puppyStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    puppyChunks = [];
+    puppyPrompt = prompt;
+    const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "";
+    puppyRec = mime ? new MediaRecorder(puppyStream, {mimeType:mime}) : new MediaRecorder(puppyStream);
+    puppyRec.ondataavailable = ev => { if (ev.data && ev.data.size) puppyChunks.push(ev.data); };
+    puppyRec.onstop = async () => {
+      const blob = new Blob(puppyChunks, {type:puppyRec.mimeType || "audio/webm"});
+      try { puppyStream.getTracks().forEach(t => t.stop()); } catch(e){}
+      puppyStream = null; puppyRec = null;
+      btn.textContent = "上传中…"; btn.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append("prompt_id", puppyPrompt.id);
+        fd.append("text", puppyPrompt.text);
+        fd.append("audio", blob, "sample.webm");
+        const r = await fetchT(`${API}/voice/puppy/sample`, {method:"POST", body:fd}, 120000);
+        if (!r.ok) {
+          const txt = await r.text();
+          let msg = txt;
+          try { msg = (JSON.parse(txt).detail || txt); } catch(e){}
+          throw new Error(msg);
+        }
+        btn.textContent = "已录入";
+        puppySetMsg("样本已保存。可以继续录其他语料，或生成音色。");
+        await refreshPuppyStatus();
+      } catch(e){
+        btn.textContent = "开始录音"; btn.disabled = false;
+        puppySetMsg("上传失败：" + e.message);
+      }
+    };
+    puppyRec.start();
+    btn.textContent = "停止录音";
+    puppySetMsg("正在录音：" + prompt.id);
+  } catch(e){
+    puppySetMsg("无法打开麦克风：" + e.message);
+  }
+}
+async function refreshPuppyCorpus(){
+  if (puppyRec && puppyRec.state === "recording"){
+    puppySetMsg("请先停止录音，再刷新语料。");
+    return;
+  }
+  try {
+    puppySetMsg("正在换一组语料…");
+    const r = await fetchT(`${API}/voice/puppy/refresh`, {method:"POST"}, 20000);
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    renderPuppyPrompts(d.prompts, true);
+    puppySetMsg(`已切换到第 ${d.batch_index + 1}/${d.batch_count} 组语料；之前的样本仍保留。`);
+    await refreshPuppyStatus();
+  } catch(e){
+    puppySetMsg("刷新语料失败：" + e.message);
+  }
+}
+async function buildPuppyVoice(){
+  try {
+    puppySetMsg("提交生成任务…");
+    const r = await fetchT(`${API}/voice/puppy/build`, {method:"POST"}, 30000);
+    if (!r.ok) throw new Error(await r.text());
+    puppySetMsg("已提交，正在生成…");
+    await refreshPuppyStatus();
+  } catch(e){ puppySetMsg("提交失败：" + e.message); }
+}
+function initPuppyVoice(){
+  const card = $("puppyVoiceCard");
+  if (card) show(card);
+  const build = $("puppyBuildBtn");
+  if (build) build.addEventListener("click", buildPuppyVoice);
+  const refresh = $("puppyRefreshBtn");
+  if (refresh) refresh.addEventListener("click", refreshPuppyStatus);
+  const refreshCorpus = $("puppyRefreshCorpusBtn");
+  if (refreshCorpus) refreshCorpus.addEventListener("click", refreshPuppyCorpus);
+  refreshPuppyStatus();
+}
+
+async function init(){
+  try {
+    const s = await fetch("/api/session", {cache:"no-store"}).then(r => r.json());
+    if (s && s.session) user = s.session.user;
+  } catch(e){}
+  // 让 GitHub Pages 入口页把地址栏同步为 /kitten/KittenPuppy4Ever/mock/
+  try { if (window.parent !== window) window.parent.postMessage({dashPath:"/mock/"}, "*"); } catch(e){}
+  // 身份由根壳（/api/login 会话）统一校验，页面内不再有独立登录门禁
+  show($("callGate"));
+  show($("voiceRow"));
+  const vs = $("voiceSel");
+  vs.value = "female_pro";
+  const savedVoice = localStorage.getItem("ms_mock_voice");
+  if (["female_pro", "female", "male_pro", "male", "puppy", "piper"].includes(savedVoice)) vs.value = savedVoice;
+  vs.addEventListener("change", () => localStorage.setItem("ms_mock_voice", vs.value));
+  const ls = $("langSel");
+  ls.value = "auto";
+  const savedLang = localStorage.getItem("ms_mock_lang");
+  if (["auto", "zh", "en"].includes(savedLang)) ls.value = savedLang;
+  ls.addEventListener("change", () => localStorage.setItem("ms_mock_lang", ls.value));
+  const ds = $("difficultySel"), ln = $("lengthSel");
+  const savedDiff = localStorage.getItem("ms_mock_difficulty");
+  if (["easy", "medium", "hard", "stress"].includes(savedDiff)) ds.value = savedDiff;
+  ds.addEventListener("change", () => localStorage.setItem("ms_mock_difficulty", ds.value));
+  const savedLen = localStorage.getItem("ms_mock_length");
+  if (savedLen) ln.value = savedLen;
+  ln.addEventListener("change", () => localStorage.setItem("ms_mock_length", ln.value));
+  if (user === "puppy") {
+    show($("debugCard"));
+    initPuppyVoice();
+  } else {
+    // Puppy voice is selectable by all once the pack exists; only puppy can record.
+    refreshPuppyStatus();
+  }
+  $("callBtn").addEventListener("click", startCall);
+  $("hangupBtn").addEventListener("click", hangUp);
+  $("stopBtn").addEventListener("click", stopAnswer);
+  $("replayBtn").addEventListener("click", () => {
+    if (lastAudioText) playAudioB64(lastAudioB64, lastAudioText, null);
+  });
+  $("viewReportBtn").addEventListener("click", openReport);
+  $("closeReportBtn").addEventListener("click", () => hide($("reportModal")));
+  $("scoreBrief").addEventListener("click", openScoreDetail);
+  $("scoreBrief").addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openScoreDetail(); }
+  });
+  $("closeScoreDetailBtn").addEventListener("click", closeScoreDetail);
+  $("scoreDetailModal").addEventListener("click", e => {
+    if (e.target === $("scoreDetailModal")) closeScoreDetail();
+  });
+  $("restartBtn").addEventListener("click", () => location.reload());
+  $("reviewBtn").addEventListener("click", () => {
+    if (sid) window.open(`${API}/session/${sid}`, "_blank");
+  });
+  updateControls();
+}
+init();
+</script>
+</body>
+</html>

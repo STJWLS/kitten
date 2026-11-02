@@ -1,0 +1,5 @@
+{
+  "base": "json-doc",
+  "desc": "带硬币账本的项目基类：items + coins + log，额外提供 grant/spend",
+  "capabilities": ["state", "action", "audit", "crud", "coins"]
+}

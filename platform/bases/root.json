@@ -1,0 +1,6 @@
+{
+  "id": "root",
+  "title": "KittenPuppy4Ever",
+  "icon": "🐱🐶",
+  "desc": "统一工作台根节点：只负责身份、树、主题与宿主，不承载业务"
+}

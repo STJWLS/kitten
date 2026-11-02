@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>时光漂流瓶 · KittenPuppy4Ever</title>
+<link rel="stylesheet" href="/static/template.css">
+<script>
+(function () {
+  try {
+    var u = localStorage.getItem("kp_login_user") || sessionStorage.getItem("kp_login_user");
+    var t = u && JSON.parse(localStorage.getItem("kp_pubtheme_" + u) || "null");
+    if (!t || !t.accent) return;
+    var vs = {"--accent": t.accent, "--pink": t.soft, "--pink-deep": t.deep, "--mint": t.mint,
+      "--bg": t.bg, "--card": t.card, "--line": t.line, "--ink": t.ink, "--p-accent": t.deep};
+    for (var k in vs) if (vs[k]) document.documentElement.style.setProperty(k, vs[k]);
+    fetch("/api/public-theme?user=" + encodeURIComponent(u), {cache: "no-store"})
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || !j.ok || !j.theme) return;
+        var t2 = j.theme, vs2 = {"--accent": t2.accent, "--pink": t2.soft, "--pink-deep": t2.deep,
+          "--mint": t2.mint, "--bg": t2.bg, "--card": t2.card, "--line": t2.line, "--ink": t2.ink, "--p-accent": t2.deep};
+        for (var k2 in vs2) if (vs2[k2]) document.documentElement.style.setProperty(k2, vs2[k2]);
+      }).catch(function () {});
+  } catch (e) {}
+})();
+</script>
+<style>
+  html, body { height:100%; }
+  html { background: transparent !important; }
+  body { margin:0; background:var(--bg, #f8f4ec) !important; color:var(--ink); font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; overflow:hidden; }
+  body[data-project] { background:var(--bg, #f8f4ec) !important; }
+  .wrap { width:min(1120px, 94vw); height:100vh; margin:0 auto; padding:18px 0 20px; display:flex; flex-direction:column; box-sizing:border-box; }
+  .head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+  .head h1 { font-size:18px; margin:0; }
+  .head .hint { color:var(--muted); font-size:11.5px; }
+  .head .chips { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .chip { border:1px solid var(--line); background:var(--card); border-radius:999px; padding:4px 10px; font-size:11px; color:var(--ink); cursor:default; }
+  button.chip { cursor:pointer; }
+  .stage { position:relative; flex:1; min-height:320px; border-radius:0; overflow:hidden;
+    background:transparent; box-shadow:none; }
+  #pond { display:block; width:100%; height:100%; cursor:grab; touch-action:none; background:transparent !important; }
+  #pond.dragging { cursor:grabbing; }
+  .tip { position:fixed; z-index:20; display:none; width:230px; padding:10px 12px; border-radius:12px;
+    border:1px solid var(--line); background:var(--card); box-shadow:0 16px 36px rgba(0,0,0,.16); pointer-events:none; }
+  .tip.show { display:block; }
+  .tip .to { font-size:12.5px; font-weight:700; display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+  .tip .meta { font-size:10.5px; color:var(--muted); line-height:1.7; margin-top:5px; }
+  .tip .pct { color:var(--accent); font-weight:700; }
+  .foot { margin-top:6px; font-size:10.5px; color:var(--muted); text-align:center; }
+  .locked-toast { position:fixed; z-index:45; display:none; max-width:250px; padding:9px 13px; border-radius:12px;
+    border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line)); background:var(--card); color:var(--ink);
+    font-size:12px; line-height:1.55; text-align:center; box-shadow:0 12px 30px rgba(42,30,55,.18); pointer-events:auto; cursor:pointer; }
+  .locked-toast.show { display:block; animation:toastIn .2s cubic-bezier(.22,1,.36,1) both; }
+  .locked-toast::after { content:""; position:absolute; left:50%; bottom:-6px; width:10px; height:10px; transform:translateX(-50%) rotate(45deg);
+    background:var(--card); border-right:1px solid color-mix(in srgb,var(--accent) 28%,var(--line)); border-bottom:1px solid color-mix(in srgb,var(--accent) 28%,var(--line)); }
+  @keyframes toastIn { from { opacity:0; transform:translateY(4px) scale(.97); } to { opacity:1; transform:none; } }
+  .archive-panel { flex:0 0 158px; min-height:120px; margin-top:10px; border-top:1px solid var(--line); padding-top:8px; overflow:auto; }
+  .archive-head { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+  .archive-head h2 { font-size:13px; margin:0; }
+  .archive-head .hint { font-size:10.5px; color:var(--muted); }
+  .archive-list { display:grid; gap:6px; }
+  .archive-letter { padding:7px 10px; border:1px solid color-mix(in srgb,var(--accent) 22%,var(--line)); border-left:3px solid var(--accent); border-radius:9px; background:var(--card); font-size:11.5px; line-height:1.6; }
+  .archive-letter .who { color:var(--muted); font-size:10.5px; }
+  .archive-letter .body { margin-top:3px; white-space:pre-wrap; }
+  .archive-empty { color:var(--muted); font-size:11px; padding:8px 2px; }
+  .modal-mask { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(40,35,50,.28); backdrop-filter:blur(4px); z-index:60; padding:18px; }
+  .modal-mask.show { display:flex; }
+  .modal-card { width:min(92vw,430px); max-height:88vh; overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px 16px; box-shadow:0 22px 50px rgba(25,45,55,.24); animation:modalIn .2s cubic-bezier(.22,1,.36,1) both; }
+  @keyframes modalIn { from { opacity:0; transform:translateY(7px) scale(.98); } to { opacity:1; transform:none; } }
+  .modal-card h3 { margin:0 0 4px; font-size:15px; }
+  .modal-card .sub { color:var(--muted); font-size:11px; margin-bottom:10px; }
+  .fld { margin-top:9px; }
+  .fld label { display:block; color:var(--muted); font-size:11px; margin-bottom:4px; }
+  .fld input, .fld select, .fld textarea { width:100%; box-sizing:border-box; }
+  .fld textarea.input {
+    min-height:118px; resize:vertical; box-sizing:border-box;
+    border:1px solid var(--line); border-radius:11px; padding:9px 11px;
+    font:inherit; font-size:12.5px; line-height:1.65; color:var(--ink);
+    background:#fffefb; outline:none; transition:border-color .18s, box-shadow .18s, background .18s;
+  }
+  .fld textarea.input::placeholder { color:var(--muted); opacity:.75; }
+  .fld textarea.input:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+  .msg { min-height:15px; color:var(--pink-deep); font-size:11px; margin-top:7px; }
+  .open-letter { padding:11px 12px; border:1px solid var(--line); border-radius:10px; background:#fffdf8; white-space:pre-wrap; line-height:1.8; font-size:12.5px; }
+  .open-meta { color:var(--muted); font-size:10.5px; text-align:right; margin-top:7px; }
+  .tip .open-hint { color:var(--accent); font-weight:700; margin-top:4px; }
+
+@media (max-width: 760px) {
+  .wrap { width: 96vw; padding: 10px 0 12px; }
+  .head { gap: 6px; margin-bottom: 6px; }
+  .head h1, .head .hint { display: none; }
+  .head .chips { margin-left: 0; width: 100%; gap: 5px; }
+  .chip { font-size: 10px; padding: 3px 8px; }
+  .stage { min-height: 280px; }
+  .archive-panel { flex-basis: 150px; }
+  .foot { display: none; }
+  .tip { width: 200px; }
+}
+</style>
+</head>
+<body data-project="bottle">
+<div class="wrap">
+  <div class="head">
+    <h1>🍾 时光漂流瓶</h1>
+    <span class="hint">圆面积 = 持续时间 · 圆环 = 时间进度 · 拖动后松手有惯性</span>
+    <div class="chips"><span class="chip" id="cnt">—</span><span class="chip" id="rev">—</span><button class="chip" id="compose" type="button">＋ 写一个漂流瓶</button><button class="chip" id="refresh" type="button">刷新</button></div>
+  </div>
+  <div class="stage"><canvas id="pond"></canvas></div>
+  <section class="archive-panel">
+    <div class="archive-head"><h2>已打开</h2><span class="hint" id="acount">—</span></div>
+    <div class="archive-list" id="archive-list"></div>
+    <div class="archive-empty" id="archive-empty">还没有已打开的漂流瓶。</div>
+  </section>
+  <div class="foot">悬停看信息 · 拖动圆环 · 双击已到期的圆环打开</div>
+</div>
+<div class="tip" id="tip"></div>
+<div class="locked-toast" id="locked-toast"></div>
+
+<div class="modal-mask" id="compose-modal">
+  <div class="modal-card">
+    <h3>写一个漂流瓶</h3>
+    <div class="sub">收件人可以是自己，也可以是别人；到开启日才能打开。</div>
+    <div class="fld"><label>收件人</label><select id="c-to"></select></div>
+    <div class="fld"><label>开启日期</label><input type="date" id="c-open"></div>
+    <div class="fld"><label>想说的话</label><textarea class="input" id="c-message" placeholder="写下此刻想留给未来的话…"></textarea></div>
+    <div class="msg" id="c-msg"></div>
+    <div class="modal-actions"><button class="chip" id="c-cancel" type="button">先不写</button><button class="chip" id="c-save" type="button">封进瓶子</button></div>
+  </div>
+</div>
+<div class="modal-mask" id="open-modal">
+  <div class="modal-card">
+    <h3 id="o-title">打开漂流瓶</h3>
+    <div class="sub" id="o-sub">—</div>
+    <div class="open-letter" id="o-message"></div>
+    <div class="open-meta" id="o-meta"></div>
+    <div class="modal-actions"><button class="chip" id="o-close" type="button">收下这句话</button></div>
+  </div>
+</div>
+
+<script>
+const API = "/api/p/bottle";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = (v) => v ? new Date(v.length === 10 ? v + "T00:00:00" : v).toLocaleDateString("zh-CN") : "—";
+const token = localStorage.getItem("kp_token") || "";
+const f = window.fetch;
+window.fetch = (u, o) => { o = o || {}; const h = new Headers(o.headers || {}); if (token) h.set("Authorization", "Bearer " + token); o.headers = h; return f(u, o); };
+async function call(path, opts) {
+  const r = await fetch(path, Object.assign({cache:"no-store"}, opts || {}));
+  const j = await r.json().catch(() => ({ok:false,error:{message:"非 JSON"}}));
+  if (!j.ok) throw new Error((j.error && j.error.message) || ("HTTP " + r.status));
+  return j;
+}
+
+let bottles = [], people = [], rev = 0, me = "", birthday = "";
+let W = 1, H = 1, dpr = 1;
+let circles = [], drag = null, hover = null;
+const canvas = $("#pond"), ctx = canvas.getContext("2d");
+const tip = $("#tip");
+const lockedToast = $("#locked-toast");
+let lockedToastHide = null, lockedToastCircle = null, lockedToastIndex = 0;
+const SPAWN_DUR = 1350, OPEN_DUR = 2000;
+let pendingPos = null;
+let pendingArchiveId = null;
+let birthdayCompose = false;
+let savedPositions = {};
+let serverLayout = {};
+let layoutServeTimer = null;
+
+function themeColor(u) {
+  const p = people.find(x => x.user === u);
+  return (p && (p.deep || p.color)) || "#8fb3e8";
+}
+function nameOf(u) { const p = people.find(x => x.user === u); return (p && p.emoji ? p.emoji + " " : "") + (u || "—"); }
+function durationDays(b) {
+  const a = new Date(b.createdAt).getTime(), z = new Date(b.openAt + "T00:00:00").getTime();
+  return Math.max(1, (z - a) / 86400000);
+}
+function progress(b) {
+  const a = new Date(b.createdAt).getTime(), z = new Date(b.openAt + "T00:00:00").getTime();
+  return Math.max(0, Math.min(1, (Date.now() - a) / Math.max(1, z - a)));
+}
+function circleScale() {
+  return Math.max(.42, Math.min(1, W / 980, H / 620));
+}
+function resize() {
+  const r = canvas.getBoundingClientRect();
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = r.width; H = r.height;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  for (const c of circles) {
+    c.x = Math.max(c.r + 2, Math.min(W - c.r - 2, c.x));
+    c.y = Math.max(c.r + 2, Math.min(H - c.r - 2, c.y));
+  }
+}
+function positionKey() { return "kp_bottle_positions:" + (me || "anon"); }
+function loadPositions() {
+  let local = {};
+  try { local = JSON.parse(localStorage.getItem(positionKey()) || "{}") || {}; } catch (e) {}
+  // Same-browser local copy is the newest; server is used on a fresh device.
+  if (local && Object.keys(local).length) return local;
+  return serverLayout || {};
+}
+function collectPositions() {
+  const out = {};
+  for (const c of circles) {
+    if (!c.b || !c.b.id) continue;
+    out[c.b.id] = { x: +(c.x / Math.max(1, W)).toFixed(5), y: +(c.y / Math.max(1, H)).toFixed(5) };
+  }
+  return out;
+}
+async function pushPositions(positions, keepalive) {
+  if (!me) return;
+  try {
+    const j = await call(API + "/action", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ action: "save_positions", rev: rev, payload: { positions } }),
+      keepalive: !!keepalive
+    });
+    if (j && j.rev) rev = j.rev;
+  } catch (e) {
+    // A stale rev can happen if another tab changed the module. Refresh rev and retry once.
+    try {
+      const st = await call(API + "/state");
+      rev = st.rev;
+      const j = await call(API + "/action", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ action: "save_positions", rev: rev, payload: { positions } })
+      });
+      if (j && j.rev) rev = j.rev;
+    } catch (_) {}
+  }
+}
+function savePositions(immediate) {
+  if (!me) return;
+  const positions = collectPositions();
+  try { localStorage.setItem(positionKey(), JSON.stringify(positions)); } catch (e) {}
+  if (layoutServeTimer) { clearTimeout(layoutServeTimer); layoutServeTimer = null; }
+  if (immediate) pushPositions(positions, true);
+  else layoutServeTimer = setTimeout(() => pushPositions(positions), 320);
+}
+function seed() {
+  const pool = bottles.filter(b => !b.opened);
+  savedPositions = loadPositions();
+  const K = 22; // area = durationDays * K
+  circles = pool.map((b, i) => {
+    const rScale = circleScale();
+    // Short-duration bottles still need a visible, tappable ring.
+    const rawArea = Math.max(90, durationDays(b) * K) * rScale * rScale;
+    const r = Math.max(18, Math.sqrt(rawArea / Math.PI));
+    const area = Math.PI * r * r;
+    let x = W * (0.12 + ((i * 37 + 11) % 76) / 100);
+    let y = H * (0.18 + ((i * 53 + 7) % 58) / 100);
+    const sp = savedPositions[b.id];
+    if (sp && Number.isFinite(sp.x) && Number.isFinite(sp.y)) {
+      x = Math.max(r + 2, Math.min(W - r - 2, sp.x * W));
+      y = Math.max(r + 2, Math.min(H - r - 2, sp.y * H));
+    }
+    return { b, x, y, vx: 0, vy: 0, r, area, mass: area, color: themeColor(b.from),
+             phase: Math.random() * Math.PI * 2, seed: i, active: true, anim: null };
+  });
+  resolveAll();
+  $("#cnt").textContent = pool.length + " 个未打开";
+  $("#rev").textContent = "rev " + rev;
+  renderArchive();
+}
+function resolveAll() {
+  for (const c of circles) {
+    c.x = Math.max(c.r + 2, Math.min(W - c.r - 2, c.x));
+    c.y = Math.max(c.r + 2, Math.min(H - c.r - 2, c.y));
+  }
+  for (let k = 0; k < 4; k++) {
+    for (let i=0;i<circles.length;i++) for (let j=i+1;j<circles.length;j++) {
+      const a=circles[i], b=circles[j], dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy), min=a.r+b.r+2;
+      if (d>0 && d<min) { const nx=dx/d, ny=dy/d, push=(min-d)/2; a.x-=nx*push; a.y-=ny*push; b.x+=nx*push; b.y+=ny*push; }
+    }
+  }
+}
+
+function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+function sCorkLift(r) { return Math.max(18, r * .75); }
+function art(c) {
+  const {x,y,r,b,color} = c;
+  const now = performance.now();
+  let ringProg = progress(b), ringColor = color, ringAlpha = 1, scale = 1, alpha = 1, showRing = true, corkAlpha = 1, corkLift = 0, openMouth = false;
+  if (c.anim && c.anim.type === "spawn") {
+    const p = Math.max(0, Math.min(1, (now - c.anim.t0) / SPAWN_DUR));
+    if (p < .28) {
+      scale = .18 + .82 * easeOut(p / .28); showRing = false;
+    } else if (p < .62) {
+      const q = (p - .28) / .34;
+      ringProg = q; ringColor = "rgba(135,135,145,.9)"; ringAlpha = .95;
+    } else {
+      const q = (p - .62) / .38;
+      ringProg = 1; ringColor = "rgba(135,135,145,.9)"; ringAlpha = 1 - q;
+      scale = 1 + .5 * Math.sin(Math.PI * q);
+    }
+  } else if (c.anim && c.anim.type === "open") {
+    const p = Math.max(0, Math.min(1, (now - c.anim.t0) / OPEN_DUR));
+    ringColor = "#3fbf78";
+    if (p < .50) {
+      ringProg = Math.min(1, p / .50);
+    } else if (p < .65) {
+      const q = (p - .50) / .15;
+      ringProg = 1; ringAlpha = 0;
+      corkAlpha = 1 - q;                 // cork: fade + pull upward
+      corkLift = q * sCorkLift(r);
+    } else if (p < .84) {
+      // 0.3–0.5s gap: cork gone, ring gone, bottle just sits open
+      ringProg = 1; ringAlpha = 0; corkAlpha = 0; openMouth = true;
+    } else {
+      const q = (p - .84) / .16;
+      ringProg = 1; ringAlpha = 0; corkAlpha = 0; openMouth = true;
+      scale = 1 + .5 * q;                // only then the inner disc grows/fades
+      alpha = 1 - q;
+    }
+  }
+  const ring = Math.max(3, r * .25);
+  const ringR = r - ring * .5;
+  const innerR = r - ring - 3;
+  ctx.save(); ctx.translate(x,y); ctx.scale(scale, scale); ctx.globalAlpha = alpha;
+  ctx.rotate(Math.sin(now/2400 + c.phase) * .035);
+  // shadow for every circle
+  ctx.save();
+  ctx.shadowColor = "rgba(28, 48, 62, .30)";
+  ctx.shadowBlur = Math.max(10, r * .34);
+  ctx.shadowOffsetY = Math.max(4, r * .13);
+  ctx.beginPath(); ctx.arc(0, 0, r - 1, 0, Math.PI*2);
+  ctx.fillStyle = "rgba(255,253,248,.94)"; ctx.fill();
+  ctx.restore();
+  if (showRing && ringAlpha > .01) {
+    ctx.globalAlpha = alpha * ringAlpha;
+    ctx.beginPath(); ctx.arc(0,0,ringR,0,Math.PI*2);
+    ctx.strokeStyle = "rgba(120,110,125,.14)"; ctx.lineWidth = ring; ctx.stroke();
+    if (ringProg > .001) {
+      ctx.beginPath(); ctx.arc(0,0,ringR,-Math.PI/2,-Math.PI/2+ringProg*Math.PI*2);
+      ctx.strokeStyle = ringColor; ctx.lineWidth = ring; ctx.lineCap = "round"; ctx.stroke();
+    }
+    ctx.globalAlpha = alpha;
+  }
+  // inner disc + bottle glyph
+  ctx.beginPath(); ctx.arc(0,0,Math.max(1,innerR),0,Math.PI*2);
+  ctx.fillStyle = "rgba(255,255,255,.54)"; ctx.fill();
+  const s = Math.max(12, Math.min(innerR * .68, 34));
+  ctx.strokeStyle = "rgba(40,64,72,.62)"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-s*.25, -s*.9); ctx.lineTo(-s*.25, -s*.45); ctx.quadraticCurveTo(-s*.62,-s*.3,-s*.62,s*.12); ctx.lineTo(-s*.62,s*.58); ctx.quadraticCurveTo(-s*.62,s*.9,0,s*.9); ctx.quadraticCurveTo(s*.62,s*.9,s*.62,s*.58); ctx.lineTo(s*.62,s*.12); ctx.quadraticCurveTo(s*.62,-s*.3,s*.25,-s*.45); ctx.lineTo(s*.25,-s*.9); ctx.stroke();
+  if (openMouth) {
+    ctx.strokeStyle = "rgba(40,64,72,.35)"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.ellipse(0, -s*.9, s*.22, s*.075, 0, 0, Math.PI*2); ctx.stroke();
+  }
+  if (corkAlpha > .01) {
+    ctx.save();
+    ctx.globalAlpha = alpha * corkAlpha;
+    const cw = s*.50, ch = s*.24, cy = -s*1.04 - corkLift;
+    ctx.save();
+    ctx.translate(0, corkLift * .35);
+    ctx.beginPath();
+    ctx.roundRect(-cw/2, cy, cw, ch, Math.max(2, s*.06));
+    ctx.fillStyle = "#b7895f"; ctx.fill();
+    ctx.strokeStyle = "#8f6847"; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.fillStyle = "rgba(255,238,205,.42)"; ctx.fillRect(-cw*.34, cy + ch*.18, cw*.67, ch*.22);
+    ctx.restore();
+    ctx.restore();
+  }
+  ctx.strokeStyle = color; ctx.globalAlpha = alpha * .75;
+  ctx.beginPath(); ctx.moveTo(-s*.48,s*.15); ctx.lineTo(s*.48,s*.15); ctx.stroke();
+  ctx.globalAlpha = alpha; ctx.fillStyle="#f8e9bf"; ctx.fillRect(-s*.18,s*.22,s*.36,s*.30);
+  ctx.restore();
+}
+function draw() {
+  ctx.clearRect(0,0,W,H);
+  for (const c of circles) art(c);
+}
+function physics(dt) {
+  dt = Math.min(.04, dt);
+  const F = 26; // fixed kinetic friction px/s^2
+  for (const c of circles) {
+    if (drag === c || !c.active || c.anim) continue;
+    const sp = Math.hypot(c.vx, c.vy);
+    if (sp > 0) {
+      const ns = Math.max(0, sp - F * dt);
+      if (ns === 0) { c.vx = 0; c.vy = 0; }
+      else { c.vx *= ns / sp; c.vy *= ns / sp; }
+    }
+    c.x += c.vx * dt; c.y += c.vy * dt;
+  }
+  // walls: elastic 0.9
+  for (const c of circles) {
+    if (drag === c || !c.active || c.anim) continue;
+    if (c.x - c.r < 2) { c.x = 2 + c.r; c.vx = Math.abs(c.vx) * .9; }
+    if (c.x + c.r > W - 2) { c.x = W - 2 - c.r; c.vx = -Math.abs(c.vx) * .9; }
+    if (c.y - c.r < 2) { c.y = 2 + c.r; c.vy = Math.abs(c.vy) * .9; }
+    if (c.y + c.r > H - 2) { c.y = H - 2 - c.r; c.vy = -Math.abs(c.vy) * .9; }
+  }
+  // circle-circle collisions: mass = area, restitution .9
+  for (let i=0;i<circles.length;i++) for (let j=i+1;j<circles.length;j++) {
+    const a=circles[i], b=circles[j];
+    if (!a.active || !b.active || a.anim || b.anim) continue;
+    let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy), min=a.r+b.r;
+    if (d <= 0 || d >= min) continue;
+    const nx=dx/d, ny=dy/d, pen=min-d;
+    const im1=1/a.mass, im2=1/b.mass, inv=im1+im2;
+    if (drag !== a) { a.x -= nx*pen*(im1/inv); a.y -= ny*pen*(im1/inv); }
+    if (drag !== b) { b.x += nx*pen*(im2/inv); b.y += ny*pen*(im2/inv); }
+    const rvx=b.vx-a.vx, rvy=b.vy-a.vy, vn=rvx*nx+rvy*ny;
+    if (vn < 0) {
+      const jimp = -(1.9) * vn / inv;
+      if (drag !== a) { a.vx -= jimp*nx*im1; a.vy -= jimp*ny*im1; }
+      if (drag !== b) { b.vx += jimp*nx*im2; b.vy += jimp*ny*im2; }
+    }
+  }
+}
+
+function hit(x,y) {
+  for (let i=circles.length-1;i>=0;i--) {
+    const c=circles[i]; if (Math.hypot(x-c.x,y-c.y)<=c.r+3) return c;
+  }
+  return null;
+}
+const LOCKED_MESSAGES = [
+  "不是给你的瓶子哦！",
+  "它在等自己的收件人。",
+  "先别拆，这份心意不是漂向你的。",
+  "100% 了，但还不是你的瓶子。",
+  "再等等，也许有属于你的漂流瓶。"
+];
+function hideLockedToast() {
+  lockedToast.classList.remove("show");
+  lockedToastCircle = null;
+  if (lockedToastHide) { clearTimeout(lockedToastHide); lockedToastHide = null; }
+}
+function resetLockedToastTimer() {
+  if (lockedToastHide) clearTimeout(lockedToastHide);
+  lockedToastHide = setTimeout(hideLockedToast, 3000);  // 3s after the last click
+}
+function positionLockedToast(c) {
+  const cr = canvas.getBoundingClientRect();
+  const tw = lockedToast.offsetWidth || 250;
+  lockedToast.style.left = Math.max(10, Math.min(innerWidth - tw - 10, cr.left + c.x - tw / 2)) + "px";
+  lockedToast.style.top = Math.max(10, cr.top + c.y - c.r - 58) + "px";
+}
+function showLockedToast(c) {
+  hideLockedToast();
+  lockedToastCircle = c;
+  lockedToastIndex = 0;
+  lockedToast.textContent = LOCKED_MESSAGES[0];
+  lockedToast.classList.add("show");
+  positionLockedToast(c);
+  resetLockedToastTimer();
+}
+lockedToast.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (!lockedToast.classList.contains("show") || !lockedToastCircle) return;
+  lockedToastIndex = (lockedToastIndex + 1) % LOCKED_MESSAGES.length;
+  lockedToast.textContent = LOCKED_MESSAGES[lockedToastIndex];
+  positionLockedToast(lockedToastCircle);
+  resetLockedToastTimer();
+});
+function showTip(c, x, y) {
+  if (!c) { tip.classList.remove("show"); hover=null; return; }
+  hover=c; const b=c.b;
+  tip.innerHTML = '<div class="to">' + esc(nameOf(b.from)) + ' → ' + esc(nameOf(b.to)) + '</div>' +
+    '<div class="meta">开启日 ' + esc(fmt(b.openAt)) + '<br>持续时间 ' + durationDays(b).toFixed(0) + ' 天 · 进度 <span class="pct">' + Math.round(progress(b)*100) + '%</span></div>' +
+    (b.canOpen ? '<div class="open-hint">点击打开</div>' : '');
+  tip.classList.add("show");
+  const cr = canvas.getBoundingClientRect();
+  const tw = tip.offsetWidth || 230, th = tip.offsetHeight || 70;
+  const centerX = cr.left + c.x;
+  let left = Math.max(8, Math.min(innerWidth - tw - 8, centerX - tw / 2));
+  // Always try below the circle first so the ring stays clickable.
+  let top = cr.top + c.y + c.r + 8;
+  if (top + th > innerHeight - 8) top = cr.top + c.y - c.r - th - 8;
+  top = Math.max(8, Math.min(innerHeight - th - 8, top));
+  tip.style.left = left + "px"; tip.style.top = top + "px";
+}
+function pos(e) { const r=canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+
+let blankDown = null;
+canvas.addEventListener("pointermove", (e) => {
+  const p=pos(e);
+  if (drag) {
+    const now=performance.now(), dt=Math.max(8, now-drag.lastT)/1000;
+    if (Math.hypot(p.x-drag.x, p.y-drag.y) > 4) drag.moved = true;
+    drag.vx = (p.x-drag.x)/dt; drag.vy=(p.y-drag.y)/dt;
+    drag.x=p.x; drag.y=p.y; drag.lastT=now;
+    showTip(null); return;
+  }
+  if (blankDown && Math.hypot(p.x-blankDown.x,p.y-blankDown.y)>6) blankDown=null;
+  const c=hit(p.x,p.y); showTip(c,p.x,p.y);
+  canvas.style.cursor = c ? "grab" : "default";
+});
+canvas.addEventListener("pointerdown", (e) => {
+  const p=pos(e), c=hit(p.x,p.y);
+  if (!c) { blankDown={x:p.x,y:p.y,t:performance.now()}; return; }
+  drag=c; c.moved=false; c.lastT=performance.now(); c.vx=0; c.vy=0; c.x=p.x; c.y=p.y;
+  canvas.classList.add("dragging"); hideTip(); hideLockedToast(); canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener("pointerup", (e) => {
+  const p=pos(e), c=drag, wasBlank=blankDown;
+  drag=null; blankDown=null; canvas.classList.remove("dragging");
+  if (c && c.moved) { savePositions(); setTimeout(savePositions, 260); }
+  if (c && !c.moved) {
+    c.vx=0; c.vy=0;
+    if (c.b.canOpen) { hideLockedToast(); openBottle(c.b.id, c); }
+    else if (progress(c.b) >= .999 && !c.b.opened && c.b.to !== me) { hideTip(); showLockedToast(c); }
+    else showTip(c,p.x,p.y);
+  } else if (!c && wasBlank && Math.hypot(p.x-wasBlank.x,p.y-wasBlank.y)<6 && performance.now()-wasBlank.t<700) {
+    hideTip(); hideLockedToast(); openCompose(false, {x:Math.max(30,Math.min(W-30,p.x)), y:Math.max(30,Math.min(H-30,p.y))});
+  }
+});
+canvas.addEventListener("pointercancel", () => { drag=null; blankDown=null; canvas.classList.remove("dragging"); });
+canvas.addEventListener("pointerleave", () => { if (!drag) { hideTip(); blankDown=null; } });
+function hideTip(){ tip.classList.remove("show"); hover=null; }
+
+function finishOpen(c) {
+  if (!c.openData) return;
+  const data = c.openData;
+  rev = data.rev; bottles = (data.data && data.data.bottles) || [];
+  circles = circles.filter(x => x !== c);
+  savePositions();
+  pendingArchiveId = c.b.id;
+  renderArchive();
+  $("#cnt").textContent = circles.length + " 个未打开";
+  const opened = bottles.find(x => x.id === c.b.id) || c.b;
+  $("#o-title").textContent = "来自 " + nameOf(opened.from) + " 的漂流瓶";
+  $("#o-sub").textContent = "开启日 " + fmt(opened.openAt);
+  $("#o-message").textContent = opened.message || "";
+  $("#o-meta").textContent = "打开于 " + fmt(opened.openedAt);
+  $("#open-modal").classList.add("show");
+}
+function updateAnimations(now) {
+  for (const c of circles.slice()) {
+    if (!c.anim) continue;
+    const dur = c.anim.type === "spawn" ? SPAWN_DUR : OPEN_DUR;
+    if (now - c.anim.t0 < dur) continue;
+    if (c.anim.type === "spawn") {
+      c.anim = null; c.active = true;
+    } else if (c.anim.type === "open" && c.openData) {
+      finishOpen(c);
+    }
+  }
+}
+let last=performance.now();
+function loop(now) {
+  const dt=(now-last)/1000; last=now; updateAnimations(now); physics(dt); draw(); requestAnimationFrame(loop);
+}
+
+function renderArchive() {
+  const opened = bottles.filter(b => b.opened && (b.isMine || b.isRecipient) && b.id !== pendingArchiveId);
+  $("#archive-list").innerHTML = opened.map(b =>
+    '<div class="archive-letter" style="border-left-color:' + esc(themeColor(b.from) || b.color || "#8dbb9a") + '">' +
+    '<div class="who">' + esc(nameOf(b.from)) + ' → ' + esc(nameOf(b.to)) + ' · 开启日 ' + esc(fmt(b.openAt)) + '</div>' +
+    '<div class="body">' + esc(b.message || "（内容不可见）") + '</div></div>'
+  ).join("");
+  $("#archive-empty").style.display = opened.length ? "none" : "";
+  $("#acount").textContent = opened.length ? opened.length + " 封" : "—";
+}
+function localDate(d) { return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+function nextBirthday() {
+  const d = new Date();
+  let md = "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(birthday)) md = birthday.slice(5);
+  else if (/^\d{2}-\d{2}$/.test(birthday)) md = birthday;
+  if (!md) { const x = new Date(d); x.setFullYear(x.getFullYear()+1); return localDate(x); }
+  let y = d.getFullYear(); let x = new Date(y + "-" + md + "T00:00:00");
+  if (x <= d) x = new Date((y+1) + "-" + md + "T00:00:00");
+  return localDate(x);
+}
+function fillRecipients() {
+  const sel = $("#c-to");
+  sel.innerHTML = people.map(p => '<option value="' + esc(p.user) + '">' + esc((p.emoji||"👤") + " " + p.user) + '</option>').join("");
+  if (people.some(p => p.user === me)) sel.value = me;
+}
+function openCompose(quick, at) {
+  pendingPos = at || null;
+  birthdayCompose = !!quick;
+  fillRecipients();
+  if (birthdayCompose) {
+    $("#c-to").value = me;
+    $("#c-to").disabled = true;
+    $("#c-open").value = nextBirthday();
+    $("#c-open").disabled = true;
+    $("#c-msg").textContent = "这是给未来自己的生日愿望；收件人和开启日固定为「自己」和「下个生日」。";
+  } else {
+    $("#c-to").disabled = false;
+    $("#c-open").disabled = false;
+    $("#c-open").value = nextBirthday();
+    $("#c-msg").textContent = "";
+  }
+  $("#c-message").value = "";
+  $("#compose-modal").classList.add("show");
+  setTimeout(() => $("#c-message").focus(), 80);
+}
+function addCircle(b, at) {
+  const rScale = circleScale();
+  const rawArea = Math.max(90, durationDays(b) * 22) * rScale * rScale;
+  const r = Math.max(18, Math.sqrt(rawArea / Math.PI));
+  const area = Math.PI * r * r;
+  let x = at ? at.x : W * (0.18 + Math.random() * .64);
+  let y = at ? at.y : H * (0.20 + Math.random() * .58);
+  x = Math.max(r + 2, Math.min(W - r - 2, x));
+  y = Math.max(r + 2, Math.min(H - r - 2, y));
+  circles.push({ b, x, y, vx: 0, vy: 0, r, area, mass: area, color: themeColor(b.from),
+    phase: Math.random()*Math.PI*2, seed: circles.length,
+    active: false, anim: { type: "spawn", t0: performance.now() } });
+  savePositions();
+  $("#cnt").textContent = circles.length + " 个未打开";
+  $("#rev").textContent = "rev " + rev;
+}
+async function saveCompose() {
+  const to = birthdayCompose ? me : $("#c-to").value;
+  const openAt = birthdayCompose ? nextBirthday() : $("#c-open").value;
+  const message = $("#c-message").value.trim();
+  if (!message) { $("#c-msg").textContent = "写点什么再封进瓶子吧。"; return; }
+  $("#c-save").disabled = true;
+  try {
+    const j = await call(API + "/action", {method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"create", rev:rev, payload:{to:to, openAt:openAt, message:message}})});
+    const oldIds = new Set(bottles.map(x => x.id));
+    rev = j.rev; bottles = (j.data && j.data.bottles) || [];
+    const fresh = bottles.find(x => !oldIds.has(x.id) && !x.opened);
+    $("#compose-modal").classList.remove("show");
+    if (fresh) addCircle(fresh, pendingPos); else seed();
+    pendingPos = null;
+  } catch(e) { $("#c-msg").textContent = "封存失败：" + e.message; }
+  finally { $("#c-save").disabled = false; }
+}
+async function openBottle(id, circle) {
+  hideTip();
+  const b = bottles.find(x => x.id === id);
+  if (!b) return;
+  if (circle) { circle.active = false; circle.anim = { type: "open", t0: performance.now() }; circle.openData = null; }
+  try {
+    const j = await call(API + "/action", {method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"open", rev:rev, payload:{id:id}})});
+    if (circle) circle.openData = j;
+    else {
+      rev = j.rev; bottles = (j.data && j.data.bottles) || [];
+      const opened = bottles.find(x => x.id === id) || b;
+      $("#o-title").textContent = "来自 " + nameOf(opened.from) + " 的漂流瓶";
+      $("#o-sub").textContent = "开启日 " + fmt(opened.openAt);
+      $("#o-message").textContent = opened.message || "";
+      $("#o-meta").textContent = "打开于 " + fmt(opened.openedAt);
+      $("#open-modal").classList.add("show");
+    }
+  } catch(e) {
+    if (circle) { circle.active = true; circle.anim = null; circle.openData = null; }
+    alert(e.message);
+  }
+}
+$("#compose").onclick = () => openCompose(false);
+$("#c-cancel").onclick = () => { $("#compose-modal").classList.remove("show"); birthdayCompose = false; $("#c-to").disabled = false; $("#c-open").disabled = false; };
+$("#c-save").onclick = () => saveCompose();
+$("#o-close").onclick = () => { $("#open-modal").classList.remove("show"); pendingArchiveId = null; renderArchive(); };
+$("#compose-modal").onclick = (e) => { if (e.target === $("#compose-modal")) { $("#compose-modal").classList.remove("show"); birthdayCompose = false; $("#c-to").disabled = false; $("#c-open").disabled = false; } };
+$("#open-modal").onclick = (e) => { if (e.target === $("#open-modal")) { $("#open-modal").classList.remove("show"); pendingArchiveId = null; renderArchive(); } };
+
+async function boot() {
+  try {
+    const s=await call("/api/session"); me=(s.session&&s.session.user)||"";
+    try {
+      const cached = JSON.parse(localStorage.getItem("kp_pubtheme_" + me) || "null");
+      if (cached && cached.accent) {
+        const vars = {"--accent": cached.accent, "--pink": cached.soft, "--pink-deep": cached.deep, "--mint": cached.mint,
+          "--bg": cached.bg, "--card": cached.card, "--line": cached.line, "--ink": cached.ink, "--p-accent": cached.deep};
+        for (const el of [document.documentElement, document.body]) for (const k in vars) if (vars[k]) el.style.setProperty(k, vars[k]);
+      }
+    } catch (e) {}
+    const u=await call("/api/users/public"); people=u.users||[];
+    const b=await call("/api/birthday"); birthday=b.birthday||"";
+    const j=await call(API+"/state"); rev=j.rev; bottles=(j.data&&j.data.bottles)||[];
+    serverLayout = (j.data && j.data.layout) || {};
+    resize(); seed(); if (!window.__bottle2dLoop) { window.__bottle2dLoop = true; requestAnimationFrame(loop); }
+    const quick = sessionStorage.getItem("kp_bottle_birthday") === "1";
+    sessionStorage.removeItem("kp_bottle_birthday");
+    if (quick) openCompose(true);
+  } catch(e) { $("#cnt").textContent="加载失败"; console.error(e); }
+}
+$("#refresh").onclick = () => { savePositions(); try { location.reload(); } catch (e) { boot(); } };
+window.addEventListener("pagehide", () => savePositions(true));
+window.addEventListener("resize", () => { resize(); });
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "id": "courtyard",
+  "parent": "root",
+  "order": 25,
+  "title": "造院",
+  "icon": "🏮",
+  "desc": "中式院落营造小游戏：吊装正房、厢房、天井与门楼，建成后由管家出具宅院契。",
+  "base": "json-doc",
+  "capabilities": [
+    "state",
+    "action",
+    "audit"
+  ],
+  "acl": {
+    "read": [
+      "kitten",
+      "puppy"
+    ],
+    "write": [
+      "kitten",
+      "puppy"
+    ]
+  },
+  "view": {
+    "kind": "custom",
+    "dir": "web"
+  },
+  "path": "/courtyard/",
+  "ui": {
+    "theme": {
+      "accent": "#9e2a22"
+    }
+  },
+  "tags": [
+    "游戏",
+    "空间",
+    "营造"
+  ]
+}

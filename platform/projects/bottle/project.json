@@ -1,0 +1,29 @@
+{
+  "id": "bottle",
+  "parent": "root",
+  "order": 26,
+  "title": "时光漂流瓶",
+  "icon": "🍾",
+  "desc": "把想说的话封进漂流瓶，约好未来某一天再打开；可写给未来的自己，也可以留给别人。",
+  "base": "json-doc",
+  "capabilities": [
+    "state",
+    "action",
+    "audit"
+  ],
+  "view": {
+    "kind": "custom",
+    "dir": "web"
+  },
+  "path": "/bottle/",
+  "ui": {
+    "theme": {
+      "accent": "#6f8fc4"
+    }
+  },
+  "tags": [
+    "生日",
+    "记录",
+    "私人"
+  ]
+}

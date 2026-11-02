@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/template.css">
+<link rel="stylesheet" href="assets/leaflet/leaflet.css">
+<link rel="stylesheet" href="assets/schedule.css">
+<script src="assets/leaflet/leaflet.js"></script>
+<script src="assets/coord.js"></script>
+<script src="assets/venues.js"></script>
+<title>日程管理 · KittenPuppy4Ever</title>
+</head>
+<body data-project="schedule">
+<main class="page">
+
+  <!-- 概览：学期 / 当前周 / 此刻 / 数据统计 -->
+  <section class="section">
+    <div class="section-head">
+      <h2>日程概览</h2>
+      <span class="hint" id="subtitle">KittenPuppy4Ever · Fall 2026</span>
+      <div class="actions">
+        <span class="chip">学期 <b id="term">—</b></span>
+        <span class="chip">当前 <b id="curweek">—</b></span>
+        <span class="chip">数据更新 <b id="updated">—</b></span>
+      </div>
+    </div>
+    <div class="termbar" id="termbar" title="学期进度"><i id="term-progress"></i></div>
+    <div class="termbar-meta"><span id="term-progress-label">学期进度 —</span><span id="term-progress-sub"></span></div>
+    <div class="grid three" id="nowbar">
+      <div class="stat nb-cur">
+        <div class="k">当前日程</div>
+        <div class="v" id="nb-cur">—</div>
+        <div class="s" id="nb-cur-sub"></div>
+      </div>
+      <div class="stat nb-next">
+        <div class="k">下一日程</div>
+        <div class="v" id="nb-next">—</div>
+        <div class="s" id="nb-next-sub"></div>
+      </div>
+      <div class="stat nb-cd">
+        <div class="k">距离下一日程</div>
+        <div class="v cdval" id="nb-cd">—</div>
+      </div>
+    </div>
+    <div class="list-label" style="margin-top:14px">数据概览 <span class="s">OVERVIEW</span></div>
+    <div class="grid three" id="cards"></div>
+  </section>
+
+  <!-- 周课表 -->
+  <section class="section">
+    <div class="section-head">
+      <h2>周日程</h2>
+      <span class="hint" id="week-hint"></span>
+      <div class="actions">
+        <div class="toolbar disp-toggles" id="disp-toggles">
+          <span class="hint">卡片显示</span>
+          <label class="chip"><input type="checkbox" data-k="tag">标签</label>
+          <label class="chip"><input type="checkbox" data-k="time">时间</label>
+          <label class="chip"><input type="checkbox" data-k="venue">地点</label>
+          <label class="chip"><input type="checkbox" data-k="note">备注</label>
+        </div>
+      </div>
+    </div>
+    <div class="tabs weektabs" id="weektabs"></div>
+    <div class="toolbar weekinfo" id="weekinfo"></div>
+    <div class="gridwrap" id="gridwrap"></div>
+    <div class="legend" id="legend"></div>
+    <div class="note" style="margin-top:10px">💡 全天 0-24 点 · 10 分钟粒度 · 点击空白位置添加个人日程 · 点击日程卡片查看详情与地点地图</div>
+  </section>
+
+  <!-- 我的日程 -->
+  <section class="section">
+    <div class="section-head">
+      <h2 id="mylist-title">我的日程 <span class="hint" id="mylist-hint"></span></h2>
+      <div class="actions">
+        <button class="btn soft sm" id="evt-export">导出 JSON</button>
+        <button class="btn soft sm" id="evt-import">导入日程（JSON / ICS / CSV）</button>
+        <button class="btn soft sm" id="mail-test">📧 测试提醒邮件</button>
+        <input type="file" id="evt-import-file" accept=".json,.ics,.csv,application/json,text/calendar,text/csv" class="hidden">
+      </div>
+    </div>
+    <div id="mylist" class="list"></div>
+  </section>
+
+  <!-- 课程信息 -->
+  <section class="section">
+    <div class="section-head">
+      <h2>课程信息</h2>
+      <span class="hint">11 门 · 19 学分</span>
+    </div>
+    <div class="table-wrap"><table class="coursetable" id="coursetable"></table></div>
+  </section>
+
+  <!-- 考试与节假日 -->
+  <section class="section">
+    <div class="section-head">
+      <h2>考试与节假日</h2>
+      <span class="hint">EXAMS &amp; HOLIDAYS</span>
+    </div>
+    <div class="grid two">
+      <div id="exams" class="list"></div>
+      <div id="holidays" class="list"></div>
+    </div>
+  </section>
+
+  <!-- puppy 维护区（仅维护者身份显示） -->
+  <section class="section" id="puppy-status" style="display:none">
+    <div class="section-head">
+      <h2>系统状态</h2>
+      <span class="hint">MAINTAINER · puppy</span>
+    </div>
+    <div class="grid pstatus" id="pstatus"></div>
+  </section>
+
+</main>
+
+<!-- 详情弹窗（点击日程卡片：课程/日程细节 + 地点小地图） -->
+<div class="modal" id="detail-modal" style="display:none">
+  <div class="modal-box modal-detail">
+    <div class="modal-head">
+      <span class="d-dot" id="d-dot"></span>
+      <h3 id="d-title"></h3>
+      <span class="chip" id="d-tag"></span>
+    </div>
+    <div class="d-sub" id="d-sub"></div>
+    <div id="d-rows"></div>
+    <div class="d-mapbox" id="d-mapbox" style="display:none"><div id="d-map"></div></div>
+    <div id="d-nomap"></div>
+    <div class="modal-btns">
+      <button class="btn primary sm" id="d-edit" style="display:none">✏️ 编辑</button>
+      <span style="flex:1"></span>
+      <button class="btn ghost sm" id="d-close">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 个人日程编辑弹窗 -->
+<div class="modal" id="evt-modal" style="display:none">
+  <div class="modal-box modal-evt">
+    <div class="modal-head"><h3 id="evt-modal-title">添加日程</h3></div>
+    <label class="field">开始 <span class="hint">（可跨日：起止日期可不同）</span></label>
+    <div class="row2">
+      <input type="date" id="evt-date" class="input">
+      <div class="place-row"><select id="evt-sh" class="select"></select><select id="evt-sm" class="select"></select></div>
+    </div>
+    <label class="field">结束</label>
+    <div class="row2">
+      <input type="date" id="evt-edate" class="input">
+      <div class="place-row"><select id="evt-eh" class="select"></select><select id="evt-em" class="select"></select></div>
+    </div>
+    <label class="field">标题 <input id="evt-title" class="input" placeholder="例如：小组讨论 / 图书馆自习"></label>
+    <label class="field">标签
+      <select id="evt-tag" class="select">
+        <option value="课程">课程</option>
+        <option value="个人">个人</option>
+        <option value="学习">学习</option>
+        <option value="生活">生活</option>
+        <option value="其他">其他</option>
+      </select>
+    </label>
+    <label class="field">地点</label>
+    <div class="place-row">
+      <input id="evt-place" class="input" list="place-list" placeholder="选择已有地点或输入">
+      <button type="button" class="btn soft sm" id="evt-newplace">➕ 新建</button>
+    </div>
+    <datalist id="place-list"></datalist>
+    <label class="field">备注 <textarea id="evt-note" class="input" rows="2" placeholder="补充说明（可选）"></textarea></label>
+    <label class="field">提醒时间（提前多久发邮件提醒，可多选；课程默认 1 小时 / 30 分钟 / 15 分钟）</label>
+    <div class="rem-checks" id="rem-checks">
+      <label class="chip"><input type="checkbox" data-off="60">1 小时</label>
+      <label class="chip"><input type="checkbox" data-off="30">30 分钟</label>
+      <label class="chip"><input type="checkbox" data-off="15">15 分钟</label>
+      <label class="chip"><input type="checkbox" data-off="5">5 分钟</label>
+      <label class="chip"><input type="checkbox" data-off="none">不提醒</label>
+    </div>
+    <label class="field">提到谁（可选，多选；被提到即可看到，不影响参与占用）</label>
+    <div class="rem-checks" id="mention-checks"></div>
+    <label class="field">参与人（同一时段每人只能参与一个日程；只显示该时段可用的人）</label>
+    <div class="rem-checks" id="participant-checks"></div>
+    <div id="participant-hint" class="status" style="font-size:11.5px;margin-top:4px"></div>
+    <div class="modal-btns">
+      <button class="btn danger sm" id="evt-del" style="display:none">删除</button>
+      <span style="flex:1"></span>
+      <button class="btn ghost sm" id="evt-cancel">取消</button>
+      <button class="btn primary sm" id="evt-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAY_CN = ["周一","周二","周三","周四","周五","周六","周日"];
+let DATA = null, curWeek = 0;
+let ALL_COURSES = [], ALL_SPECIALS = [], ALL_EXAMS = [];
+const DATA_V = "v20260904g";
+const EVT_KEY = "emf_schedule_events_v1";
+let editingEvtId = null;
+/* 身份由根壳统一管理：页面不做登录门禁/身份切换，默认维护者视图（不弹登录） */
+let USERS = {};
+let ACTIVE_USERS = [];
+let EVENTS = [];
+let currentUser = (document.body.dataset.user || "");
+function uEmoji(n){ return (USERS[n] && USERS[n].emoji) || "👤"; }
+const HOURPX = 42;   // 每小时像素高（大格）
+const TAG_COLORS = {"课程":"var(--accent)", "考试":"#c96a5a", "个人":"var(--pink-deep)", "学习":"#2e7d8f", "生活":"#2e9e6b", "其他":"#8a7f6d", "导入":"#c98f2f"};
+
+/* ---- 时间工具（0-1440 分钟，10 分钟粒度） ---- */
+function fmtMin(m){
+  const h = Math.floor(m/60), mm = m%60;
+  return String(h).padStart(2,"0") + ":" + String(mm).padStart(2,"0");
+}
+function parseTimeToMin(hhmm){
+  if (!hhmm) return null;
+  const [h,m] = hhmm.split(":").map(Number);
+  return Math.round((h*60 + m)/10)*10;
+}
+
+function courseVisible(c){
+  const parts = Array.isArray(c.participants) ? c.participants : (c.owner ? [c.owner] : ["kitten"]);
+  const ments = Array.isArray(c.mentions) ? c.mentions : [];
+  return c.owner === currentUser || ments.includes(currentUser) || parts.includes(currentUser);
+}
+function applyCourseData(){
+  DATA.courses = ALL_COURSES.filter(courseVisible);
+  const personVisible = (x) => {
+    const parts = Array.isArray(x.participants) ? x.participants : (x.owner ? [x.owner] : []);
+    const ments = Array.isArray(x.mentions) ? x.mentions : [];
+    return x.owner === currentUser || ments.includes(currentUser) || parts.includes(currentUser);
+  };
+  DATA.specials = ALL_SPECIALS.filter(personVisible);
+  const specialCourse = new Map(DATA.courses.map(c => [c.code, c]));
+  DATA.specials.forEach(sp => {
+    if (!sp.title) {
+      const c = specialCourse.get(sp.code);
+      sp.title = c ? (c.cn || c.name) : (sp.note || sp.code || "特殊安排");
+    }
+    if (!sp.tag) sp.tag = sp.code || "安排";
+  });
+  DATA.exams = ALL_EXAMS.filter(personVisible);
+  const collator = new Intl.Collator("zh-Hans-CN", { sensitivity: "base", numeric: true });
+  DATA.courses.sort((a, b) => collator.compare(a.cn || a.name || a.code || "", b.cn || b.name || b.code || ""));
+  const n = DATA.courses.length;
+  DATA.courses.forEach((c, i) => {
+    const idx = n <= 1 ? 32 : Math.round((i / (n - 1)) * 63);
+    c.color = "var(--kp-ramp-" + idx + ")";
+  });
+  DATA.weeks = deriveSchedule(DATA);
+}
+async function fetchScheduleStore(){
+  const cr = await fetch("/api/schedule/courses", {cache:"no-store"});
+  const cj = await cr.json();
+  if (!cj || !cj.ok) throw new Error((cj && cj.error && cj.error.message) || "读取课程数据失败");
+  ALL_COURSES = Array.isArray(cj.courses) ? cj.courses : [];
+  ALL_SPECIALS = Array.isArray(cj.specials) ? cj.specials : [];
+  ALL_EXAMS = Array.isArray(cj.exams) ? cj.exams : [];
+  DATA = DATA || {};
+  DATA.meta = cj.meta || DATA.meta || {};
+  DATA.slots = cj.slots || DATA.slots || [];
+  DATA.holidays = cj.holidays || DATA.holidays || [];
+  DATA.venues = cj.venues || DATA.venues || [];
+  applyCourseData();
+}
+async function refreshCourseData(){
+  await fetchScheduleStore();
+  if (typeof buildCards === "function") buildCards();
+  if (typeof buildWeekTabs === "function") buildWeekTabs();
+  if (typeof selectWeek === "function") selectWeek(curWeek || 1);
+  if (typeof buildLegend === "function") buildLegend();
+  if (typeof buildCourseTable === "function") buildCourseTable();
+  if (typeof buildExams === "function") buildExams();
+  if (typeof buildHolidays === "function") buildHolidays();
+}
+async function init(){
+  // 身份沿用根壳会话（同源 cookie）：页面不弹登录、不做门禁；无会话时按默认身份渲染
+  try {
+    const sr = await fetch("/api/session", {cache:"no-store"});
+    const sj = await sr.json();
+    const su = sj && sj.session && sj.session.user;
+    if (su && USERS[su]) currentUser = su;
+  } catch(e){}
+  await loadScheduleEvents();
+  // 课程、考试、特殊安排、节假日、地点全部来自可写 store（不再渲染 schedule.json 内置课程）
+  DATA = {};
+  await fetchScheduleStore();
+  VenueStore.migrateEvents();   // 旧版 s0/s1 事件 → startMin/endMin + tag
+  await migrateLocalEvents();
+  const m = DATA.meta;
+  document.title = m.title + " · Fall 2026";
+  document.getElementById("subtitle").textContent = m.subtitle;
+  document.getElementById("term").textContent = m.termStart.slice(5).replace("-","/") + " ~ " + m.termEnd.slice(5).replace("-","/");
+  document.getElementById("updated").textContent = m.updated;
+  const now = new Date();
+  const start = new Date(m.termStart + "T00:00:00+08:00");
+  const end = new Date(m.termEnd + "T23:59:59+08:00");
+  let wk = 0;
+  if (now >= start && now <= end) {
+    wk = Math.floor((now - start) / (7*864e5)) + 1;
+  }
+  curWeek = wk;
+  document.getElementById("curweek").textContent = wk ? ("Week " + wk) : (now < start ? "未开学" : "已结课");
+  const total = end - start;
+  const pct = Math.min(100, Math.max(0, ((now - start) / total) * 100));
+  const totalWeeks = Math.max(1, Math.ceil(total / (7 * 864e5)));
+  const bar = document.getElementById("term-progress");
+  bar.style.width = pct.toFixed(1) + "%";
+  const barBox = document.getElementById("termbar");
+  if (barBox) barBox.title = `学期进度 ${pct.toFixed(0)}%（Week ${wk || 0}/${totalWeeks}）`;
+  const label = document.getElementById("term-progress-label");
+  if (label) label.textContent = `学期进度 ${pct.toFixed(0)}%`;
+  const sub = document.getElementById("term-progress-sub");
+  if (sub) sub.textContent = wk ? `Week ${wk} / ${totalWeeks}` : (now < start ? "尚未开学" : "已结课");
+  buildCards();
+  buildWeekTabs();
+  buildLegend();
+  buildCourseTable();
+  buildExams();
+  buildHolidays();
+  renderMylist();
+  refreshPlaceList();
+  bindModal();
+  bindVenueModal();
+  bindDispToggles();
+  applyUserMode();
+  selectWeek(wk || 1);
+  updateNowBar();
+  setInterval(updateNowBar, 1000);
+  // 本机存储探测/拉取完成后：再跑一次迁移（LocalBackend 可能后写入旧格式数据）+ 刷新
+  setTimeout(()=>{ VenueStore.migrateEvents(); renderMylist(); selectWeek(curWeek || 1); }, 2500);
+}
+function pad(n){ return String(n).padStart(2,"0"); }
+
+/* 统一日程流：课程会话 + 个人日程 → 时间轴（用于当前/下一/倒计时） */
+function agenda(){
+  const list = [];
+  for (const w of DATA.weeks) for (const day of w.days) for (const s of day.sessions){
+    const c = DATA.courses.find(x=>x.code===s.c);
+    list.push({
+      start: new Date(day.date + "T" + fmtMin(s.start) + ":00+08:00"),
+      end: new Date(day.date + "T" + fmtMin(s.end) + ":00+08:00"),
+      title: s.title || (c ? (c.cn || c.name) : (s.note && !/^\d/.test(s.note) ? s.note : (s.c || s.tag || "日程"))),
+      venue: s.v || "", tag: s.tag || "课程", isEvt: false
+    });
+  }
+  for (const e of getEvents()){
+    const d0 = e.date, d1 = e.endDate || e.date;
+    list.push({
+      start: new Date(d0 + "T" + fmtMin(e.startMin ?? 0) + ":00+08:00"),
+      end: new Date(d1 + "T" + fmtMin(d1 === d0 ? (e.endMin ?? 1440) : (e.endMin ?? 1440)) + ":00+08:00"),
+      title: "📌 " + (e.title || "个人日程"),
+      venue: e.place || "", tag: e.tag || "个人", isEvt: true
+    });
+  }
+  return list;
+}
+function curNext(now){
+  let cur = null, next = null;
+  for (const a of agenda()){
+    if (a.start <= now && now <= a.end) cur = a;
+    if (a.start > now && (!next || a.start < next.start)) next = a;
+  }
+  return {cur, next};
+}
+/* 当前/下一/倒计时 状态条（每秒刷新） */
+function updateNowBar(){
+  const now = new Date();
+  const {cur, next} = curNext(now);
+  const curEl = document.getElementById("nb-cur"), curSub = document.getElementById("nb-cur-sub");
+  if (cur){
+    curEl.textContent = cur.title;
+    curSub.textContent = fmtMin(cur.start.getHours()*60 + cur.start.getMinutes()) + " ~ " +
+      fmtMin(cur.end.getHours()*60 + cur.end.getMinutes()) + (cur.venue ? " · " + cur.venue : "");
+  } else {
+    curEl.textContent = "空闲中";
+    curSub.textContent = "";
+  }
+  const nEl = document.getElementById("nb-next"), nSub = document.getElementById("nb-next-sub");
+  if (next){
+    nEl.textContent = next.title;
+    const d = next.start;
+    nSub.textContent = (d.getMonth()+1) + "/" + d.getDate() + " " + DAY_CN[(d.getDay()+6)%7] + " " +
+      fmtMin(d.getHours()*60 + d.getMinutes()) + " 开始" + (next.venue ? " · " + next.venue : "");
+  } else {
+    nEl.textContent = "—";
+    nSub.textContent = "本阶段日程已全部结束";
+  }
+  const cd = document.getElementById("nb-cd");
+  if (next){
+    const diff = next.start - now;
+    const dd = Math.floor(diff/864e5), hh = Math.floor(diff%864e5/36e5),
+          mm = Math.floor(diff%36e5/6e4), ss = Math.floor(diff%6e4/1e3);
+    cd.textContent = (dd? dd + "天 " : "") + pad(hh) + ":" + pad(mm) + ":" + pad(ss);
+  } else {
+    cd.textContent = "—";
+  }
+}
+
+function buildCards(){
+  const wk = DATA.weeks.find(w=>w.no===curWeek);
+  const weekCnt = wk ? wk.days.reduce((a,d)=>a+d.sessions.length,0) : 0;
+  const evtCnt = getEvents().length;
+  const credits = DATA.courses.reduce((a,c)=>a+c.credit,0);
+  const cards = [
+    {num: DATA.courses.length, lab:"课程总数", sub:"共 " + credits + " 学分 · M1 8 + M2 5 + 跨模块 6"},
+    {num: weekCnt, lab:"本周课时", sub: curWeek? ("Week " + curWeek) : "未开学"},
+    {num: evtCnt, lab:"我的日程", sub:"提到我 / 我参与 · 可导出"},
+  ];
+  document.getElementById("cards").innerHTML = cards.map(c=>
+    `<div class="stat"><div class="v">${c.num}</div><div class="k">${c.lab}</div><div class="s">${c.sub}</div></div>`).join("");
+}
+
+function buildWeekTabs(){
+  const today = new Date(Date.now() + 8*3600e3).toISOString().slice(0,10);   // UTC+8
+  const el = document.getElementById("weektabs");
+  el.innerHTML = DATA.weeks.map(w=>{
+    const hol = DATA.holidays.some(h=>h.weeks.includes(w.no));
+    const isToday = w.start <= today && today <= w.end;
+    return `<button class="tab wt ${hol?'holiday':''} ${isToday?'today':''}" data-w="${w.no}">
+      W${w.no}<span class="wkdates">${w.start.slice(5)}</span></button>`;
+  }).join("");
+  el.querySelectorAll(".wt").forEach(b=>b.addEventListener("click",()=>selectWeek(+b.dataset.w)));
+}
+
+function selectWeek(n){
+  document.querySelectorAll(".wt").forEach(b=>b.classList.toggle("active",+b.dataset.w===n));
+  const w = DATA.weeks.find(x=>x.no===n);
+  const hint = document.getElementById("week-hint");
+  hint.textContent = w.start + " ~ " + w.end;
+  const info = document.getElementById("weekinfo");
+  const tags = [];
+  DATA.holidays.filter(h=>h.weeks.includes(n)).forEach(h=>tags.push(`<span class="chip warn">${h.name} ${h.dates[0]} ~ ${h.dates[1]}</span>`));
+  DATA.exams.filter(e=>e.week===n).forEach(e=>tags.push(`<span class="chip bad">${e.cn || e.course} Exam ${e.date} ${e.time}</span>`));
+  info.innerHTML = tags.length? tags.join("") : `<span class="hint">无节假日 / 考试安排</span>`;
+  renderGrid(w);
+}
+
+/* ---- 卡片显示开关（标签/时间/地点/备注） ---- */
+const DISP_KEY = "emf_disp_prefs";
+function getDisp(){
+  try { return Object.assign({tag:true,time:true,venue:true,note:true}, JSON.parse(localStorage.getItem(DISP_KEY)||"{}")); }
+  catch(e){ return {tag:true,time:true,venue:true,note:true}; }
+}
+function bindDispToggles(){
+  const prefs = getDisp();
+  document.querySelectorAll("#disp-toggles input").forEach(cb=>{
+    cb.checked = prefs[cb.dataset.k] !== false;
+    cb.addEventListener("change", ()=>{
+      prefs[cb.dataset.k] = cb.checked;
+      localStorage.setItem(DISP_KEY, JSON.stringify(prefs));
+      selectWeek(curWeek || 1);
+    });
+  });
+}
+/* 地点信息更全：代码/名称 → 完整名称 + 地址 */
+function venueFull(codeOrName){
+  if (!codeOrName) return "";
+  const v = VenueStore.findVenue(codeOrName);
+  if (!v) return codeOrName;
+  return v.name + (v.address ? " · " + v.address : "");
+}
+
+/* ---- 全天网格（0-24 点，10 分钟粒度；小时为大格，日程块可跨格/跨日；重叠等宽、交叉分段） ---- */
+function renderGrid(w){
+  const prefs = getDisp();
+  const today = new Date(Date.now() + 8*3600e3).toISOString().slice(0,10);   // UTC+8
+  const holDays = {};
+  DATA.holidays.filter(h=>h.weeks.includes(w.no)).forEach(h=>h.days.forEach(d=>holDays[d]=h.name));
+  const evts = getEvents();
+
+  let labels = "";
+  for (let h=0; h<24; h++){
+    labels += `<div class="hour">${String(h).padStart(2,"0")}:00</div>`;
+  }
+
+  let days = "";
+  const blkInfo = {};
+  for (let di=0; di<7; di++){
+    const day = w.days[di];
+    const entries = dayEntries(day, evts);
+    const segments = layoutDay(entries);
+
+    let blocksHtml = "";
+    for (const seg of segments){
+      const e = seg.entry;
+      const top = seg.t0/60 * HOURPX;
+      const height = Math.max((seg.t1 - seg.t0)/60 * HOURPX, 20);
+      const tagColor = TAG_COLORS[e.tag] || "#8a7f6d";
+      const accent = e.isEvt ? "var(--pink-deep)" : (e.color || "var(--muted)");
+      const bg = e.isExam
+        ? "background:color-mix(in srgb, var(--bad) 17%, transparent);border:1px solid color-mix(in srgb, var(--bad) 50%, transparent);"
+        : e.isEvt
+          ? "background:linear-gradient(135deg, color-mix(in srgb, var(--pink) 46%, transparent), color-mix(in srgb, var(--pink) 16%, transparent));border:1.5px dashed var(--pink-deep);color:var(--pink-deep);"
+          : `background:linear-gradient(135deg,color-mix(in srgb,${e.color} 36%,transparent),color-mix(in srgb,${e.color} 13%,transparent));border:1px solid color-mix(in srgb,${e.color} 48%,transparent);border-left:3px solid ${e.color};`;
+      // 标签+标题同行；其余部分独立成行；内容超出行数预算时自动省略号截断
+      const clampN = Math.max(1, Math.floor((height - 10) / 13));
+      const tagHtml = prefs.tag ? `<span class="tagchip" style="background:${tagColor}">${e.tag}</span>` : "";
+      const timeLine = prefs.time
+        ? `<span class="eline">${fmtMin(seg.t0)} ~ ${fmtMin(seg.t1)}${e.cross ? " · ⤵ 跨日" : ""}</span>` : "";
+      const venueLine = (prefs.venue && e.venue)
+        ? `<span class="eline">📍 ${esc(venueFull(e.venue))}</span>` : "";
+      const noteLine = (prefs.note && e.note) ? `<span class="eline">🗒 ${esc(e.note)}</span>` : "";
+      // 创建者 / 提到谁（个人日程专属，始终显示）
+      let whoLine = "";
+      if (e.isEvt){
+        const who = uEmoji(e.creator || "kitten");
+        const m = (e.mentions || []).map(uEmoji).join("");
+        whoLine = `<span class="eline who">${who}${m ? " → " + m : ""}</span>`;
+      }
+      const blkKey = e.id + "|" + day.date;
+      blkInfo[blkKey] = {entry: e, day, w};
+      blocksHtml += `<div class="evtblock ${e.isEvt?"evt":""} ${e.isExam?"exam":""}" data-blk="${blkKey}"
+        style="top:${top.toFixed(1)}px;height:${height.toFixed(1)}px;left:${seg.left.toFixed(2)}%;width:calc(${seg.width.toFixed(2)}% - 3px);${bg}">
+        <div class="bl-inner" style="-webkit-line-clamp:${clampN}">
+          ${tagHtml}<span class="cn"><span class="bdot" style="background:${accent}"></span>${e.isEvt?"📌 ":""}${esc(e.title)}</span>
+          ${whoLine}
+          ${timeLine}
+          ${venueLine}
+          ${noteLine}
+        </div>
+        <span class="bhint">详情 ›</span>
+      </div>`;
+    }
+    const hol = holDays[di];
+    days += `<div class="daycol" data-date="${day.date}"${hol?` style="background:linear-gradient(color-mix(in srgb, var(--warn) 8%, transparent), color-mix(in srgb, var(--warn) 8%, transparent)),repeating-linear-gradient(to bottom, transparent 0 ${HOURPX-1}px, var(--line) ${HOURPX-1}px ${HOURPX}px)"`:""}>
+      ${hol?`<div class="holbadge">${hol}</div>`:""}
+      ${blocksHtml}
+    </div>`;
+  }
+
+  const gw = document.getElementById("gridwrap");
+  gw.innerHTML =
+    `<div class="g24">
+      <div class="g24-labels">${labels}</div>
+      <div class="g24-main">
+        <div class="g24-head">${w.days.map((d,i)=>`<div class="hd ${d.date===today?'today':''}">${DAY_CN[i]}<span class="d">${d.date.slice(5)}</span></div>`).join("")}</div>
+        <div class="g24-days">${days}</div>
+      </div>
+    </div>`;
+  // 时间轴对齐：左侧标签列垫出与星期表头等高的空白，使小时标签与下方时间带逐格对齐
+  const head = gw.querySelector(".g24-head");
+  const labcol = gw.querySelector(".g24-labels");
+  if (head && labcol) labcol.style.paddingTop = head.offsetHeight + "px";
+
+  document.querySelectorAll(".daycol").forEach(col=>{
+    col.addEventListener("click", e=>{
+      if (e.target.closest(".evtblock")) return;
+      const rect = col.getBoundingClientRect();
+      const offY = e.clientY - rect.top;
+      let minute = Math.floor(offY / HOURPX * 60 / 10) * 10;
+      minute = Math.min(1430, Math.max(0, minute));
+      openEvtModal(col.dataset.date, minute, null);
+    });
+  });
+  // 点击任意日程卡片 → 详情弹窗（含地点小地图）；个人日程可在详情里进入编辑
+  document.querySelectorAll(".evtblock").forEach(b=>{
+    b.addEventListener("click", e=>{
+      e.stopPropagation();
+      const info = blkInfo[b.dataset.blk];
+      if (info) openDetail(info.entry, info.day, info.w);
+    });
+  });
+}
+
+/* 某天的日程条目（课程 + 个人日程；跨日日程按覆盖天拆分） */
+function dayEntries(day, evts){
+  const entries = [];
+  for (const s of day.sessions){
+    const c = DATA.courses.find(x=>x.code===s.c);
+    entries.push({
+      id: "c" + day.date + s.c + s.start, start: s.start, end: s.end,
+      tag: s.tag || (c ? c.code : "课程"),
+      title: s.title || (c ? (c.cn || c.name) : (s.note && !/^\d/.test(s.note) ? s.note : (s.c || s.tag || "日程"))),
+      venue: s.v || "",
+      note: s.note || "",
+      cross: false,
+      color: c ? c.color : "var(--muted)",
+      isExam: !!s.isExam || (s.tag === "考试"),
+      course: c || null,
+      code: s.c || ""
+    });
+  }
+  for (const e of evts){
+    const d0 = e.date, d1 = e.endDate || e.date;
+    if (day.date < d0 || day.date > d1) continue;
+    const st = (day.date === d0) ? (e.startMin ?? 0) : 0;
+    const en = (day.date === d1) ? (e.endMin ?? 1440) : 1440;
+    if (en <= st) continue;
+    const cross = d0 !== d1;
+    entries.push({
+      id: e.id, start: st, end: en,
+      tag: e.tag || "个人",
+      title: e.title,
+      venue: e.place || "",
+      place: e.place || "",
+      note: e.note || "",
+      cross: cross,
+      endDate: e.endDate || e.date,
+      creator: e.creator || currentUser,
+      mentions: Array.isArray(e.mentions) ? e.mentions : [],
+      participants: Array.isArray(e.participants) ? e.participants : [],
+      color: null, isEvt: true, evtId: e.id
+    });
+  }
+  return entries;
+}
+
+/* 重叠布局算法：
+   1) 按所有起止时间点扫描时间片，每片的活跃日程为一组 → 组内等宽
+   2) 同一日程相邻时间片若 (left, width) 不变则合并成一段；
+      交叉状态（并行日程数/位置）变化处自动断开分段渲染 */
+function layoutDay(entries){
+  const pts = new Set();
+  for (const e of entries){
+    if (e.end <= e.start) continue;
+    pts.add(e.start); pts.add(e.end);
+  }
+  const sorted = [...pts].sort((a,b)=>a-b);
+  const byId = new Map();
+  const segs = [];
+  for (let i=0; i<sorted.length-1; i++){
+    const t0 = sorted[i], t1 = sorted[i+1];
+    if (t1 <= t0) continue;
+    const active = entries.filter(e=>e.start <= t0 && e.end >= t1);
+    if (!active.length) continue;
+    const n = active.length;
+    active.forEach((e, idx)=>{
+      const left = idx*100/n, width = 100/n;
+      const arr = byId.get(e.id) || [];
+      const last = arr[arr.length-1];
+      if (last && last.t1 === t0 && Math.abs(last.left-left) < 0.01 && Math.abs(last.width-width) < 0.01){
+        last.t1 = t1;   // 相邻且等宽同位 → 合并
+      } else {
+        const seg = {id: e.id, t0, t1, left, width, entry: e};
+        arr.push(seg);
+        segs.push(seg);
+      }
+      byId.set(e.id, arr);
+    });
+  }
+  return segs;
+}
+
+function buildLegend(){
+  document.getElementById("legend").innerHTML = DATA.courses.map((c)=>
+    `<span class="chip leg"><i style="background:${c.color}"></i>${c.code} ${c.cn}</span>`).join("") +
+    `<span class="chip leg"><i style="background:var(--pink)"></i>📌 我的日程</span>` +
+    Object.entries(TAG_COLORS).map(([t,c])=>`<span class="chip leg"><i style="background:${c}"></i>标签 ${t}</span>`).join("");
+}
+
+function buildCourseTable(){
+  const html = `<tr><th>模块</th><th>课程</th><th>缩写</th><th>学分</th><th>教授</th><th>上课地点</th></tr>` +
+  DATA.courses.map(c=>{
+    const mod = c.module==="M1"?"Module 1":c.module==="M2"?"Module 2":"M1-M2";
+    const profEn = c.prof_en && c.prof_en !== c.prof
+      ? `<br><span style="color:var(--muted);font-size:11px">${c.prof_en}</span>` : "";
+    return `<tr>
+      <td><span class="mod-tag">${mod}</span></td>
+      <td>${c.name}<br><span style="color:var(--muted);font-size:11px">${c.cn}</span></td>
+      <td><span class="codechip" style="background:${c.color}">${c.code}</span></td>
+      <td class="cr">${c.credit}</td>
+      <td>${c.prof}${profEn}</td>
+      <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">${c.venues}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("coursetable").innerHTML = html;
+}
+
+function buildExams(){
+  document.getElementById("exams").innerHTML =
+    `<div class="list-label">考试 <span class="s">EXAMS</span></div>` +
+    DATA.exams.map(e=>`<div class="row"><div class="grow"><div class="t">${e.cn || e.course}${e.course ? (e.cn ? " · " + e.course : "") : ""}</div>
+      <div class="s">${e.time}（Week ${e.week} · ${DAY_CN[e.day]}）</div></div><span class="chip">${e.date}</span></div>`).join("") +
+    `<div class="s" style="padding:0 2px">MIE / PFV / COF / AIC 考试未排入课表，另行通知</div>`;
+}
+function buildHolidays(){
+  const seen = {};
+  DATA.holidays.forEach(h=>{
+    const k = h.name + h.dates.join();
+    if (!seen[k]) seen[k] = h;
+  });
+  document.getElementById("holidays").innerHTML =
+    `<div class="list-label">节假日 <span class="s">HOLIDAYS</span></div>` +
+    Object.values(seen).map(h=>`<div class="row"><div class="grow"><div class="t">${h.name} ${h.en}</div>
+      <div class="s">Week ${h.weeks.join(" / ")}</div></div><span class="chip warn">${h.dates[0]} ~ ${h.dates[1]}</span></div>`).join("");
+}
+
+/* ============ 个人日程（全天 10 分钟粒度） ============ */
+/* 统一走 VenueStore：保存即推送本机后端（store.json），删除才会真正生效 */
+async function loadScheduleEvents(){
+  try {
+    const r = await fetch("/api/schedule/events", {cache:"no-store"});
+    const j = await r.json();
+    if (!j || !j.ok) throw new Error((j && j.error && j.error.message) || "读取日程失败");
+    EVENTS = (Array.isArray(j.events) ? j.events : []).filter(e => e.source !== "course");
+    ACTIVE_USERS = Array.isArray(j.users) ? j.users : [];
+    USERS = {};
+    ACTIVE_USERS.forEach(u => { USERS[u.user] = {emoji: u.emoji || "👤"}; });
+    if (j.me) currentUser = j.me;
+  } catch(e) {
+    console.warn("load schedule events failed", e);
+  }
+}
+async function migrateLocalEvents(){
+  try {
+    if (localStorage.getItem("emf_schedule_migrated_server_v1")) return;
+    const arr = JSON.parse(localStorage.getItem("emf_schedule_events_v1") || "[]");
+    if (!Array.isArray(arr) || !arr.length){ localStorage.setItem("emf_schedule_migrated_server_v1", "1"); return; }
+    let ok = 0;
+    for (const e of arr){
+      if (!e || !e.date || e.startMin == undefined || e.endMin == undefined) continue;
+      const r = await fetch("/api/schedule/events", {method:"POST",headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({title:e.title||"旧日程",date:e.date,endDate:e.endDate||e.date,
+          startMin:e.startMin,endMin:e.endMin,tag:e.tag||"个人",place:e.place||"",
+          note:e.note||"",reminders:e.reminders||[],mentions:[currentUser],participants:[]})});
+      if (r.ok) ok++;
+    }
+    localStorage.setItem("emf_schedule_migrated_server_v1", "1");
+    if (ok){ await loadScheduleEvents(); }
+  } catch(e) {}
+}
+function getEvents(){ return EVENTS; }
+function saveEvents(){ /* 由服务端接口保存，保留空实现兼容旧调用 */ }
+
+function renderMentionChecks(selected){
+  const box = document.getElementById("mention-checks");
+  if (!box) return;
+  box.innerHTML = ACTIVE_USERS.map(u => {
+    const on = selected.includes(u.user) ? " checked" : "";
+    return `<label class="chip"><input type="checkbox" data-m="${u.user}"${on}>${u.emoji || "👤"} ${u.user}</label>`;
+  }).join("");
+}
+async function renderParticipantChecks(date, startMin, endMin, selected){
+  const box = document.getElementById("participant-checks");
+  const hint = document.getElementById("participant-hint");
+  if (!box) return;
+  box.innerHTML = `<span class="status" style="font-size:11.5px">正在读取该时段可用用户…</span>`;
+  try {
+    const q = new URLSearchParams({date, startMin:String(startMin), endMin:String(endMin), exclude: editingEvtId || ""});
+    const r = await fetch("/api/schedule/participants?" + q.toString(), {cache:"no-store"});
+    const j = await r.json();
+    if (!j || !j.ok) throw new Error("读取可用用户失败");
+    box.innerHTML = (j.users || []).map(u => {
+      const busy = !u.available;
+      const on = selected.includes(u.user) ? " checked" : "";
+      const dis = busy ? " disabled" : "";
+      const label = busy ? `${u.emoji || "👤"} ${u.user}（忙碌：${u.busy_title || "其他日程"}）` : `${u.emoji || "👤"} ${u.user}`;
+      return `<label class="chip" title="${busy ? "该时段已有参与日程" : "该时段可用"}"><input type="checkbox" data-p="${u.user}"${on}${dis}>${label}</label>`;
+    }).join("");
+    if (hint) hint.textContent = "只显示当前时段可参与的人；被其他人占用的用户不可选。";
+  } catch(e) {
+    box.innerHTML = `<span class="status" style="font-size:11.5px">读取失败：${e.message}</span>`;
+    if (hint) hint.textContent = "";
+  }
+}
+
+function canWriteEvent(e){ return !!e && (String(e.creator || "") === currentUser || (Array.isArray(e.participants) && e.participants.includes(currentUser))); }
+function canDeleteEvent(e){ return !!e && String(e.creator || "") === currentUser; }
+function openEvtModal(date, minute, id){
+  editingEvtId = id || null;
+  const evt = id ? getEvents().find(e=>e.id===id) : null;
+  if (evt && !canWriteEvent(evt)) { alert("你对该日程只有只读权限"); return; }
+  document.getElementById("evt-modal-title").textContent = evt ? "编辑日程" : "添加日程";
+  document.getElementById("evt-date").value = evt ? evt.date : date;
+  document.getElementById("evt-edate").value = evt ? (evt.endDate || evt.date) : date;
+  const sh = document.getElementById("evt-sh"), sm = document.getElementById("evt-sm");
+  const eh = document.getElementById("evt-eh"), em = document.getElementById("evt-em");
+  sh.innerHTML = Array.from({length:24},(_,i)=>`<option value="${i}">${String(i).padStart(2,"0")}时</option>`).join("");
+  eh.innerHTML = Array.from({length:25},(_,i)=>`<option value="${i}">${String(i).padStart(2,"0")}时</option>`).join("");
+  sm.innerHTML = em.innerHTML = ["00","10","20","30","40","50"].map(v=>`<option value="${v}">${v}分</option>`).join("");
+  const s = evt ? evt.startMin : (minute ?? 0);
+  const en = evt ? evt.endMin : Math.min(1440, (minute ?? 0) + 60);
+  sh.value = Math.floor(s/60); sm.value = String(s%60).padStart(2,"0");
+  eh.value = Math.floor(en/60); em.value = String(en%60).padStart(2,"0");
+  document.getElementById("evt-title").value = evt ? evt.title : "";
+  document.getElementById("evt-tag").value = evt && evt.tag ? evt.tag : "个人";
+  document.getElementById("evt-place").value = evt ? (evt.place||"") : "";
+  document.getElementById("evt-place").dataset.placeCode = evt && evt.placeCode ? evt.placeCode : "";
+  document.getElementById("evt-note").value = evt ? (evt.note||"") : "";
+  // 提醒时间（可多选；不提醒互斥；旧数据/新日程默认提前 30 分钟）
+  const rems = evt && Array.isArray(evt.reminders) ? evt.reminders : [30];
+  document.querySelectorAll("#rem-checks input").forEach(cb=>{
+    if (cb.dataset.off === "none") cb.checked = rems.length === 0;
+    else cb.checked = rems.includes(+cb.dataset.off);
+  });
+  // 提到谁（新日程默认只提到自己）
+  const ments = evt && Array.isArray(evt.mentions) ? evt.mentions : [currentUser];
+  renderMentionChecks(ments);
+  // 参与人：回显 + 按当前时段读取可用用户
+  const parts = evt && Array.isArray(evt.participants) ? evt.participants : [];
+  const dateVal = document.getElementById("evt-date").value;
+  const endVal = document.getElementById("evt-edate").value || dateVal;
+  renderParticipantChecks(dateVal, s, en, parts);
+  document.getElementById("evt-del").style.display = (evt && canDeleteEvent(evt)) ? "" : "none";
+  document.getElementById("evt-modal").style.display = "flex";
+  document.getElementById("evt-title").focus();
+}
+function closeEvtModal(){
+  document.getElementById("evt-modal").style.display = "none";
+  editingEvtId = null;
+}
+async function saveEvt(){
+  const title = document.getElementById("evt-title").value.trim();
+  if (!title){ alert("请填写日程标题"); return; }
+  const date = document.getElementById("evt-date").value;
+  const endDate = document.getElementById("evt-edate").value || date;
+  const startMin = (+document.getElementById("evt-sh").value)*60 + (+document.getElementById("evt-sm").value);
+  const endMin = (+document.getElementById("evt-eh").value)*60 + (+document.getElementById("evt-em").value);
+  const sKey = date + "T" + fmtMin(startMin);
+  const eKey = endDate + "T" + fmtMin(endMin);
+  if (eKey <= sKey){ alert("结束时间必须晚于开始时间"); return; }
+  const placeEl = document.getElementById("evt-place");
+  const none = document.querySelector("#rem-checks input[data-off='none']").checked;
+  const rems = none ? [] :
+    [...document.querySelectorAll("#rem-checks input:checked")]
+      .filter(cb=>cb.dataset.off !== "none")
+      .map(cb=>+cb.dataset.off).sort((a,b)=>b-a);
+  const ments = [...document.querySelectorAll("#mention-checks input:checked")].map(cb=>cb.dataset.m);
+  const parts = [...document.querySelectorAll("#participant-checks input:checked")].map(cb=>cb.dataset.p);
+  const obj = {id: editingEvtId || undefined,
+               date, startMin, endMin, endDate, title,
+               tag: document.getElementById("evt-tag").value,
+               place: placeEl.value.trim(),
+               note: document.getElementById("evt-note").value.trim(),
+               reminders: rems,
+               mentions: ments,
+               participants: parts};
+  if (placeEl.dataset.placeCode) obj.placeCode = placeEl.dataset.placeCode;
+  try {
+    const r = await fetch("/api/schedule/events", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(obj)
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) throw new Error((j.error && j.error.message) || ("保存失败 " + r.status));
+    await loadScheduleEvents();
+    closeEvtModal();
+    selectWeek(curWeek || 1);
+    renderMylist();
+    buildCards();
+  } catch(e) {
+    alert(e.message);
+  }
+}
+async function delEvt(){
+  if (!editingEvtId) return;
+  try {
+    const r = await fetch("/api/schedule/events/delete", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id: editingEvtId})
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) throw new Error((j.error && j.error.message) || "删除失败");
+    await loadScheduleEvents();
+    closeEvtModal();
+    selectWeek(curWeek || 1);
+    renderMylist();
+    buildCards();
+  } catch(e) { alert(e.message); }
+}
+function refreshParticipantFromForm(){
+  const date = document.getElementById("evt-date").value;
+  const startMin = (+document.getElementById("evt-sh").value)*60 + (+document.getElementById("evt-sm").value);
+  const endMin = (+document.getElementById("evt-eh").value)*60 + (+document.getElementById("evt-em").value);
+  const selected = [...document.querySelectorAll("#participant-checks input:checked")].map(cb=>cb.dataset.p);
+  if (date && endMin > startMin) renderParticipantChecks(date, startMin, endMin, selected);
+  else {
+    renderParticipantChecks(document.getElementById("evt-date").value, startMin, endMin, selected);
+  }
+}
+function bindModal(){
+  document.getElementById("evt-save").addEventListener("click", saveEvt);
+  ["evt-date","evt-edate","evt-sh","evt-sm","evt-eh","evt-em"].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", refreshParticipantFromForm);
+  });
+  document.getElementById("evt-cancel").addEventListener("click", closeEvtModal);
+  document.getElementById("evt-del").addEventListener("click", delEvt);
+  document.getElementById("evt-modal").addEventListener("click", e=>{
+    if (e.target === document.getElementById("evt-modal")) closeEvtModal();
+  });
+  document.getElementById("evt-export").addEventListener("click", exportEvents);
+  document.getElementById("evt-import").addEventListener("click", ()=>{
+    document.getElementById("evt-import-file").click();
+  });
+  document.getElementById("evt-import-file").addEventListener("change", importEvents);
+  // 提醒时间多选：不提醒与其余互斥
+  document.querySelectorAll("#rem-checks input").forEach(cb=>{
+    cb.addEventListener("change", ()=>{
+      if (cb.dataset.off === "none"){
+        if (cb.checked) document.querySelectorAll("#rem-checks input").forEach(o=>{
+          if (o.dataset.off !== "none") o.checked = false;
+        });
+      } else if (cb.checked){
+        document.querySelector("#rem-checks input[data-off='none']").checked = false;
+      }
+    });
+  });
+  // 测试提醒邮件（由本机后端发送）
+  document.getElementById("mail-test").addEventListener("click", async ()=>{
+    const btn = document.getElementById("mail-test");
+    btn.textContent = "📧 发送中…";
+    try {
+      const r = await fetch("/api/mailtest", {method: "POST"});
+      const d = await r.json();
+      alert(d.ok ? "测试提醒邮件已发送 ✓" : "发送失败：" + (d.msg || d.error || ""));
+    } catch(e){
+      alert("无法连接本机提醒服务（请确认本机后端已运行）：" + e.message);
+    }
+    btn.textContent = "📧 测试提醒邮件";
+  });
+  // 详情弹窗
+  document.getElementById("d-close").addEventListener("click", closeDetail);
+  document.getElementById("d-edit").addEventListener("click", ()=>{
+    if (detailEntry && detailEntry.evtId){
+      const id = detailEntry.evtId;
+      closeDetail();
+      openEvtModal(null, null, id);
+    }
+  });
+  document.getElementById("detail-modal").addEventListener("click", e=>{
+    if (e.target === document.getElementById("detail-modal")) closeDetail();
+  });
+  document.addEventListener("keydown", e=>{
+    if (e.key === "Escape"){ closeDetail(); closeEvtModal(); }
+  });
+}
+function exportEvents(){
+  const blob = new Blob([JSON.stringify(getEvents(), null, 1)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "emf_events_" + new Date(Date.now() + 8*3600e3).toISOString().slice(0,10) + ".json";   // UTC+8
+  a.click();
+}
+async function importEvents(){
+  const f = document.getElementById("evt-import-file").files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = async ()=>{
+    try {
+      const text = String(rd.result || "");
+      const name = (f.name || "").toLowerCase();
+      let arr;
+      if (name.endsWith(".ics") || /^BEGIN:VCALENDAR/m.test(text)) arr = parseIcs(text);
+      else if (name.endsWith(".csv")) arr = parseCsv(text);
+      else {
+        const t = text.trim();
+        arr = t.startsWith("[") ? JSON.parse(t) : parseCsv(t);
+      }
+      if (!Array.isArray(arr) || !arr.length) throw new Error("no rows");
+      let added = 0, skipped = 0;
+      for (const e of arr){
+        if (!e || !e.date){ skipped++; continue; }
+        const body = Object.assign({}, e, {id: undefined});
+        const r = await fetch("/api/schedule/events", {
+          method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)
+        });
+        if (r.ok) added++; else skipped++;
+      }
+      await loadScheduleEvents();
+      selectWeek(curWeek || 1);
+      renderMylist();
+      buildCards();
+      alert("导入完成：新增 " + added + " 条，跳过 " + skipped + " 条");
+    } catch(e) { alert("文件解析失败（支持 .json / .ics / .csv）：" + (e.message||e)); }
+    document.getElementById("evt-import-file").value = "";
+  };
+  rd.readAsText(f, "utf-8");
+}
+function newEvtId(seed){
+  return "i" + Math.abs(seed.split("").reduce((a,c)=>(a*31 + c.charCodeAt(0))|0, 0)).toString(36) + Math.floor(Math.random()*46656).toString(36);
+}
+function parseIcs(text){
+  const out = [];
+  const blocks = text.split(/BEGIN:VEVENT/).slice(1);
+  for (const b of blocks){
+    const grab = (k)=>{ const m = b.match(new RegExp("^" + k + "[^:\\n]*:([^\\n]+)", "m")); return m ? m[1].trim() : ""; };
+    let dt = grab("DTSTART").replace(/^.*:/, "");
+    if (/^VALUE=DATE/.test(grab("DTSTART"))) dt = b.match(/VALUE=DATE:(\d{8})/)?.[1] || dt;
+    if (!dt) continue;
+    const date = dt.slice(0,4) + "-" + dt.slice(4,6) + "-" + dt.slice(6,8);
+    let t0 = dt.includes("T") ? dt.slice(9,13) : "";
+    let tend = grab("DTEND").replace(/^.*:/, "");
+    let t1 = tend.includes("T") ? tend.slice(9,13) : "";
+    const startMin = parseTimeToMin(t0.slice(0,2) + ":" + t0.slice(2)) ?? 0;
+    let endMin = parseTimeToMin(t1.slice(0,2) + ":" + t1.slice(2));
+    if (endMin === null || endMin <= startMin) endMin = Math.min(1440, startMin + 60);
+    out.push({
+      id: newEvtId(date + dt + (grab("SUMMARY")||"")), date, startMin, endMin,
+      tag: "导入",
+      title: grab("SUMMARY") || "导入日程",
+      place: grab("LOCATION") || "",
+      note: grab("DESCRIPTION") || ""
+    });
+  }
+  return out;
+}
+function parseCsv(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim());
+  if (!lines.length) return [];
+  const sep = lines[0].includes(",") ? "," : (lines[0].includes(";") ? ";" : "\t");
+  const head = lines[0].split(sep).map(h=>h.trim());
+  const idx = {};
+  head.forEach((h,i)=>{
+    if (/^(date|日期)$/i.test(h)) idx.date = i;
+    else if (/^(start|开始|starttime|start_time)$/i.test(h)) idx.s0 = i;
+    else if (/^(end|结束|endtime|end_time)$/i.test(h)) idx.s1 = i;
+    else if (/^(title|标题|summary|主题)$/i.test(h)) idx.title = i;
+    else if (/^(place|地点|location)$/i.test(h)) idx.place = i;
+    else if (/^(note|备注|desc|description)$/i.test(h)) idx.note = i;
+  });
+  if (idx.date === undefined) throw new Error("CSV 缺少日期列");
+  const out = [];
+  for (let li=1; li<lines.length; li++){
+    const c = lines[li].split(sep).map(x=>x.trim().replace(/^"|"$/g,""));
+    if (!c[idx.date]) continue;
+    const d = c[idx.date].replace(/[./年]/g,"-").replace(/月/g,"-").replace(/日/g,"");
+    const dparts = d.split("-").map(Number);
+    const date = dparts[0] >= 1000 ? dparts[0] + "-" + String(dparts[1]).padStart(2,"0") + "-" + String(dparts[2]).padStart(2,"0") : d;
+    const startMin = idx.s0 !== undefined ? (parseTimeToMin(c[idx.s0]) ?? 0) : 0;
+    let endMin = idx.s1 !== undefined ? parseTimeToMin(c[idx.s1]) : null;
+    if (endMin === null || endMin <= startMin) endMin = Math.min(1440, startMin + 60);
+    out.push({
+      id: newEvtId(lines[li]), date, startMin, endMin,
+      tag: "导入",
+      title: (idx.title !== undefined && c[idx.title]) ? c[idx.title] : "导入日程",
+      place: idx.place !== undefined ? c[idx.place] : "",
+      note: idx.note !== undefined ? c[idx.note] : ""
+    });
+  }
+  return out;
+}
+function renderMylist(){
+  const evts = getEvents().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.startMin??0)-(b.startMin??0));
+  const hint = document.getElementById("mylist-hint");
+  const backend = (typeof LocalBackend !== "undefined" && LocalBackend.online()) ? " · 本机存储已连接" : " · 本机存储未连接";
+  hint.textContent = (evts.length ? ("共 " + evts.length + " 条") : "点击周课表空格添加") + backend;
+  const el = document.getElementById("mylist");
+  if (!evts.length){
+    el.innerHTML = `<div class="empty">还没有个人日程 — 点击上方周课表里的空白位置即可添加（10 分钟粒度 / 标签 / 地点 / 备注）</div>`;
+    return;
+  }
+  el.innerHTML = evts.map(e=>{
+    const g = new Date(e.date + "T00:00:00+08:00").getDay();
+    const dayCn = DAY_CN[(g + 6) % 7];
+    const start = new Date(DATA.meta.termStart + "T00:00:00+08:00");
+    const wk = Math.max(1, Math.min(DATA.meta.totalWeeks,
+      Math.floor((new Date(e.date + "T00:00:00+08:00") - start) / (7*864e5)) + 1));
+    const tag = e.tag || "个人";
+    const tagColor = TAG_COLORS[tag] || "#8a7f6d";
+    const cross = e.endDate && e.endDate !== e.date;
+    const range = cross
+      ? `${e.date} ${fmtMin(e.startMin)} ~ ${e.endDate} ${fmtMin(e.endMin)}（跨日）`
+      : `${e.date}（W${wk} ${dayCn}）${fmtMin(e.startMin)} ~ ${fmtMin(e.endMin)}`;
+    const rems = Array.isArray(e.reminders) ? e.reminders : [30];
+    const remTxt = rems.length ? (" · 🔔提前" + rems.map(r=>r>=60?(r/60)+"h":r+"m").join("/")) : " · 🔔不提醒";
+    const who = uEmoji(e.creator || "kitten");
+    const ments = Array.isArray(e.mentions) ? e.mentions : [];
+    const whoTxt = " · " + who + (ments.length ? "→" + ments.map(uEmoji).join("") : "");
+    const meta = range + (e.place ? " · " + e.place : "") + (e.note ? " · " + e.note : "") + remTxt + whoTxt;
+    return `<div class="row mylist-item">
+      <span class="mk" style="background:${tagColor}"></span>
+      <div class="grow">
+        <div class="t"><span class="chip" style="background:${tagColor};color:var(--card)">${tag}</span> 📌 ${e.title}</div>
+        <div class="s meta">${meta}</div>
+      </div>
+      <div class="ops">
+        ${canWriteEvent(e) ? `<button data-e="${e.id}" class="btn sm ghost op-edit">编辑</button>` : ""}
+        ${canDeleteEvent(e) ? `<button data-e="${e.id}" class="btn sm danger op-del">删除</button>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+  el.querySelectorAll(".op-edit").forEach(b=>b.addEventListener("click",()=>openEvtModal(null,null,b.dataset.e)));
+  el.querySelectorAll(".op-del").forEach(b=>b.addEventListener("click", async ()=>{
+    try {
+      const r = await fetch("/api/schedule/events/delete", {
+        method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: b.dataset.e})
+      });
+      const j = await r.json();
+      if (!r.ok || !j.ok) throw new Error((j.error && j.error.message) || "删除失败");
+      await loadScheduleEvents();
+      selectWeek(curWeek || 1);
+      renderMylist();
+      buildCards();
+    } catch(e){ alert(e.message); }
+  }));
+}
+
+/* ============ 地点选择 + 新建（统一组件，见 assets/venues.js） ============ */
+function refreshPlaceList(){
+  PlacePicker.attach(document.getElementById("evt-place"));
+}
+function applyUserMode(){
+/* 展示模式：身份由根壳统一管理，这里只按当前身份切换面板 */
+  document.body.classList.toggle("user-puppy", currentUser === "puppy");
+  document.body.classList.toggle("user-kitten", currentUser === "kitten");
+  document.getElementById("puppy-status").style.display = currentUser === "puppy" ? "" : "none";
+  const t = document.getElementById("mylist-title");
+  if (t && t.firstChild) t.firstChild.textContent = "我的日程 ";
+  renderPuppyPanel();
+}
+/* puppy 维护者面板：后端 / 存储 / 邮件 / 数据版本 */
+async function renderPuppyPanel(){
+  if (currentUser !== "puppy") return;
+  const el = document.getElementById("pstatus");
+  if (!el) return;
+  const online = (typeof LocalBackend !== "undefined") ? LocalBackend.online() : false;
+  let mailTxt = "读取中…";
+  try {
+    const r = await fetch("/api/mailstatus");
+    const d = await r.json();
+    mailTxt = d.enabled ? ("🟢 已启用 · " + d.host + " → " + (d.to_addrs || []).join(" / ")) : "🔴 未启用";
+  } catch(e){ mailTxt = "后端不可达"; }
+  const evts = getEvents();
+  el.innerHTML = [
+    {k:"后端服务", v: online ? "🟢 在线（本机存储已连接）" : "🔴 离线"},
+    {k:"日程数据", v: "个人日程 " + evts.length + " 条 · 课程 " + DATA.courses.length + " 门"},
+    {k:"邮件提醒", v: mailTxt},
+    {k:"数据版本", v: DATA.meta.updated},
+  ].map(x=>`<div class="stat"><div class="k">${x.k}</div><div class="v">${x.v}</div></div>`).join("");
+}
+
+function bindVenueModal(){
+  document.getElementById("evt-newplace").addEventListener("click", function(){
+    VenueEditor.open({onSaved: function(v){
+      refreshPlaceList();
+      document.getElementById("evt-place").value = v.name;
+      document.getElementById("evt-place").dataset.placeCode = v.code;
+    }});
+  });
+}
+
+/* ============ 详情弹窗（课程 / 个人日程 + 地点小地图） ============ */
+let detailMap = null, detailMarker = null, detailEntry = null, detailDay = null, detailWeek = null;
+
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function weekNoOf(date){
+  const start = new Date(DATA.meta.termStart + "T00:00:00+08:00");
+  return Math.max(1, Math.min(DATA.meta.totalWeeks,
+    Math.floor((new Date(date + "T00:00:00+08:00") - start) / (7*864e5)) + 1));
+}
+
+function ensureDetailMap(){
+  if (detailMap){ detailMap.invalidateSize(); return; }
+  detailMap = L.map("d-map", {center:[31.2995, 121.5020], zoom: 16,
+                              zoomControl: true, attributionControl: false});
+  const key = (DATA.meta && DATA.meta.tdtKey) || "";
+  if (key){
+    L.tileLayer("https://t{s}.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk=" + key,
+      {subdomains:["0","1","2","3","4","5","6","7"], maxZoom:18}).addTo(detailMap);
+    L.tileLayer("https://t{s}.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=" + key,
+      {subdomains:["0","1","2","3","4","5","6","7"], maxZoom:18}).addTo(detailMap);
+  }
+}
+
+function showDetailMap(v){
+  const box = document.getElementById("d-mapbox");
+  const nomap = document.getElementById("d-nomap");
+  if (!v || v.lat === undefined || v.lng === undefined){
+    box.style.display = "none";
+    nomap.innerHTML = `<div class="empty" style="padding:10px 0">该地点暂无坐标信息</div>`;
+    return;
+  }
+  nomap.innerHTML = "";
+  box.style.display = "";
+  ensureDetailMap();
+  if (detailMarker) detailMap.removeLayer(detailMarker);
+  detailMarker = L.marker([v.lat, v.lng], {icon: L.divIcon({
+    className: "tdt-pin" + (v.custom ? " custom" : ""),
+    html: `<div class="pin"><em>📍</em></div><div class="pin-tip">${esc(v.short || v.name)}</div>`,
+    iconSize: [30, 44], iconAnchor: [15, 42]
+  })}).addTo(detailMap)
+    .bindPopup(`<b>${esc(v.name)}</b>${v.address ? "<br>" + esc(v.address) : ""}`);
+  detailMap.setView([v.lat, v.lng], 16);
+  setTimeout(()=>detailMap.invalidateSize(), 60);
+}
+
+/* 详情行：label + 内容 */
+function dRow(k, v, mono){
+  return `<div class="d-row"><span class="k">${k}</span><span class="v${mono?' mono':''}">${v}</span></div>`;
+}
+
+function openDetail(entry, day, w){
+  if (!entry) return;
+  detailEntry = entry; detailDay = day; detailWeek = w;
+  const e = entry;
+  const tagColor = TAG_COLORS[e.tag] || "#8a7f6d";
+  const accent = e.isEvt ? "var(--pink-deep)" : (e.color || "var(--muted)");
+  document.getElementById("d-dot").style.background = accent;
+  document.getElementById("d-title").textContent = e.isEvt ? ("📌 " + e.title) : e.title;
+  document.getElementById("d-tag").textContent = e.tag || "课程";
+  document.getElementById("d-tag").style.background = tagColor;
+  const wk = weekNoOf(day.date);
+  const dow = DAY_CN[w.days.indexOf(day)];
+  const subParts = [];
+  if (e.course){
+    subParts.push(esc(e.course.name));
+    if (e.course.prof_en && e.course.prof_en !== e.course.prof) subParts.push(esc(e.course.prof_en));
+  }
+  document.getElementById("d-sub").textContent = subParts.join(" · ");
+
+  const rows = [];
+  rows.push(dRow("📅 日期", `${day.date}（${dow} · Week ${wk}）`));
+  rows.push(dRow("🕐 时间", (e.cross ? `${day.date} ${fmtMin(e.start)} ~ ${(e.isEvt&&e.endDate)?e.endDate:day.date} ${fmtMin(e.end)}（跨日）`
+                                       : `${fmtMin(e.start)} ~ ${fmtMin(e.end)}`) + (e.isExam ? " · 考试" : "")));
+  if (e.course){
+    const mod = e.course.module==="M1"?"Module 1":e.course.module==="M2"?"Module 2":"M1-M2";
+    rows.push(dRow("🎓 课程", `${esc(e.course.code)} · ${mod} · ${e.course.credit} 学分`));
+    rows.push(dRow("👨‍🏫 教授", esc(e.course.prof)));
+    if (e.course.venues) rows.push(dRow("🏛 常用教室", esc(e.course.venues)));
+  }
+  if (e.venue){
+    const v = VenueStore.findVenue(e.venue);
+    const addr = v && v.address ? v.address : "";
+    rows.push(dRow("📍 地点", `<b>${esc(e.venue)}</b>${addr ? " · " + esc(addr) : ""}`));
+    if (v && v.note) rows.push(dRow("📝 地点备注", esc(v.note)));
+  } else if (e.isEvt && e.place){
+    rows.push(dRow("📍 地点", esc(e.place) + "（未绑定已有地点）"));
+  }
+  if (e.note) rows.push(dRow("🗒 备注", esc(e.note)));
+  // 提醒设置
+  if (e.isEvt){
+    const evt = getEvents().find(x=>x.id===e.evtId);
+    const rems = evt && Array.isArray(evt.reminders) ? evt.reminders : [30];
+    rows.push(dRow("🔔 提醒", rems.length ? ("提前 " + rems.map(r=>r>=60? (r/60)+" 小时" : r+" 分钟").join(" / ")) : "不提醒"));
+    rows.push(dRow("👤 创建者", uEmoji(e.creator || currentUser) + " " + (e.creator || currentUser)));
+    if ((e.mentions || []).length) rows.push(dRow("📣 提到", e.mentions.map(m=>uEmoji(m) + " " + m).join("、")));
+    if ((e.participants || []).length) rows.push(dRow("🙋 参与", e.participants.map(m=>uEmoji(m) + " " + m).join("、")));
+  } else {
+    rows.push(dRow("🔔 提醒", "默认提前 1 小时 / 30 分钟 / 15 分钟（邮件）"));
+  }
+  document.getElementById("d-rows").innerHTML = rows.join("");
+
+  // 地点小地图
+  const v = e.venue ? VenueStore.findVenue(e.venue) : (e.isEvt && e.place ? VenueStore.findVenue(e.place) : null);
+  showDetailMap(v);
+
+  // 底部按钮（地图页由根壳导航统一提供，页面内不再放项目间链接）
+  document.getElementById("d-edit").style.display = (e.isEvt && canWriteEvent(getEvents().find(x=>x.id===e.evtId))) ? "" : "none";
+  document.getElementById("detail-modal").style.display = "flex";
+}
+
+function closeDetail(){
+  document.getElementById("detail-modal").style.display = "none";
+  detailEntry = null;
+}
+
+init();
+
+window.addEventListener("message", async (e) => {
+  const a = e.data && e.data.kpAiAction; if (!a) return;
+  if (a.type === "refresh_courses") { try { await refreshCourseData(); } catch(e) {} return; }
+  if (a.type === "reload") { location.reload(); return; }
+  if (a.type === "focus" || a.type === "click") {
+    const el = document.querySelector(a.selector || "#gridwrap");
+    if (el) { try { el.scrollIntoView({block:"center",behavior:"smooth"}); } catch(_){} if (el.focus) el.focus(); }
+  }
+  if (a.type === "refresh_places") {
+    try {
+      if (typeof VenueStore !== "undefined" && VenueStore.reloadVenues) await VenueStore.reloadVenues();
+      if (typeof refreshPlaceList === "function") refreshPlaceList();
+      if (typeof renderMylist === "function") renderMylist();
+    } catch(e) {}
+    return;
+  }
+  if (a.type === "refresh") {
+    try {
+      await loadScheduleEvents();
+      if (typeof selectWeek === "function") selectWeek(curWeek || 1);
+      if (typeof renderMylist === "function") renderMylist();
+      if (typeof buildCards === "function") buildCards();
+    } catch(e) {}
+  }
+});
+</script>
+</body>
+</html>

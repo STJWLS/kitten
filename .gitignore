@@ -1,0 +1,26 @@
+# runtime data / accounts / secrets
+platform/data/
+platform/config/users.json
+platform/config/secret*
+localdata/
+.env
+
+# native build outputs / signing material
+releases/
+**/*.apk
+**/*.apk.idsig
+**/*.keystore
+**/*.jks
+**/*.p12
+app/ios/signing/*.key
+android/KittenPuppy/build/
+android/KittenPuppy/kp.keystore
+app/android/EMFSchedule/build/
+app/toolchain/
+
+# generated artifacts
+**/__pycache__/
+**/*.pyc
+platform/check.js
+platform/checkpart.js
+platform/*.png

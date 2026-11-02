@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/template.css">
+<title>日程调试 · KittenPuppy4Ever</title>
+<style>
+  .dbg-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:10px; }
+  .field { display:block; font-size:11.5px; color:var(--muted); }
+  .field > input, .field > select, .field > textarea { display:block; width:100%; margin-top:4px; }
+  .evt { display:flex; gap:10px; align-items:flex-start; border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:var(--tone-1); }
+  .evt .when { min-width:155px; font-size:11.5px; color:var(--muted); }
+  .evt .title { font-weight:650; }
+  .evt .meta { font-size:11px; color:var(--muted); margin-top:3px; }
+  .evt .ops { margin-left:auto; display:flex; gap:6px; }
+  .course { border:1px solid var(--line); border-radius:11px; padding:9px 11px; background:var(--tone-1); }
+  .course .title { font-weight:650; }
+  .course .meta { font-size:11px; color:var(--muted); margin-top:3px; line-height:1.7; }
+  .hidden { display:none !important; }
+  .modal { position:fixed; inset:0; z-index:80; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.28); }
+  .modal .box { width:min(94vw,680px); max-height:90vh; overflow:auto; background:var(--tone-1); border:1px solid var(--tone-3); border-radius:16px; padding:16px 18px; }
+  body.drawer-mode .page { max-width:none; padding:8px; gap:8px; }
+  body.drawer-mode .section { padding:10px; border-radius:12px; }
+  body.drawer-mode .section-head { margin-bottom:7px; }
+  body.drawer-mode .section-head h2 { font-size:12px; }
+  body.drawer-mode .dbg-grid { grid-template-columns:1fr; gap:7px; }
+  body.drawer-mode .evt { flex-wrap:wrap; padding:8px; }
+  body.drawer-mode .evt .when { min-width:120px; }
+  body.drawer-mode .evt .ops { margin-left:0; width:100%; justify-content:flex-end; }
+  body.drawer-mode .toolbar .input { min-width:0 !important; width:100%; }
+  body.drawer-mode .modal .box { width:calc(100vw - 16px); padding:12px; }
+</style>
+</head>
+<body data-project="schedule-debug">
+<main class="page">
+  <section class="section">
+    <div class="section-head"><h2>日程调试</h2><span class="hint">superadmin · 所有用户的日程</span>
+      <div class="actions"><button class="btn soft sm" id="refresh">刷新</button><button class="btn primary sm" id="add">新增日程</button></div>
+    </div>
+    <div class="toolbar" style="margin-bottom:10px">
+      <input id="q" class="input" placeholder="搜索标题 / 地点 / 用户" style="min-width:240px">
+      <select id="user-filter" class="select"><option value="">全部用户</option></select>
+      <span class="spacer"></span><span class="chip" id="count">—</span>
+    </div>
+    <div id="list" class="list"></div>
+  </section>
+</main>
+
+<div class="modal hidden" id="modal">
+  <div class="box">
+    <div class="section-head"><h2 id="modal-title">编辑日程</h2><button class="plain" id="cancel">关闭</button></div>
+    <label class="field">标题 <input id="f-title" class="input"></label>
+    <div class="dbg-grid">
+      <label class="field">创建者 <select id="f-creator" class="select"></select></label>
+      <label class="field">标签 <select id="f-tag" class="select"><option>课程</option><option>个人</option><option>学习</option><option>生活</option><option>考试</option><option>其他</option></select></label>
+      <label class="field">开始日期 <input id="f-date" type="date" class="input"></label>
+      <label class="field">结束日期 <input id="f-edate" type="date" class="input"></label>
+      <label class="field">开始时间 <input id="f-start" type="time" class="input"></label>
+      <label class="field">结束时间 <input id="f-end" type="time" class="input"></label>
+    </div>
+    <label class="field">地点 <input id="f-place" class="input"></label>
+    <label class="field">备注 <textarea id="f-note" class="input" rows="2"></textarea></label>
+    <label class="field">提到（用户名逗号分隔） <input id="f-mentions" class="input"></label>
+    <label class="field">参与人（用户名逗号分隔） <input id="f-parts" class="input"></label>
+    <div class="status" id="modal-msg" style="color:var(--bad)"></div>
+    <div class="toolbar" style="justify-content:flex-end;margin-top:10px">
+      <button class="btn ghost sm" id="cancel2">取消</button>
+      <button class="btn primary sm" id="save">保存</button>
+    </div>
+  </div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+let EVENTS = [], USERS = [], COURSES = [], SLOTS = [], editing = null;
+const fmt = (m) => String(Math.floor((m||0)/60)).padStart(2,"0") + ":" + String((m||0)%60).padStart(2,"0");
+const toMin = (v) => { const [h,m] = String(v||"00:00").split(":").map(Number); return h*60+m; };
+async function api(path, opts){
+  const r = await fetch(path, Object.assign({cache:"no-store"}, opts||{}));
+  const j = await r.json().catch(()=>({ok:false,error:{message:"非 JSON"}}));
+  if (!r.ok || !j.ok) throw new Error((j.error && j.error.message) || ("HTTP " + r.status));
+  return j;
+}
+async function load(){
+  const j = await api("/api/schedule/admin/events");
+  EVENTS = j.events || []; USERS = j.users || [];
+  const sel = $("#user-filter"), cur = sel.value;
+  sel.innerHTML = '<option value="">全部用户</option>' + USERS.map(u => '<option value="'+esc(u.user)+'">'+esc(u.emoji||"👤")+" "+esc(u.user)+'</option>').join("");
+  sel.value = cur;
+  const creator = $("#f-creator");
+  creator.innerHTML = USERS.map(u => '<option value="'+esc(u.user)+'">'+esc(u.emoji||"👤")+" "+esc(u.user)+'</option>').join("");
+  render();
+}
+
+function render(){
+  const q = ($("#q").value || "").toLowerCase().trim();
+  const uf = $("#user-filter").value;
+  const list = EVENTS.filter(e => {
+    if (uf && e.creator !== uf) return false;
+    const hay = [e.title,e.place,e.note,e.creator,(e.mentions||[]).join(" "),(e.participants||[]).join(" ")].join(" ").toLowerCase();
+    return !q || hay.includes(q);
+  }).sort((a,b)=> (a.date||"").localeCompare(b.date||"") || (a.startMin||0)-(b.startMin||0));
+  $("#count").textContent = list.length + " / " + EVENTS.length + " 条";
+  $("#list").innerHTML = list.map(e => {
+    const who = esc(e.creator||"") + ((e.mentions||[]).length ? " · 提到 " + esc((e.mentions||[]).join("、")) : "") +
+      ((e.participants||[]).length ? " · 参与 " + esc((e.participants||[]).join("、")) : "");
+    return '<div class="evt" data-id="'+esc(e.id)+'">' +
+      '<div class="when">' + esc(e.date) + (e.endDate && e.endDate!==e.date ? " ~ "+esc(e.endDate) : "") + "<br>" + fmt(e.startMin) + " – " + fmt(e.endMin) + "</div>" +
+      '<div class="grow"><div class="title">' + esc(e.title||"(无标题)") + ' <span class="chip">' + esc(e.tag||"") + '</span></div>' +
+      '<div class="meta">' + who + (e.place ? " · " + esc(e.place) : "") + '</div></div>' +
+      '<div class="ops"><button class="btn ghost sm op-edit">编辑</button><button class="btn danger sm op-del">删除</button></div></div>';
+  }).join("") || '<div class="empty">暂无日程</div>';
+  $("#list").querySelectorAll(".op-edit").forEach(b => b.onclick = () => openModal(b.closest(".evt").dataset.id));
+  $("#list").querySelectorAll(".op-del").forEach(b => b.onclick = async () => {
+    if (!confirm("删除这条日程？")) return;
+    try { await api("/api/schedule/admin/events/delete", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:b.closest(".evt").dataset.id})}); await load(); }
+    catch(e){ alert(e.message); }
+  });
+}
+function openModal(id){
+  editing = id ? EVENTS.find(e => e.id === id) : null;
+  $("#modal-title").textContent = editing ? "编辑日程" : "新增日程";
+  $("#f-title").value = editing ? editing.title||"" : "";
+  $("#f-creator").value = editing ? editing.creator||"" : (USERS[0]?.user || "");
+  $("#f-tag").value = editing ? editing.tag||"个人" : "个人";
+  $("#f-date").value = editing ? editing.date||"" : new Date().toISOString().slice(0,10);
+  $("#f-edate").value = editing ? editing.endDate||editing.date||"" : new Date().toISOString().slice(0,10);
+  $("#f-start").value = fmt(editing ? editing.startMin : 600);
+  $("#f-end").value = fmt(editing ? editing.endMin : 660);
+  $("#f-place").value = editing ? editing.place||"" : "";
+  $("#f-note").value = editing ? editing.note||"" : "";
+  $("#f-mentions").value = editing ? (editing.mentions||[]).join(",") : "";
+  $("#f-parts").value = editing ? (editing.participants||[]).join(",") : "";
+  $("#modal-msg").textContent = "";
+  $("#modal").classList.remove("hidden");
+}
+async function save(){
+  const title = $("#f-title").value.trim();
+  if (!title) return $("#modal-msg").textContent = "标题不能为空";
+  const body = {
+    id: editing ? editing.id : undefined,
+    title, creator: $("#f-creator").value,
+    date: $("#f-date").value, endDate: $("#f-edate").value || $("#f-date").value,
+    startMin: toMin($("#f-start").value), endMin: toMin($("#f-end").value),
+    tag: $("#f-tag").value, place: $("#f-place").value.trim(), note: $("#f-note").value.trim(),
+    mentions: $("#f-mentions").value.split(",").map(s=>s.trim()).filter(Boolean),
+    participants: $("#f-parts").value.split(",").map(s=>s.trim()).filter(Boolean)
+  };
+  try {
+    await api("/api/schedule/admin/events", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    $("#modal").classList.add("hidden"); await load();
+  } catch(e){ $("#modal-msg").textContent = "保存失败：" + e.message; }
+}
+$("#refresh").onclick = () => load().catch(e => alert(e.message));
+$("#add").onclick = () => openModal();
+$("#cancel").onclick = $("#cancel2").onclick = () => $("#modal").classList.add("hidden");
+$("#save").onclick = save;
+$("#q").oninput = render;
+$("#user-filter").onchange = render;
+if (new URLSearchParams(location.search).get("drawer") === "1") document.body.classList.add("drawer-mode");
+load().catch(e => alert("读取失败：" + e.message));
+</script>
+</body>
+</html>
