@@ -591,7 +591,7 @@ public class MainActivity extends Activity {
     private void showMessages(int tab) {
         messagesTab = tab;
         String[] items = {"通知", "私信"};
-        KpPopup popup = new KpPopup(this, "消息", items, tab, (p, index) -> messagesPane(p, index),
+        KpPopup popup = new KpPopup(this, "mail-popup", "消息", items, tab, (p, index) -> messagesPane(p, index),
                 bg, card, ink, muted, line, accent, soft);
         popup.show();
     }
@@ -1170,9 +1170,23 @@ public class MainActivity extends Activity {
     private void showSettings() {
         screen = "settings";
         String[] items = {"个人资料", "主题外观", "服务器", "关于"};
-        KpPopup popup = new KpPopup(this, "设置", items, 0, (p, index) -> settingsPane(p, index),
+        KpPopup popup = new KpPopup(this, "settings-popup", "设置", items, 0, (p, index) -> settingsPane(p, index),
                 bg, card, ink, muted, line, accent, soft);
+        popup.addRightDrawer("说明", (p, index) -> settingsHelpPane());
         popup.show();
+    }
+    private View settingsHelpPane() {
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        TextView title = tv("模板说明", 16, ink, true);
+        title.setPadding(0, 0, 0, dp(10));
+        body.addView(title);
+        TextView text = tv("这个右抽屉与左侧模块抽屉使用同一套模板：\n\n• 桌面宽 25%，内缩 m=8，R30\n• 右抽屉顶部从关闭按钮底部 + m 开始\n• 移动端全宽覆盖\n• 内容 padding=2m\n\n它对应网页设置页的“说明”抽屉，不是新页面。", 11.5f, muted, false);
+        text.setLineSpacing(0, 1.6f);
+        body.addView(text);
+        scroll.addView(body);
+        return scroll;
     }
     private View settingsPane(KpPopup popup, int index) {
         ScrollView scroll = new ScrollView(this);
