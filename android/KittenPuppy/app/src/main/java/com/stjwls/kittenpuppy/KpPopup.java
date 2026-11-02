@@ -200,7 +200,16 @@ final class KpPopup extends Dialog {
     private void toggleLeft() { setLeftOpen(!leftOpen); }
     private void setLeftOpen(boolean open) {
         leftOpen = open;
-        leftDrawer.setVisibility(open ? View.VISIBLE : View.GONE);
+        float hidden = mobile ? -popupW : -leftW;
+        if (open) {
+            leftDrawer.setVisibility(View.VISIBLE);
+            leftDrawer.setTranslationX(hidden);
+            leftDrawer.animate().translationX(0).setDuration(220).start();
+        } else {
+            leftDrawer.animate().translationX(hidden).setDuration(180).withEndAction(() -> {
+                if (!leftOpen) leftDrawer.setVisibility(View.GONE);
+            }).start();
+        }
         updateInsets();
         syncToggles();
     }
@@ -208,13 +217,22 @@ final class KpPopup extends Dialog {
     private void setRightOpen(boolean open) {
         if (rightDrawer == null) return;
         rightOpen = open;
-        rightDrawer.setVisibility(open ? View.VISIBLE : View.GONE);
-        if (rightDrawerHost != null && rightDrawerHost.getChildCount() == 0) {
-            Object tag = rightDrawer.getTag();
-            if (tag instanceof Provider) {
-                View v = ((Provider) tag).create(this, 0);
-                if (v != null) rightDrawerHost.addView(v, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        float hidden = mobile ? popupW : rightW;
+        if (open) {
+            rightDrawer.setVisibility(View.VISIBLE);
+            rightDrawer.setTranslationX(hidden);
+            rightDrawer.animate().translationX(0).setDuration(220).start();
+            if (rightDrawerHost != null && rightDrawerHost.getChildCount() == 0) {
+                Object tag = rightDrawer.getTag();
+                if (tag instanceof Provider) {
+                    View v = ((Provider) tag).create(this, 0);
+                    if (v != null) rightDrawerHost.addView(v, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                }
             }
+        } else {
+            rightDrawer.animate().translationX(hidden).setDuration(180).withEndAction(() -> {
+                if (!rightOpen) rightDrawer.setVisibility(View.GONE);
+            }).start();
         }
         updateInsets();
         syncToggles();
@@ -257,6 +275,13 @@ final class KpPopup extends Dialog {
         g.setColor(color); g.setCornerRadius(dp(radius));
         if (stroke != 0) g.setStroke(dp(1), stroke);
         return g;
+    }
+    @Override public void show() {
+        super.show();
+        cardView.setScaleX(.975f);
+        cardView.setScaleY(.975f);
+        cardView.setAlpha(0f);
+        cardView.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(180).start();
     }
     private void clearWindowBackground() {
         Window win = getWindow();
