@@ -24,3 +24,9 @@ app/toolchain/
 platform/check.js
 platform/checkpart.js
 platform/*.png
+
+# Android emulator scratch data
+android/avd/
+android/home/
+android/tmp/
+android/*.log
