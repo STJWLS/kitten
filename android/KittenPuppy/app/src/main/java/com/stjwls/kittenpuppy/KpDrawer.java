@@ -30,10 +30,16 @@ final class KpDrawer extends Dialog {
     private final Provider[] nestedProviders;
     private final FrameLayout[] nestedViews;
     private int openNested = -1;
+    private final boolean fromLeft;
 
     KpDrawer(Activity a, String nodeKey, String title, Provider provider,
              int bg, int card, int ink, int muted, int line, int accent, int soft) {
+        this(a, nodeKey, title, provider, bg, card, ink, muted, line, accent, soft, false);
+    }
+    KpDrawer(Activity a, String nodeKey, String title, Provider provider,
+             int bg, int card, int ink, int muted, int line, int accent, int soft, boolean fromLeft) {
         super(a, android.R.style.Theme_Translucent_NoTitleBar);
+        this.fromLeft = fromLeft;
         this.activity = a; this.bg = bg; this.card = card; this.ink = ink;
         this.muted = muted; this.line = line; this.accent = accent; this.soft = soft;
         mobile = a.getResources().getConfiguration().smallestScreenWidthDp <= 760;
@@ -56,8 +62,9 @@ final class KpDrawer extends Dialog {
         cardView.setBackground(bgCard);
         cardView.setElevation(dp(16));
         FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(w, ViewGroup.LayoutParams.MATCH_PARENT);
-        cp.gravity = Gravity.END;
-        cp.topMargin = top; cp.bottomMargin = bottom; cp.rightMargin = right;
+        cp.gravity = fromLeft ? Gravity.START : Gravity.END;
+        cp.topMargin = top; cp.bottomMargin = bottom;
+        if (fromLeft) cp.leftMargin = right; else cp.rightMargin = right;
         root.addView(cardView, cp);
 
         LinearLayout head = new LinearLayout(a);
@@ -85,8 +92,9 @@ final class KpDrawer extends Dialog {
         buttonStack.setOrientation(LinearLayout.VERTICAL);
         buttonStack.setGravity(Gravity.END);
         FrameLayout.LayoutParams bsp = new FrameLayout.LayoutParams(dp(44), ViewGroup.LayoutParams.WRAP_CONTENT);
-        bsp.gravity = Gravity.BOTTOM | Gravity.END;
-        bsp.rightMargin = dp(12); bsp.bottomMargin = dp(16);
+        bsp.gravity = Gravity.BOTTOM | (fromLeft ? Gravity.START : Gravity.END);
+        if (fromLeft) bsp.leftMargin = dp(12); else bsp.rightMargin = dp(12);
+        bsp.bottomMargin = dp(16);
         cardView.addView(buttonStack, bsp);
         clearWindow();
         setContentView(root);
@@ -141,7 +149,7 @@ final class KpDrawer extends Dialog {
         if (nestedViews[index] == null) return;
         openNested = index;
         nestedViews[index].setVisibility(View.VISIBLE);
-        nestedViews[index].setTranslationX(mobile ? cardView.getWidth() : dp(36));
+        nestedViews[index].setTranslationX(mobile ? (fromLeft ? -cardView.getWidth() : cardView.getWidth()) : (fromLeft ? -dp(36) : dp(36)));
         nestedViews[index].setAlpha(.4f);
         nestedViews[index].animate().translationX(0).alpha(1f).setDuration(200).start();
         nestedViews[index].bringToFront();
@@ -149,7 +157,7 @@ final class KpDrawer extends Dialog {
     private void closeNested() {
         if (openNested < 0) return;
         FrameLayout v = nestedViews[openNested];
-        v.animate().translationX(mobile ? cardView.getWidth() : dp(36)).alpha(.4f).setDuration(160)
+        v.animate().translationX(mobile ? (fromLeft ? -cardView.getWidth() : cardView.getWidth()) : (fromLeft ? -dp(36) : dp(36))).alpha(.4f).setDuration(160)
                 .withEndAction(() -> v.setVisibility(View.GONE)).start();
         openNested = -1;
     }

@@ -79,12 +79,20 @@ final class KpPopup extends Dialog {
         contentHost = new FrameLayout(a);
         cardView.addView(contentHost, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        leftDrawer = buildLeftDrawer(brand, items);
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(mobile ? ViewGroup.LayoutParams.MATCH_PARENT : leftW,
-                ViewGroup.LayoutParams.MATCH_PARENT);
-        if (mobile) { lp.leftMargin = 0; lp.topMargin = 0; lp.bottomMargin = 0; }
-        else { lp.leftMargin = m; lp.topMargin = m; lp.bottomMargin = m; }
-        cardView.addView(leftDrawer, lp);
+        if (items != null && items.length > 0) {
+            leftDrawer = buildLeftDrawer(brand, items);
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(mobile ? ViewGroup.LayoutParams.MATCH_PARENT : leftW,
+                    ViewGroup.LayoutParams.MATCH_PARENT);
+            if (mobile) { lp.leftMargin = 0; lp.topMargin = 0; lp.bottomMargin = 0; }
+            else { lp.leftMargin = m; lp.topMargin = m; lp.bottomMargin = m; }
+            cardView.addView(leftDrawer, lp);
+
+            leftToggle = roundAction("←", this::toggleLeft);
+            FrameLayout.LayoutParams ltp = new FrameLayout.LayoutParams(dp(44), dp(44));
+            ltp.gravity = Gravity.BOTTOM | Gravity.START;
+            ltp.leftMargin = m; ltp.bottomMargin = m;
+            cardView.addView(leftToggle, ltp);
+        }
 
         close = roundAction("✕", this::dismiss);
         FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(dp(44), dp(44));
@@ -92,12 +100,6 @@ final class KpPopup extends Dialog {
         clp.topMargin = m; clp.rightMargin = m;
         cardView.addView(close, clp);
         close.bringToFront();
-
-        leftToggle = roundAction("←", this::toggleLeft);
-        FrameLayout.LayoutParams ltp = new FrameLayout.LayoutParams(dp(44), dp(44));
-        ltp.gravity = Gravity.BOTTOM | Gravity.START;
-        ltp.leftMargin = m; ltp.bottomMargin = m;
-        cardView.addView(leftToggle, ltp);
 
         updateInsets();
         setContentView(root);
@@ -183,22 +185,25 @@ final class KpPopup extends Dialog {
     }
 
     private void select(int index) {
-        selected = Math.max(0, Math.min(leftItems.length - 1, index));
-        LinearLayout itemsBox = (LinearLayout) leftDrawer.getChildAt(1);
-        for (int i = 0; i < itemsBox.getChildCount(); i++) {
-            TextView v = (TextView) itemsBox.getChildAt(i);
-            boolean on = i == selected;
-            v.setTextColor(on ? Color.WHITE : ink);
-            v.setTypeface(null, on ? Typeface.BOLD : Typeface.NORMAL);
-            v.setBackground(rounded(on ? accent : Color.TRANSPARENT, 9, 0));
+        selected = leftItems != null && leftItems.length > 0 ? Math.max(0, Math.min(leftItems.length - 1, index)) : 0;
+        if (leftDrawer != null) {
+            LinearLayout itemsBox = (LinearLayout) leftDrawer.getChildAt(1);
+            for (int i = 0; i < itemsBox.getChildCount(); i++) {
+                TextView v = (TextView) itemsBox.getChildAt(i);
+                boolean on = i == selected;
+                v.setTextColor(on ? Color.WHITE : ink);
+                v.setTypeface(null, on ? Typeface.BOLD : Typeface.NORMAL);
+                v.setBackground(rounded(on ? accent : Color.TRANSPARENT, 9, 0));
+            }
         }
         contentHost.removeAllViews();
         View content = leftProvider.create(this, selected);
         if (content != null) contentHost.addView(content, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
-    private void toggleLeft() { setLeftOpen(!leftOpen); }
+    private void toggleLeft() { if (leftDrawer != null) setLeftOpen(!leftOpen); }
     private void setLeftOpen(boolean open) {
+        if (leftDrawer == null) return;
         leftOpen = open;
         float hidden = mobile ? -popupW : -leftW;
         if (open) {
@@ -240,7 +245,7 @@ final class KpPopup extends Dialog {
     private void updateInsets() {
         int l = dp(16), r = dp(16);
         if (!mobile) {
-            if (leftOpen) l += leftW + 2 * m;
+            if (leftDrawer != null && leftOpen) l += leftW + 2 * m;
             if (rightOpen) r += rightW + 2 * m;
         }
         contentHost.setPadding(l, dp(16), r, dp(16));

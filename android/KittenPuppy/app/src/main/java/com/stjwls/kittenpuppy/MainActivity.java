@@ -1193,6 +1193,176 @@ public class MainActivity extends Activity {
     }
 
     // ---------------- settings ----------------
+    // ---------------- page template gallery (no business content) ----------------
+    private void showTemplateGallery() {
+        screen = "templates";
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackground(screenBackground());
+        root.addView(topBar("页面模板", true, this::showHome));
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(dp(18), dp(8), dp(18), dp(28));
+        TextView lead = tv("纯模板页，不请求后端、不加载业务数据。所有内容都是占位。", 11.5f, muted, false);
+        lead.setLineSpacing(0, 1.5f);
+        lead.setPadding(0, 0, 0, dp(14));
+        body.addView(lead);
+        body.addView(templateCard("空白 Popup", "非抽屉叶子 · R30 · 关闭键 · 2m padding", this::showTemplateLeafPopup));
+        body.addView(templateCard("左侧抽屉 Popup", "R38 Popup · 25% Drawer · R30 · 可收起 · 内容让位", this::showTemplateLeftPopup));
+        body.addView(templateCard("右侧抽屉 Popup", "R38 Popup · 右侧 R30 · 顶部从关闭键下方开始", this::showTemplateRightPopup));
+        body.addView(templateCard("左右双抽屉 Popup", "R38 Popup · 左目录 + 右说明 · 独立开合", this::showTemplateBothPopup));
+        body.addView(templateCard("右侧边栏 + 嵌套抽屉", "25vw 边栏 R30 · 子抽屉全屏覆盖 · 44dp 按钮", this::showTemplateEdgeRight));
+        body.addView(templateCard("左侧边栏", "左侧边栏 R30 · 移动端全宽", this::showTemplateEdgeLeft));
+        body.addView(templateCard("Modal", "叶子弹窗 · 无抽屉 · R30 · 关闭键", this::showTemplateModal));
+        body.addView(templateCard("全页模板", "页头 + pbar + 内容卡 + 返回", this::showTemplateFullPage));
+        body.addView(templateCard("44dp 按钮簇", "圆按钮模板 · 边距 m=8 · 底部/右侧", this::showTemplateButtons));
+        scroll.addView(body);
+        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        setRoot(root);
+    }
+    private View templateCard(String title, String desc, Runnable action) {
+        LinearLayout cardBox = new LinearLayout(this);
+        cardBox.setOrientation(LinearLayout.VERTICAL);
+        cardBox.setPadding(dp(16), dp(14), dp(16), dp(14));
+        cardBox.setBackground(rounded(card, 16, line));
+        cardBox.setElevation(dp(2));
+        cardBox.setClickable(true);
+        cardBox.setOnClickListener(v -> action.run());
+        cardBox.addView(tv(title, 14, ink, true));
+        TextView d = tv(desc, 10.5f, muted, false);
+        d.setPadding(0, dp(3), 0, 0);
+        cardBox.addView(d);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(9);
+        cardBox.setLayoutParams(lp);
+        return cardBox;
+    }
+    private View templatePane(String title, String note) {
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        TextView t = tv(title, 18, ink, true);
+        t.setPadding(0, 0, dp(44), dp(8));
+        body.addView(t);
+        TextView n = tv(note, 11.5f, muted, false);
+        n.setLineSpacing(0, 1.6f);
+        body.addView(n);
+        TextView placeholder = tv("内容占位\n这里只验证模板尺寸、圆角、抽屉和按钮。", 12, muted, false);
+        placeholder.setGravity(Gravity.CENTER);
+        placeholder.setBackground(rounded(mix(card, bg, .4f), 14, line));
+        placeholder.setPadding(dp(12), dp(18), dp(12), dp(18));
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        plp.topMargin = dp(14);
+        body.addView(placeholder, plp);
+        return body;
+    }
+    private void showTemplateLeafPopup() {
+        new KpPopup(this, "bug-popup", "空白 Popup", new String[0], 0,
+                (p, i) -> templatePane("空白 Popup", "非抽屉叶子：R30，无抽屉，内容 padding=2m=16，关闭键右上角。"),
+                bg, card, ink, muted, line, accent, soft).show();
+    }
+    private void showTemplateLeftPopup() {
+        KpPopup p = new KpPopup(this, "settings-popup", "左侧抽屉", new String[]{"面板一", "面板二", "面板三"}, 0,
+                (x, i) -> templatePane("左侧抽屉 / 面板" + (i + 1), "Popup R38；左抽屉 25%、inset m=8、R30；内容为抽屉宽 + 2m 让位。"),
+                bg, card, ink, muted, line, accent, soft);
+        p.show();
+    }
+    private void showTemplateRightPopup() {
+        KpPopup p = new KpPopup(this, "settings-popup", "右侧抽屉", new String[0], 0,
+                (x, i) -> templatePane("右侧抽屉 Popup", "非抽屉 Popup R38；右侧抽屉 R30；顶部从关闭键底部 + m 开始。"),
+                bg, card, ink, muted, line, accent, soft);
+        p.addRightDrawer("右抽屉", (x, i) -> templatePane("右侧抽屉", "右侧抽屉内容占位。桌面 25%，移动全宽。"));
+        p.show();
+    }
+    private void showTemplateBothPopup() {
+        KpPopup p = new KpPopup(this, "settings-popup", "左右抽屉", new String[]{"目录一", "目录二"}, 0,
+                (x, i) -> templatePane("左右抽屉 / 目录" + (i + 1), "非抽屉 Popup R38；左右抽屉都是 R30；内容左右同时让位。"),
+                bg, card, ink, muted, line, accent, soft);
+        p.addRightDrawer("说明", (x, i) -> templatePane("右侧说明", "右抽屉内容占位；关闭右抽屉后内容 padding 回收。"));
+        p.show();
+    }
+    private void showTemplateEdgeRight() {
+        KpDrawer d = new KpDrawer(this, "ai-drawer", "右侧边栏", x -> templatePane("右侧边栏", "25vw、R30、顶部/底部边距；移动端全宽。"),
+                bg, card, ink, muted, line, accent, soft);
+        d.addNested("嵌套抽屉 A", "🕘", x -> templatePane("嵌套 A", "嵌套抽屉全屏覆盖父抽屉，R0，从右侧滑入。"));
+        d.addNested("嵌套抽屉 B", "⚙️", x -> templatePane("嵌套 B", "同一个嵌套模板，不单独写页面。"));
+        d.show();
+    }
+    private void showTemplateEdgeLeft() {
+        new KpDrawer(this, "debug", "左侧边栏", x -> templatePane("左侧边栏", "左侧边栏 R30；移动端全宽；关闭键。"),
+                bg, card, ink, muted, line, accent, soft, true).show();
+    }
+    private void showTemplateModal() {
+        new KpModal(this, "bug-popup", "Modal", x -> templatePane("Modal", "叶子弹窗：无抽屉、R30、居中、关闭键。"),
+                card, ink, muted, line, accent).show();
+    }
+    private void showTemplateFullPage() {
+        screen = "template-page";
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackground(screenBackground());
+        LinearLayout pbar = new LinearLayout(this);
+        pbar.setOrientation(LinearLayout.HORIZONTAL);
+        pbar.setGravity(Gravity.CENTER_VERTICAL);
+        pbar.setPadding(dp(14), dp(10), dp(14), dp(8));
+        pbar.setBackground(rounded(mix(card, bg, .5f), 16, line));
+        TextView back = tv("← 返回", 11, muted, false);
+        back.setPadding(dp(10), dp(6), dp(10), dp(6));
+        back.setBackground(rounded(card, 18, line));
+        back.setOnClickListener(v -> showTemplateGallery());
+        pbar.addView(back);
+        pbar.addView(tv("  全页模板", 14, ink, true));
+        root.addView(pbar);
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(dp(20), dp(14), dp(20), dp(28));
+        TextView hero = tv("页面内容占位", 24, ink, true);
+        body.addView(hero);
+        body.addView(tv("页头 / pbar / 内容卡片 / 返回按钮的模板结构。", 11.5f, muted, false));
+        LinearLayout cardBox = new LinearLayout(this);
+        cardBox.setOrientation(LinearLayout.VERTICAL);
+        cardBox.setPadding(dp(18), dp(18), dp(18), dp(18));
+        cardBox.setBackground(rounded(card, 18, line));
+        cardBox.setElevation(dp(3));
+        TextView ph = tv("内容卡占位", 14, ink, true);
+        cardBox.addView(ph);
+        TextView p2 = tv("这里不加载任何业务数据。", 11, muted, false);
+        p2.setPadding(0, dp(4), 0, 0);
+        cardBox.addView(p2);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        clp.topMargin = dp(18);
+        body.addView(cardBox, clp);
+        scroll.addView(body);
+        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        setRoot(root);
+    }
+    private void showTemplateButtons() {
+        screen = "template-page";
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackground(screenBackground());
+        root.addView(topBar("44dp 按钮簇", true, this::showTemplateGallery));
+        FrameLayout stage = new FrameLayout(this);
+        TextView tip = tv("边距 m=8，按钮 44dp，R22。\n这是抽屉/弹窗底部按钮簇的模板。", 12, muted, false);
+        tip.setPadding(dp(18), dp(16), dp(18), 0);
+        stage.addView(tip);
+        String[] labels = {"←", "☰", "?", "✕"};
+        for (int i = 0; i < labels.length; i++) {
+            TextView b = tv(labels[i], 18, ink, false);
+            b.setGravity(Gravity.CENTER);
+            b.setBackground(rounded(card, 22, line));
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(44), dp(44));
+            lp.gravity = Gravity.BOTTOM | (i % 2 == 0 ? Gravity.START : Gravity.END);
+            lp.leftMargin = i % 2 == 0 ? dp(8) : 0;
+            lp.rightMargin = i % 2 == 0 ? 0 : dp(8);
+            lp.bottomMargin = dp(8) + (i / 2) * dp(52);
+            stage.addView(b, lp);
+        }
+        root.addView(stage, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        setRoot(root);
+    }
+
     private void showSettings() {
         screen = "settings";
         String[] items = {"个人资料", "主题外观", "服务器", "关于"};
@@ -1290,6 +1460,11 @@ public class MainActivity extends Activity {
             info.setLineSpacing(0, 1.7f);
             info.setPadding(0, dp(10), 0, 0);
             body.addView(info);
+            TextView templates = pill("页面模板总览", accent, false);
+            templates.setOnClickListener(v -> { popup.dismiss(); showTemplateGallery(); });
+            LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40));
+            tlp.topMargin = dp(18);
+            body.addView(templates, tlp);
         }
         scroll.addView(body);
         return scroll;

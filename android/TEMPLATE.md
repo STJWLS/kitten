@@ -62,3 +62,18 @@ AI drawer, AI history/settings nested drawers, bottle status drawer, debug drawe
 - bottom button stack
 
 Demo node: AI drawer (button on home) with history/settings nested drawers.
+
+
+## Template gallery
+
+Settings → About → "页面模板总览" opens a pure placeholder catalog (no API calls):
+
+- blank leaf Popup R30
+- left drawer Popup R38
+- right drawer Popup R38
+- both drawers Popup R38
+- right edge drawer R30 + nested full-cover drawers
+- left edge drawer R30
+- leaf Modal R30
+- full page (pbar + card + back)
+- 44dp button cluster

@@ -48,7 +48,7 @@ KEYSTORE = os.path.join(APP_ROOT, "kp.keystore")
 KS_PASS = os.environ.get("KP_KS_PASS", "kp2026")
 ALIAS = "kittenpuppy"
 APP_NAME = "KittenPuppy4Ever"
-VERSION = "0.6.0"
+VERSION = "0.7.0"
 OUT_APK = os.path.join(RELEASES, APP_NAME + "-" + VERSION + ".apk")
 
 def jdk_bin(tool):
