@@ -1,6 +1,8 @@
 package com.stjwls.kittenpuppy;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -14,22 +16,30 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -51,6 +61,8 @@ public class MainActivity extends Activity {
     private String messagesPeer = "";
     private int messagesTab = 0;
     private TextView homeMailBadge;
+    private BottleView bottleView;
+    private int bottleRev = 0;
 
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -62,6 +74,7 @@ public class MainActivity extends Activity {
     }
 
     @Override public void onBackPressed() {
+        if ("bottle".equals(screen)) { showHome(); return; }
         if ("project".equals(screen) || "settings".equals(screen)) { showHome(); return; }
         if ("thread".equals(screen)) { showMessages(); return; }
         if ("messages".equals(screen)) { showHome(); return; }
@@ -431,6 +444,7 @@ public class MainActivity extends Activity {
     // ---------------- project ----------------
     private void showProject(JSONObject node) {
         screen = "project"; currentProject = node;
+        if ("bottle".equals(node.optString("id"))) { showBottle(node); return; }
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(bg);
@@ -731,6 +745,201 @@ public class MainActivity extends Activity {
             }
             @Override public void fail(String m) { list.removeAllViews(); list.addView(empty("读取失败：" + m)); }
         });
+    }
+
+    // ---------------- bottle (native Canvas) ----------------
+    private void showBottle(JSONObject node) {
+        if (node != null) currentProject = node;
+        screen = "bottle";
+        showLoading("正在打捞漂流瓶…");
+        loadBottleState();
+    }
+    private void loadBottleState() {
+        getAsync("/api/p/bottle/state", new JsonCb() {
+            @Override public void ok(JSONObject j) {
+                bottleRev = j.optInt("rev", 0);
+                renderBottle(j.optJSONObject("data"));
+            }
+            @Override public void fail(String m) { err("漂流瓶读取失败：" + m); showHome(); }
+        });
+    }
+    private void renderBottle(JSONObject data) {
+        if (data == null) data = new JSONObject();
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(bg);
+        LinearLayout header = topBar("时光漂流瓶", true, this::showHome);
+        TextView refresh = action("⟳", this::loadBottleState);
+        header.addView(refresh, new LinearLayout.LayoutParams(dp(38), dp(38)));
+        root.addView(header);
+
+        FrameLayout stage = new FrameLayout(this);
+        bottleView = new BottleView(this);
+        bottleView.setData(data.optJSONArray("bottles"), data.optJSONObject("layout"));
+        bottleView.setListener(new BottleView.Listener() {
+            @Override public void onTap(JSONObject bottle) { showBottleDetail(bottle); }
+            @Override public void onMoved(Map<String, android.graphics.PointF> positions) { saveBottlePositions(positions); }
+        });
+        stage.addView(bottleView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        TextView write = tv("＋ 写一瓶", 13, Color.WHITE, true);
+        write.setGravity(Gravity.CENTER);
+        write.setPadding(dp(16), 0, dp(16), 0);
+        write.setBackground(rounded(accent, 23, 0));
+        write.setElevation(dp(4));
+        write.setOnClickListener(v -> showBottleCompose());
+        FrameLayout.LayoutParams wp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46));
+        wp.gravity = Gravity.BOTTOM | Gravity.END;
+        wp.rightMargin = dp(18); wp.bottomMargin = dp(18);
+        stage.addView(write, wp);
+        root.addView(stage, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        setRoot(root);
+    }
+    private void showBottleDetail(JSONObject b) {
+        String from = b.optString("from", "");
+        String to = b.optString("to", "");
+        String openAt = b.optString("openAt", "");
+        String msg = b.optString("message", "");
+        boolean canOpen = b.optBoolean("canOpen", false);
+        String text;
+        if (msg.length() > 0) text = msg;
+        else if (canOpen) text = "已到开启日。\n\n来自 " + from + " · 给 " + to + "\n开启日 " + openAt + "\n\n点“打开”收下这句话。";
+        else text = "还没到开启日。\n\n来自 " + from + " · 给 " + to + "\n开启日 " + openAt;
+        AlertDialog.Builder d = new AlertDialog.Builder(this);
+        d.setTitle(msg.length() > 0 ? "来自 " + from + " 的漂流瓶" : "漂流瓶");
+        d.setMessage(text);
+        if (canOpen) {
+            final String id = b.optString("id", "");
+            d.setPositiveButton("打开", (dialog, which) -> openBottle(id));
+        }
+        d.setNegativeButton(msg.length() > 0 ? "收下这句话" : "先放着", null);
+        d.show();
+    }
+    private void openBottle(String id) {
+        JSONObject body = new JSONObject();
+        try {
+            body.put("action", "open");
+            body.put("rev", bottleRev);
+            JSONObject payload = new JSONObject();
+            payload.put("id", id);
+            body.put("payload", payload);
+        } catch (Exception ignored) {}
+        postAsync("/api/p/bottle/action", body, new JsonCb() {
+            @Override public void ok(JSONObject j) {
+                bottleRev = j.optInt("rev", bottleRev);
+                renderBottle(j.optJSONObject("data"));
+                refreshBadge();
+            }
+            @Override public void fail(String m) { err("打开失败：" + m); }
+        });
+    }
+    private void showBottleCompose() {
+        getAsync("/api/messages/threads", new JsonCb() {
+            @Override public void ok(JSONObject j) {
+                JSONArray arr = j.optJSONArray("users");
+                final List<String> users = new ArrayList<>();
+                String me = session == null ? "" : session.optString("user", "");
+                if (arr != null) for (int i = 0; i < arr.length(); i++) {
+                    String u = arr.optString(i);
+                    if (u.length() > 0 && !u.equals(me)) users.add(u);
+                }
+                if (users.isEmpty()) { err("没有其他可收信的用户"); return; }
+                showBottleComposeDialog(users);
+            }
+            @Override public void fail(String m) { err("读取用户失败：" + m); }
+        });
+    }
+    private void showBottleComposeDialog(List<String> users) {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(18), dp(8), dp(18), dp(4));
+        TextView toLabel = tv("收件人", 11, muted, false); form.addView(toLabel);
+        Spinner to = new Spinner(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, users);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        to.setAdapter(adapter);
+        form.addView(to, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(42)));
+        TextView dateLabel = tv("开启日期", 11, muted, false); dateLabel.setPadding(0, dp(8), 0, 0); form.addView(dateLabel);
+        final EditText date = field("YYYY-MM-DD", false);
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.YEAR, 1);
+        final String[] picked = {new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cal.getTime())};
+        date.setText(picked[0]);
+        date.setFocusable(false);
+        date.setOnClickListener(v -> {
+            Calendar c = Calendar.getInstance();
+            try { c.setTime(new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(picked[0])); } catch (Exception ignored) {}
+            new DatePickerDialog(MainActivity.this, (view, year, month, day) -> {
+                Calendar n = Calendar.getInstance();
+                n.set(year, month, day);
+                picked[0] = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(n.getTime());
+                date.setText(picked[0]);
+            }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
+        });
+        form.addView(date, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
+        TextView msgLabel = tv("瓶中信", 11, muted, false); msgLabel.setPadding(0, dp(8), 0, 0); form.addView(msgLabel);
+        final EditText message = field("写点什么，封进瓶子…", false);
+        message.setSingleLine(false);
+        message.setMinLines(4);
+        message.setMaxLines(7);
+        message.setGravity(Gravity.TOP);
+        message.setPadding(dp(10), dp(8), dp(10), dp(8));
+        form.addView(message, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(110)));
+
+        AlertDialog.Builder d = new AlertDialog.Builder(this);
+        d.setTitle("写一瓶漂流瓶");
+        d.setView(form);
+        d.setNegativeButton("取消", null);
+        d.setPositiveButton("封进瓶子", null);
+        AlertDialog dialog = d.create();
+        dialog.setOnShowListener(x -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String text = message.getText().toString().trim();
+            if (text.length() == 0) { err("写点什么再封进瓶子吧"); return; }
+            String peer = String.valueOf(to.getSelectedItem());
+            JSONObject body = new JSONObject();
+            try {
+                body.put("action", "create");
+                body.put("rev", bottleRev);
+                JSONObject payload = new JSONObject();
+                payload.put("to", peer); payload.put("message", text); payload.put("openAt", picked[0]);
+                body.put("payload", payload);
+            } catch (Exception ignored) {}
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+            postAsync("/api/p/bottle/action", body, new JsonCb() {
+                @Override public void ok(JSONObject j) {
+                    dialog.dismiss();
+                    bottleRev = j.optInt("rev", bottleRev);
+                    renderBottle(j.optJSONObject("data"));
+                    refreshBadge();
+                }
+                @Override public void fail(String m) {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                    err("封瓶失败：" + m);
+                }
+            });
+        }));
+        dialog.show();
+    }
+    private void saveBottlePositions(Map<String, android.graphics.PointF> positions) {
+        JSONObject clean = new JSONObject();
+        try {
+            for (Map.Entry<String, android.graphics.PointF> e : positions.entrySet()) {
+                JSONObject p = new JSONObject();
+                p.put("x", Math.round(e.getValue().x * 100000) / 100000.0);
+                p.put("y", Math.round(e.getValue().y * 100000) / 100000.0);
+                clean.put(e.getKey(), p);
+            }
+            JSONObject body = new JSONObject();
+            body.put("action", "save_positions");
+            body.put("rev", bottleRev);
+            JSONObject payload = new JSONObject();
+            payload.put("positions", clean);
+            body.put("payload", payload);
+            postAsync("/api/p/bottle/action", body, new JsonCb() {
+                @Override public void ok(JSONObject j) { bottleRev = j.optInt("rev", bottleRev); }
+                @Override public void fail(String m) {}
+            });
+        } catch (Exception ignored) {}
     }
 
     // ---------------- settings ----------------

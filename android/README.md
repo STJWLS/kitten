@@ -1,4 +1,4 @@
-# KittenPuppy4Ever · Android 原生客户端（Phase 1）
+# KittenPuppy4Ever · Android 原生客户端（Phase 1 + 2A）
 
 这是一个 **不使用 WebView** 的 Android 原生客户端骨架。
 
@@ -14,6 +14,8 @@
   - 原生私信聊天气泡与发送
   - 标记已读 / 全部已读
 - 原生设置页：账号、主题信息、服务器地址、退出登录
+- **Phase 2A：原生 Canvas 漂流瓶**：海面绘制、拖动位置、点击查看/打开、写瓶、原生收件人/日期选择
+- 后端默认使用 Tailscale Funnel 公网入口，真实手机不需要模拟器
 - 服务端主题色应用到原生界面
 - 无 WebView、无 Capacitor/Cordova、无 Gradle 依赖
 
@@ -28,7 +30,7 @@ python android/build_apk.py
 输出：
 
 ```text
-releases/KittenPuppy4Ever-0.1.0.apk
+releases/KittenPuppy4Ever-0.2.0.apk
 ```
 
 CI 构建使用 `JAVA_HOME` + `ANDROID_SDK_ROOT`，不需要本地 toolchain。
@@ -41,12 +43,12 @@ CI 构建使用 `JAVA_HOME` + `ANDROID_SDK_ROOT`，不需要本地 toolchain。
 https://02f5c6734009.tail4ba04e.ts.net
 ```
 
-GitHub Pages 只是静态入口，实际后端运行在本机 `127.0.0.1:8772`，由 Tailscale Funnel 暴露。Android 模拟器也可改为 `http://10.0.2.2:8772`。
+GitHub Pages 只是静态入口；本机 `127.0.0.1:8772` 的 Python 服务同时提供 API 后端和网页前端，由 Tailscale Funnel 暴露。Android 模拟器也可改为 `http://10.0.2.2:8772`。
 
 ## 安装
 
 ```bash
-adb install -r releases/KittenPuppy4Ever-0.1.0.apk
+adb install -r releases/KittenPuppy4Ever-0.2.0.apk
 ```
 
 ## GitHub Actions
@@ -65,9 +67,8 @@ adb install -r releases/KittenPuppy4Ever-0.1.0.apk
 
 ## 下一阶段
 
-Phase 1 只完成原生壳、路由、消息、设置和主题。下一阶段实现：
+Phase 1 完成原生壳、路由、消息、设置和主题；Phase 2A 完成漂流瓶原生 Canvas。后续实现：
 
-- 漂流瓶原生 Canvas
 - 日程/许愿池/便签原生界面
 - AI 原生 SSE 聊天
 - 面试 Mock 录音
