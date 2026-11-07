@@ -1675,8 +1675,24 @@
   $("#deed-again").onclick = () => { stopIsoAnim(); el.modal.classList.add("hidden"); state.round++; startRound(); };
   $("#sound").onclick = (e) => { state.muted = !state.muted; e.target.textContent = "音效：" + (state.muted ? "关" : "开"); };
 
+  // QA：把单个构件放到格心，供图鉴/回归截图；不参与正常游戏流程。
+  function renderDemo(type) {
+    if (!HOUSES[type]) return null;
+    stopIsoAnim();
+    state.phase = "done";
+    state.rooms = [{ t: type, rot: 0, x: 1, y: 1, w: HOUSES[type].w, h: HOUSES[type].h }];
+    state.piece = null;
+    state.falling = null;
+    draw();
+    const r = state.rooms[0];
+    return {
+      type, name: HOUSES[type].name, kind: HOUSES[type].kind,
+      w: r.w, h: r.h, cell, cw, chh, W, H, PAD, LOT_TOP,
+      px: gx(r.x), py: roomTop(r), pw: r.w * cell, ph: r.h * cell
+    };
+  }
   // 调试出口（只读）：给自动化检查用
-  window.__kpYard = { get state() { return state; }, analyze, landing };
+  window.__kpYard = { get state() { return state; }, analyze, landing, renderDemo };
 
   // ---- QA：?auto=1 直接模拟 8 件并出宅院契 ----
   function autoPlay() {
