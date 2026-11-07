@@ -276,7 +276,7 @@
   .cards {
     display: grid; gap: 16px;
     width: 100%;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
     max-width: none;
   }
   .card {
@@ -2927,8 +2927,15 @@ function updateDrawerTabs(){
   if (!onBottle) closeBottleStatusDrawer();
   const gameStats = $("#game-stats-btn");
   const onGames = !!app.session && inProject && app.current && app.current.id === "games";
-  if (gameStats) gameStats.classList.toggle("show", onGames);
-  if (!onGames && gameStats) { gameStats.classList.remove("active"); const gd = $("#game-stats-drawer"); if (gd) gd.classList.remove("open"); }
+  if (gameStats) {
+    gameStats.classList.toggle("show", onGames);
+    gameStats.style.display = onGames ? "inline-flex" : "none";
+    if (!onGames) {
+      gameStats.classList.remove("active");
+      const gd = $("#game-stats-drawer");
+      if (gd) gd.classList.remove("open");
+    }
+  }
   const onAi = !!app.session && inProject && isAi;
   const configFab = $("#ai-page-config"), histFab = $("#ai-page-history");
   if (configFab) configFab.classList.toggle("show", onAi);

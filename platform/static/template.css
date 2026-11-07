@@ -449,7 +449,7 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
 .card-tags span { font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:1px 7px; }
 .cards {
   display: grid; gap: 16px; width: 100%;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
   max-width: none;
 }
 .card {
