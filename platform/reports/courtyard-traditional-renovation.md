@@ -162,3 +162,64 @@
 - 10×8 轴测格子图：`courtyard-series/courtyard-grid-iso-atlas.png`
 - 单件轴测卡片：`courtyard-series/cards/<id>-iso.png`
 - 单件轴测原始图：`courtyard-series/iso/<id>.png`
+
+## 11. 扩展：大画布、21 构件、可旋转落子
+
+### 画布
+
+- 造院 canvas：`660×760` → `820×900`（实际按 820 宽、内容比高自适应）；
+- 桌面最大宽度 820px；
+- 移动端仍按父容器宽度缩放，390px 下无横向溢出。
+
+### 构件总数
+
+从 13 种扩展到 21 种：
+
+常规 12：
+
+```text
+正房、厢房、书房、净房、厨房、门楼、天井、回廊、影壁、倒座房、耳房、花台
+```
+
+隐藏 9：
+
+```text
+月洞门、戏台、太湖石、水池、垂花门、亭、古井、石桥、竹林
+```
+
+新增尺寸：
+
+| 构件 | 尺寸 | kind |
+|---|---:|---|
+| 倒座房 | 3×1 | hall |
+| 耳房 | 1×1 | service |
+| 花台 | 1×1 | garden |
+| 垂花门 | 1×2 | gate |
+| 亭 | 2×2 | pavilion |
+| 古井 | 1×1 | well |
+| 石桥 | 2×1 | bridge |
+| 竹林 | 2×2 | bamboo |
+
+隐藏构件通过 `rare + hidden` 标记，仍走稀有替换池；不会固定出现在每局。
+
+### 旋转落子
+
+- 新增 `R` 键与“旋转 R”按钮；
+- 当前构件可在落下前切换横/竖；
+- 旋转后重新按新的面阔夹取 x 位置，落点仍由 `landing()` 计算；
+- 不改变落子、堆叠、开门、评分机制。
+
+### 全构件图鉴
+
+- 平面全图：`courtyard-series/courtyard-elements-series-all.png`
+- 轴测全图：`courtyard-series/courtyard-elements-iso-series-all.png`
+- 单件平面：`courtyard-series/raw2/<id>.png`
+- 单件轴测：`courtyard-series/iso2/<id>.png`
+- 单件卡片：`courtyard-series/cards/<id>.png` / `<id>-iso.png`
+
+### 回归
+
+- 24 局 auto 无 JavaScript 错误；
+- 新构件平面/轴测渲染无错误；
+- 旋转 xiang（2×3）验证为 3×2，HUD 显示“（转）”；
+- 桌面画布 820 宽；移动端 390 宽无横向溢出。

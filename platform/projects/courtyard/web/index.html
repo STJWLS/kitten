@@ -19,7 +19,7 @@
   .yard-meta .chip { background: #f3ead6; color: #7a6448; }
   .yard-wrap { display: flex; justify-content: center; margin-top: 12px; }
   canvas#yard {
-    width: 100%; max-width: 660px; height: auto; border-radius: 14px;
+    width: 100%; max-width: 820px; height: auto; border-radius: 14px;
     border: 1px solid #e3d5b8; box-shadow: 0 10px 30px rgba(90, 70, 40, .12);
     background: #f7f1e3; cursor: pointer; touch-action: manipulation;
   }
@@ -78,10 +78,11 @@
         <span class="chip" id="crane-chip">—</span>
       </div>
     </div>
-    <div class="yard-wrap"><canvas id="yard" width="660" height="760"></canvas></div>
+    <div class="yard-wrap"><canvas id="yard" width="820" height="900"></canvas></div>
     <div class="yard-banner" id="banner"></div>
-    <div class="yard-tip">点击画面 / 空格落子 · <kbd>A</kbd><kbd>D</kbd> 手动移动吊车 · 相邻房间自动开门、朝外/朝街墙面自动开窗 · 院门朝南（画面下方） · 正房三开间，两厢三开间</div>
+    <div class="yard-tip">点击画面 / 空格落子 · <kbd>A</kbd><kbd>D</kbd> 移动 · <kbd>R</kbd> 旋转横/竖 · 院门朝南（画面下方） · 正房三开间，两厢三开间</div>
     <div class="yard-actions">
+      <button class="btn soft sm" id="rotate">旋转 R</button>
       <button class="btn soft sm" id="restart">重起一座</button>
       <button class="btn soft sm" id="sound">音效：开</button>
     </div>
@@ -161,10 +162,18 @@
     tian:  { name: "天井", kind: "courtyard",w: 3, h: 3, color: "#eee7d7", ink: "#7a6448" },
     lang:  { name: "回廊", kind: "corridor", w: 1, h: 3, color: "#d3c19e", ink: "#5a4a30" },
     hu:    { name: "影壁", kind: "screen",   w: 1, h: 1, color: "#c3ae92", ink: "#4a3a2a" },
-    yue:   { name: "月洞门", kind: "moonGate",w: 1, h: 1, color: "#b6cdb0", ink: "#2f4a2c", rare: true },
-    tai:   { name: "戏台", kind: "stage",    w: 3, h: 2, color: "#c78d7a", ink: "#5c2a20", rare: true },
-    shi:   { name: "太湖石", kind: "rock",   w: 1, h: 1, color: "#c5cdd1", ink: "#3c4a52", rare: true },
-    chi:   { name: "水池", kind: "pond",     w: 2, h: 1, color: "#b9d6dc", ink: "#2c4a56", rare: true },
+    yue:   { name: "月洞门", kind: "moonGate",w: 1, h: 1, color: "#b6cdb0", ink: "#2f4a2c", rare: true, hidden: true },
+    tai:   { name: "戏台", kind: "stage",    w: 3, h: 2, color: "#c78d7a", ink: "#5c2a20", rare: true, hidden: true },
+    shi:   { name: "太湖石", kind: "rock",   w: 1, h: 1, color: "#c5cdd1", ink: "#3c4a52", rare: true, hidden: true },
+    chi:   { name: "水池", kind: "pond",     w: 2, h: 1, color: "#b9d6dc", ink: "#2c4a56", rare: true, hidden: true },
+    dao:   { name: "倒座房", kind: "hall",   w: 3, h: 1, color: "#e4d1b0", ink: "#6b4a2a" },
+    er:    { name: "耳房", kind: "service", w: 1, h: 1, color: "#eadcc4", ink: "#5a5448" },
+    hua:   { name: "花台", kind: "garden",  w: 1, h: 1, color: "#d8e2c8", ink: "#44603a" },
+    chui:  { name: "垂花门", kind: "gate",  w: 1, h: 2, color: "#a9443a", ink: "#f7e9df", rare: true, hidden: true },
+    ting:  { name: "亭", kind: "pavilion", w: 2, h: 2, color: "#c9b08a", ink: "#5b432d", rare: true, hidden: true },
+    gu:    { name: "古井", kind: "well",    w: 1, h: 1, color: "#b9b1a0", ink: "#4a4438", rare: true, hidden: true },
+    qiao:  { name: "石桥", kind: "bridge",  w: 2, h: 1, color: "#c7c0ae", ink: "#4f4a40", rare: true, hidden: true },
+    zhu:   { name: "竹林", kind: "bamboo",  w: 2, h: 2, color: "#c8d8bd", ink: "#385a34", rare: true, hidden: true },
   };
   // 不是所有构件都是"房间"：只有 hall/wing/study/service 才按室内绘制；
   // gate 是门楼，stage 是戏台，corridor 是廊，screen/moonGate 是墙，courtyard/pond/rock 是室外。
@@ -176,9 +185,9 @@
   // 一座院子的基本料单：正房、两厢、书房、净房、厨房、门楼、影壁 8 件。
   // 偶发移除一件并补入天井/回廊/稀有构件，保持"一院八件"的落子结构。
   const CORE = ["zheng", "xiang", "xiang", "shu", "jing", "chu", "men", "hu"];
-  const EXTRAS = [["tian", 3], ["lang", 2.4], ["hu", 2], ["jing", 0.8], ["chu", 0.8],
-                  ["xiang", 0.5], ["shu", 0.4], ["zheng", 0.3]];
-  const RARE_POOL = ["yue", "tai", "shi", "chi"];
+  const EXTRAS = [["tian", 3], ["lang", 2.4], ["hu", 2], ["dao", 1.4], ["er", 1.4], ["hua", 1.6],
+                  ["jing", 0.8], ["chu", 0.8], ["xiang", 0.5], ["shu", 0.4], ["zheng", 0.3]];
+  const RARE_POOL = ["yue", "tai", "shi", "chi", "chui", "ting", "gu", "qiao", "zhu"];
   const RARE_CHAIN = [0.45, 0.45, 0.3];
   const BED = ["xiang", "shu"];
 
@@ -460,7 +469,7 @@
   let cell = 72, cw = 660, LOT_TOP = 210, chh = 720;
 
   function layout() {
-    const maxW = Math.min(660, canvas.parentElement.clientWidth || 660);
+    const maxW = Math.min(820, canvas.parentElement.clientWidth || 820);
     cw = maxW;
     PAD = Math.max(18, Math.min(46, Math.floor(cw * 0.06)));
     cell = Math.max(34, Math.min(78, Math.floor((cw - PAD * 2) / W), Math.floor(690 / (H + 2))));
@@ -493,6 +502,17 @@
     el.banner.textContent = text; el.banner.classList.add("show");
     clearTimeout(state.bannerT);
     state.bannerT = setTimeout(() => el.banner.classList.remove("show"), ms);
+  }
+  // 落子前可把当前构件旋成横/竖；落点与旋转后的尺寸一致。
+  function rotatePiece() {
+    if (state.phase !== "playing" || !state.piece) return;
+    const def = HOUSES[state.piece.t];
+    if (def.w === def.h) return;
+    state.piece.rot = state.piece.rot ? 0 : 1;
+    const [w] = sizeOf(state.piece.t, state.piece.rot);
+    state.x = Math.max(0, Math.min(W - w, state.x));
+    updateHud();
+    draw();
   }
 
   function startRound() {
@@ -638,7 +658,8 @@
 
   const ROOF = { zheng: "#4e5b55", xiang: "#55665d", shu: "#566a63", men: "#7a2f28",
     jing: "#6d6a60", chu: "#7a6247", tian: "#b9c3a9", lang: "#8a7a5c",
-    hu: "#8a7a66", yue: "#4f6b4b", tai: "#6f3a30", shi: "#6b747a", chi: "#5f8790" };
+    hu: "#8a7a66", yue: "#4f6b4b", tai: "#6f3a30", shi: "#6b747a", chi: "#5f8790",
+    dao: "#556058", er: "#6d6a60", chui: "#7a2f28", ting: "#5d5038" };
   const WALL = { zheng: "#f3ead8", xiang: "#eef2e8", shu: "#eaf1f2", men: "#c05a4d",
     jing: "#ebe6da", chu: "#f4e4c3", tian: "#e9e1cd", lang: "#e5d9c0",
     hu: "#e8dfcf", yue: "#d3e2cd", tai: "#e7c3b4", shi: "#d5dbde", chi: "#c4dde2" };
@@ -656,12 +677,17 @@
     if (k === "hall") return 2.0;
     if (k === "wing") return 1.45;
     if (k === "study") return 1.30;
+    if (k === "pavilion") return 1.25;
+    if (k === "garden") return 0.30;
+    if (k === "well") return 0.35;
+    if (k === "bridge") return 0.25;
+    if (k === "bamboo") return 1.15;
     return 1.0;
   }
 
   const ISO_CA = 0.82, ISO_SA = 0.47, ISO_ZK = 0.92;
   const lerpN = (a, b, t) => a + (b - a) * t;
-  const OPEN_KINDS = ["tian", "chi", "shi", "lang", "hu", "yue", "tai"];
+  const OPEN_KINDS = ["tian", "chi", "shi", "lang", "hu", "yue", "tai", "garden", "pavilion", "well", "bridge", "bamboo"];
 
   function drawIso(g, w, h, an, flow, opts = {}) {
     const t = Math.max(0, Math.min(1, opts.t == null ? 1 : opts.t));
@@ -807,6 +833,40 @@
         for (const [ox, oy] of [[0.16, 0.16], [0.84, 0.16], [0.16, 0.84], [0.84, 0.84]]) {
           line(P(r.x + r.w * ox, r.y + r.h * oy, 0), P(r.x + r.w * ox, r.y + r.h * oy, 0.95), "#7d2d26", Math.max(1.4, sc * 0.04));
         }
+      } else if (k === "garden") {
+        const c = P(cx, cy, 0.22);
+        g.beginPath(); g.ellipse(c[0], c[1], sc * 0.22, sc * 0.12, 0, 0, Math.PI * 2);
+        g.fillStyle = "rgba(110,140,82,.55)"; g.fill();
+        for (const [ox, oy] of [[-0.22, 0.1], [0.18, -0.12], [0.05, 0.18]]) {
+          const q = P(cx + ox, cy + oy, 0.30);
+          g.beginPath(); g.arc(q[0], q[1], sc * 0.07, 0, Math.PI * 2); g.fillStyle = "rgba(78,112,66,.55)"; g.fill();
+        }
+      } else if (k === "pavilion") {
+        const z1 = 1.15;
+        for (const [ox, oy] of [[0.16, 0.16], [0.84, 0.16], [0.16, 0.84], [0.84, 0.84]]) {
+          line(P(r.x + r.w * ox, r.y + r.h * oy, 0), P(r.x + r.w * ox, r.y + r.h * oy, z1), "#7d2d26", Math.max(1.4, sc * 0.04));
+        }
+      } else if (k === "well") {
+        const c = P(cx, cy, 0.22);
+        g.beginPath(); g.ellipse(c[0], c[1], sc * 0.22, sc * 0.12, 0, 0, Math.PI * 2);
+        g.fillStyle = "#c9c0ad"; g.fill(); g.strokeStyle = "#6b6250"; g.lineWidth = 1.3; g.stroke();
+        g.beginPath(); g.ellipse(c[0], c[1] - sc * 0.03, sc * 0.12, sc * 0.06, 0, 0, Math.PI * 2);
+        g.fillStyle = "#6f7e7d"; g.fill();
+      } else if (k === "bridge") {
+        quad([P(r.x + 0.08, r.y + 0.25, 0.05), P(r.x + r.w - 0.08, r.y + 0.25, 0.05),
+              P(r.x + r.w - 0.08, r.y + 0.75, 0.05), P(r.x + 0.08, r.y + 0.75, 0.05)], "#cfc7b6", "#6b6254", 1.2);
+        for (let i = 1; i < 5; i++) {
+          const xx = r.x + i * r.w / 5;
+          line(P(xx, r.y + 0.24, 0.28), P(xx, r.y + 0.76, 0.28), "#8a7a62", 1);
+        }
+      } else if (k === "bamboo") {
+        for (let i = 0; i < 8; i++) {
+          const bx = r.x + 0.14 + (i % 4) * 0.24, by = r.y + 0.55 - Math.floor(i / 4) * 0.28;
+          line(P(bx, by, 0), P(bx, by, 0.95), "#5d7a4c", Math.max(1.2, sc * 0.025));
+          const c = P(bx, by, 1.0);
+          g.beginPath(); g.ellipse(c[0], c[1], sc * 0.09, sc * 0.045, -0.5, 0, Math.PI * 2);
+          g.fillStyle = "rgba(78,112,66,.40)"; g.fill();
+        }
       } else if (k === "gate") {
         // 门楼正面朱门
         const yy = r.y + r.h * 0.52;
@@ -878,7 +938,7 @@
     // ---- 屋顶：灰瓦、正脊、檐口 ----
     for (const r of rooms) {
       const k = id(r);
-      if (!["zheng", "xiang", "shu", "jing", "chu", "men", "tai", "lang"].includes(k)) continue;
+      if (!["zheng", "xiang", "shu", "jing", "chu", "dao", "er", "men", "chui", "tai", "ting", "lang"].includes(k)) continue;
       const h0 = Math.max(0.55, roomHeight(r) * 0.82 + 0.04);
       const e = 0.10;
       const topPts = [
@@ -1554,6 +1614,81 @@
     ctx.globalAlpha = 1;
   }
 
+  // 花台：室外花木点景
+  function drawGarden(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#f1edde"; ctx.fillRect(px, py, pw, ph);
+    ctx.fillStyle = "rgba(110,140,82,.16)"; ctx.fillRect(px + 3, py + 3, pw - 6, ph - 6);
+    ctx.strokeStyle = "rgba(80,110,62,.55)"; ctx.lineWidth = 1.2;
+    for (let i = 0; i < 5; i++) {
+      const fx = px + pw * (0.18 + (i % 3) * 0.28), fy = py + ph * (0.22 + Math.floor(i / 3) * 0.36);
+      ctx.beginPath(); ctx.arc(fx, fy, Math.max(2.2, cell * 0.06), 0, Math.PI * 2); ctx.fillStyle = "rgba(110,140,82,.45)"; ctx.fill();
+      ctx.beginPath(); ctx.moveTo(fx, fy + 3); ctx.lineTo(fx, fy + cell * 0.14); ctx.strokeStyle = "#5d4730"; ctx.stroke();
+    }
+    drawPlanLabel("花台", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
+  // 亭：开放柱亭，有顶无墙
+  function drawPavilion(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    drawEave(px, py, pw, ph, "#7a5a3a", alpha);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#f6ecdc"; ctx.fillRect(px, py, pw, ph);
+    ctx.strokeStyle = "rgba(110,85,55,.25)"; ctx.lineWidth = 1;
+    for (let i = 1; i < r.w * 2; i++) { const xx = px + (i * pw) / (r.w * 2); ctx.beginPath(); ctx.moveTo(xx, py + 4); ctx.lineTo(xx, py + ph - 4); ctx.stroke(); }
+    ctx.fillStyle = "#7d2d26";
+    for (const [dx, dy] of [[0.12, 0.16], [0.88, 0.16], [0.12, 0.84], [0.88, 0.84]]) {
+      ctx.beginPath(); ctx.arc(px + pw * dx, py + ph * dy, Math.max(2, cell * 0.055), 0, Math.PI * 2); ctx.fill();
+    }
+    drawPlanLabel("亭", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
+  // 古井：井台与井口
+  function drawWell(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#f1edde"; ctx.fillRect(px, py, pw, ph);
+    const cx = px + pw / 2, cy = py + ph / 2, rr = Math.min(pw, ph) * 0.30;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.fillStyle = "#c9c0ad"; ctx.fill(); ctx.strokeStyle = "#6b6250"; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, rr * 0.62, 0, Math.PI * 2); ctx.fillStyle = "#6f7e7d"; ctx.fill(); ctx.strokeStyle = "#4a5655"; ctx.stroke();
+    drawPlanLabel("古井", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
+  // 石桥：桥面与栏杆
+  function drawBridge(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(140,180,185,.25)"; ctx.fillRect(px, py, pw, ph);
+    ctx.fillStyle = "#cfc7b6"; ctx.fillRect(px + 3, py + ph * 0.34, pw - 6, ph * 0.32);
+    ctx.strokeStyle = "#6b6254"; ctx.lineWidth = 1.3; ctx.strokeRect(px + 3, py + ph * 0.34, pw - 6, ph * 0.32);
+    ctx.strokeStyle = "#8a7a62"; ctx.lineWidth = 1;
+    for (let i = 1; i < 5; i++) { const xx = px + (i * pw) / 5; ctx.beginPath(); ctx.moveTo(xx, py + ph * 0.30); ctx.lineTo(xx, py + ph * 0.70); ctx.stroke(); }
+    drawPlanLabel("石桥", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
+  // 竹林：室外竹丛
+  function drawBamboo(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#eef0df"; ctx.fillRect(px, py, pw, ph);
+    for (let i = 0; i < 9; i++) {
+      const bx = px + pw * (0.12 + (i % 5) * 0.19), by = py + ph * (0.68 - Math.floor(i / 5) * 0.26);
+      ctx.strokeStyle = "#5d7a4c"; ctx.lineWidth = Math.max(1.3, cell * 0.025);
+      ctx.beginPath(); ctx.moveTo(bx, py + ph - 4); ctx.lineTo(bx, by); ctx.stroke();
+      ctx.fillStyle = "rgba(78,112,66,.35)";
+      for (const [ox, oy] of [[-3, 0], [3, -2], [0, 3]]) {
+        ctx.beginPath(); ctx.ellipse(bx + ox, by + oy, Math.max(2, cell * 0.05), Math.max(1, cell * 0.025), -0.5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    drawPlanLabel("竹林", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
   function drawRoom(r, alpha = 1, topOverride = null) {
     const k = kindOf(r.t);
     if (k === "courtyard") return drawCourtyard(r, alpha);
@@ -1564,6 +1699,11 @@
     if (k === "corridor") return drawCorridor(r, alpha);
     if (k === "gate") return drawGate(r, alpha);
     if (k === "stage") return drawStage(r, alpha);
+    if (k === "garden") return drawGarden(r, alpha);
+    if (k === "pavilion") return drawPavilion(r, alpha);
+    if (k === "well") return drawWell(r, alpha);
+    if (k === "bridge") return drawBridge(r, alpha);
+    if (k === "bamboo") return drawBamboo(r, alpha);
     return drawBuildingRoom(r, alpha, topOverride);
   }
 
@@ -1740,7 +1880,9 @@
     if (e.code === "Space") { e.preventDefault(); drop(); }
     if (e.code === "KeyA" || e.code === "ArrowLeft") state.x = Math.max(0, state.x - 1);
     if (e.code === "KeyD" || e.code === "ArrowRight") state.x = Math.min(W - w, state.x + 1);
+    if (e.code === "KeyR") { e.preventDefault(); rotatePiece(); }
   });
+  $("#rotate").onclick = rotatePiece;
   $("#restart").onclick = () => { stopIsoAnim(); el.modal.classList.add("hidden"); state.round++; startRound(); };
   $("#deed-close").onclick = () => { stopIsoAnim(); el.modal.classList.add("hidden"); };
   $("#deed-stay").onclick = () => { stopIsoAnim(); el.modal.classList.add("hidden"); };
@@ -1763,7 +1905,7 @@
     drawIso(c.getContext("2d"), c.width, c.height, an, 0, {
       t: 1, focus: { x: r.x - pad, y: r.y - pad, w: r.w + pad * 2, h: r.h + pad * 2, z: Math.max(0.9, roomHeight(r) + 0.55) }
     });
-    return { type, name: def.name, kind: def.kind, w: def.w, h: def.h, width: c.width, height: c.height };
+    return { type, name: def.name, kind: def.kind, hidden: !!def.hidden, w: def.w, h: def.h, width: c.width, height: c.height };
   }
   // QA：把单个构件放到格心，供图鉴/回归截图；不参与正常游戏流程。
   function renderDemo(type) {
@@ -1777,6 +1919,7 @@
     const r = state.rooms[0];
     return {
       type, name: HOUSES[type].name, kind: HOUSES[type].kind,
+      hidden: !!HOUSES[type].hidden,
       w: r.w, h: r.h, cell, cw, chh, W, H, PAD, LOT_TOP,
       px: gx(r.x), py: roomTop(r), pw: r.w * cell, ph: r.h * cell
     };
