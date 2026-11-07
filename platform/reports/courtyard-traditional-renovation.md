@@ -42,13 +42,13 @@
 | 净房 | 1×1 | 1×1 | 后院附属小间 |
 | 厨房 | 1×1 | 2×1 | 沿院墙横向附属 |
 | 门楼 | 1×1 | 1×2 | 一间两进，强调门第进深 |
-| 天井 | 2×1 | 2×2 | 院心采光天井 |
-| 回廊 | 1×3 | 1×4 | 沿院一侧的连续柱廊 |
+| 天井 | 2×1 | 3×3 | 院心采光天井 |
+| 回廊 | 1×3 | 1×3 | 沿院一侧的连续柱廊 |
 | 影壁 | 1×1 | 1×1 | 门内挡景的独立短墙 |
-| 月洞门 | 1×2 | 1×2 | 院墙上的圆形门洞 |
+| 月洞门 | 1×2 | 1×1 | 院墙上的圆形门洞 |
 | 戏台 | 2×2 | 3×2 | 三开间戏台 |
 | 太湖石 | 1×1 | 1×1 | 庭院点景 |
-| 水池 | 2×1 | 2×2 | 院心水面 |
+| 水池 | 2×1 | 2×1 | 院心水面 |
 
 ## 4. 构件组合
 
@@ -95,6 +95,24 @@
 - 原有八件入界、门楼临街、夹缝、可达性、稀有构件分继续保留；
 - 总分仍限制 20–100。
 
+## 7. 非房间要素的分类与渲染
+
+不是所有构件都按“房间”渲染。新增 `HOUSES.kind` 分类：
+
+| kind | 构件 | 渲染方式 |
+|---|---|---|
+| hall/wing/study/service | 正房/厢房/书房/净房/厨房 | 室内地面、家具、墙体、门窗、灰瓦出檐 |
+| gate | 门楼 | 门楼体量、朱红大门、门钉、匾额、台阶，不画室内家具 |
+| courtyard | 天井 | 室外青砖、院心树、置石，不砌墙、不画门窗 |
+| corridor | 回廊 | 柱列 + 廊顶，不砌房间墙 |
+| screen | 影壁 | 一段短墙 + 红心砖框，不按房间占地满铺 |
+| moonGate | 月洞门 | 墙段 + 圆洞，不按房间渲染 |
+| stage | 戏台 | 开放台面 + 红柱 + 屋顶，不砌墙 |
+| rock | 太湖石 | 瘦皱漏透山石轮廓，不铺房间地面 |
+| pond | 水池 | 水面、波纹、荷叶，不砌墙 |
+
+门窗绘制只对 `hall/wing/study/service/gate` 执行；天井、水池、山石、影壁、月洞门、回廊不会出现门洞/窗洞。
+
 ## 7. 视觉改造
 
 平面图：
@@ -128,6 +146,6 @@
 
 ## 9. 相关截图
 
-- `C:/Users/Administrator/Documents/deepseek-harness/default-workspace/courtyard-new-plan2.png`
+- `C:/Users/Administrator/Documents/deepseek-harness/default-workspace/courtyard-elements-plan.png`
 - `C:/Users/Administrator/Documents/deepseek-harness/default-workspace/courtyard-new-start.png`
 - `C:/Users/Administrator/Documents/deepseek-harness/default-workspace/courtyard-iso-new.png`

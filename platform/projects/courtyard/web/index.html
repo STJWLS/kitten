@@ -152,20 +152,27 @@
   // 传统四合院构件尺度：面阔（东西）× 进深（南北），单位=格
   // 正房三开间；厢房三开间、两进深；门楼一间两进；天井与回廊按院落尺度。
   const HOUSES = {
-    zheng: { name: "正房", w: 3, h: 2, color: "#e6d3b3", ink: "#6b4a2a" },
-    xiang: { name: "厢房", w: 2, h: 3, color: "#dce6d6", ink: "#3f5a3a" },
-    shu:   { name: "书房", w: 2, h: 2, color: "#dbe5e9", ink: "#3c5566" },
-    jing:  { name: "净房", w: 1, h: 1, color: "#e9e4d8", ink: "#5a5448" },
-    chu:   { name: "厨房", w: 2, h: 1, color: "#ead6ae", ink: "#6b4a2a" },
-    men:   { name: "门楼", w: 1, h: 2, color: "#b4433a", ink: "#f7e9df" },
-    tian:  { name: "天井", w: 2, h: 2, color: "#eee7d7", ink: "#7a6448" },
-    lang:  { name: "回廊", w: 1, h: 4, color: "#d3c19e", ink: "#5a4a30" },
-    hu:    { name: "影壁", w: 1, h: 1, color: "#c3ae92", ink: "#4a3a2a" },
-    yue:   { name: "月洞门", w: 1, h: 2, color: "#b6cdb0", ink: "#2f4a2c", rare: true },
-    tai:   { name: "戏台", w: 3, h: 2, color: "#c78d7a", ink: "#5c2a20", rare: true },
-    shi:   { name: "太湖石", w: 1, h: 1, color: "#c5cdd1", ink: "#3c4a52", rare: true },
-    chi:   { name: "水池", w: 2, h: 2, color: "#b9d6dc", ink: "#2c4a56", rare: true },
+    zheng: { name: "正房", kind: "hall",     w: 3, h: 2, color: "#e6d3b3", ink: "#6b4a2a" },
+    xiang: { name: "厢房", kind: "wing",     w: 2, h: 3, color: "#dce6d6", ink: "#3f5a3a" },
+    shu:   { name: "书房", kind: "study",    w: 2, h: 2, color: "#dbe5e9", ink: "#3c5566" },
+    jing:  { name: "净房", kind: "service",  w: 1, h: 1, color: "#e9e4d8", ink: "#5a5448" },
+    chu:   { name: "厨房", kind: "service",  w: 2, h: 1, color: "#ead6ae", ink: "#6b4a2a" },
+    men:   { name: "门楼", kind: "gate",     w: 1, h: 2, color: "#b4433a", ink: "#f7e9df" },
+    tian:  { name: "天井", kind: "courtyard",w: 3, h: 3, color: "#eee7d7", ink: "#7a6448" },
+    lang:  { name: "回廊", kind: "corridor", w: 1, h: 3, color: "#d3c19e", ink: "#5a4a30" },
+    hu:    { name: "影壁", kind: "screen",   w: 1, h: 1, color: "#c3ae92", ink: "#4a3a2a" },
+    yue:   { name: "月洞门", kind: "moonGate",w: 1, h: 1, color: "#b6cdb0", ink: "#2f4a2c", rare: true },
+    tai:   { name: "戏台", kind: "stage",    w: 3, h: 2, color: "#c78d7a", ink: "#5c2a20", rare: true },
+    shi:   { name: "太湖石", kind: "rock",   w: 1, h: 1, color: "#c5cdd1", ink: "#3c4a52", rare: true },
+    chi:   { name: "水池", kind: "pond",     w: 2, h: 1, color: "#b9d6dc", ink: "#2c4a56", rare: true },
   };
+  // 不是所有构件都是"房间"：只有 hall/wing/study/service 才按室内绘制；
+  // gate 是门楼，stage 是戏台，corridor 是廊，screen/moonGate 是墙，courtyard/pond/rock 是室外。
+  const ROOM_KINDS = ["hall", "wing", "study", "service"];
+  const ENCLOSED_KINDS = ["hall", "wing", "study", "service", "gate"];
+  const kindOf = (t) => HOUSES[t].kind;
+  const isRoomKind = (t) => ROOM_KINDS.includes(kindOf(t));
+  const isEnclosedKind = (t) => ENCLOSED_KINDS.includes(kindOf(t));
   // 一座院子的基本料单：正房、两厢、书房、净房、厨房、门楼、影壁 8 件。
   // 偶发移除一件并补入天井/回廊/稀有构件，保持"一院八件"的落子结构。
   const CORE = ["zheng", "xiang", "xiang", "shu", "jing", "chu", "men", "hu"];
@@ -637,23 +644,24 @@
     hu: "#e8dfcf", yue: "#d3e2cd", tai: "#e7c3b4", shi: "#d5dbde", chi: "#c4dde2" };
 
   function roomHeight(r) {
-    const id = r.t;
-    if (id === "tian") return 0.08;
-    if (id === "chi") return 0.05;
-    if (id === "shi") return 0.55;
-    if (id === "zheng") return 2.0;
-    if (id === "xiang") return 1.45;
-    if (id === "shu") return 1.35;
-    if (id === "men") return 1.55;
-    if (id === "tai") return 1.65;
-    if (id === "lang") return 0.75;
-    if (id === "hu") return 1.05;
+    const k = kindOf(r.t);
+    if (k === "courtyard") return 0.06;
+    if (k === "pond") return 0.04;
+    if (k === "rock") return 0.55;
+    if (k === "screen") return 0.95;
+    if (k === "moonGate") return 1.00;
+    if (k === "corridor") return 0.65;
+    if (k === "gate") return 1.55;
+    if (k === "stage") return 1.55;
+    if (k === "hall") return 2.0;
+    if (k === "wing") return 1.45;
+    if (k === "study") return 1.30;
     return 1.0;
   }
 
   const ISO_CA = 0.82, ISO_SA = 0.47, ISO_ZK = 0.92;
   const lerpN = (a, b, t) => a + (b - a) * t;
-  const OPEN_KINDS = ["tian", "chi", "shi"];
+  const OPEN_KINDS = ["tian", "chi", "shi", "lang", "hu", "yue", "tai"];
 
   function drawIso(g, w, h, an, flow, opts = {}) {
     const t = Math.max(0, Math.min(1, opts.t == null ? 1 : opts.t));
@@ -1076,7 +1084,7 @@
       ctx.beginPath(); ctx.arc(x, 54, 1.6, 0, Math.PI * 2); ctx.fill();
     }
   }
-  function drawRoom(r, alpha = 1, topOverride = null) {
+  function drawBuildingRoom(r, alpha = 1, topOverride = null) {
     const px = gx(r.x), py = (topOverride == null ? roomTop(r) : topOverride);
     const pw = r.w * cell, ph = r.h * cell;
     const id = r.t;
@@ -1279,6 +1287,213 @@
     ctx.globalAlpha = 1;
   }
 
+  function drawPlanLabel(text, px, py, pw, ph, alpha = 1) {
+    ctx.globalAlpha = alpha;
+    ctx.font = "600 " + Math.max(8, Math.min(12, cell * 0.15)) + "px 'Songti SC', 'SimSun', serif";
+    const tw = ctx.measureText(text).width;
+    if (pw < tw + 8 || ph < 18) { ctx.globalAlpha = 1; return; }
+    const cx = px + pw / 2, cy = py + ph / 2;
+    ctx.fillStyle = "rgba(248,242,230,.92)";
+    ctx.fillRect(cx - tw / 2 - 4, cy - 9, tw + 8, 18);
+    ctx.strokeStyle = "rgba(122,96,60,.55)"; ctx.lineWidth = 1;
+    ctx.strokeRect(cx - tw / 2 - 4, cy - 9, tw + 8, 18);
+    ctx.fillStyle = "#3a3028"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(text, cx, cy + 1);
+    ctx.globalAlpha = 1;
+  }
+  function drawEave(px, py, pw, ph, color, alpha) {
+    const e = Math.max(2.5, cell * 0.055);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(62,66,62,.14)";
+    ctx.fillRect(px - e, py - e, pw + e * 2, ph + e * 2);
+    ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.2, cell * 0.018);
+    ctx.strokeRect(px - e, py - e, pw + e * 2, ph + e * 2);
+    ctx.beginPath();
+    for (const [cx0, cy0, sx, sy] of [[px - e, py - e, -1, -1], [px + pw + e, py - e, 1, -1], [px - e, py + ph + e, -1, 1], [px + pw + e, py + ph + e, 1, 1]]) {
+      ctx.moveTo(cx0, cy0); ctx.quadraticCurveTo(cx0 + sx * cell * 0.10, cy0 + sy * cell * 0.02, cx0 + sx * cell * 0.17, cy0 + sy * cell * 0.10);
+    }
+    ctx.stroke();
+  }
+
+  // 天井：室外院落，不砌房间墙，不按房间标注
+  function drawCourtyard(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#efe7d5";
+    ctx.fillRect(px, py, pw, ph);
+    ctx.strokeStyle = "rgba(120,95,60,.22)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 1; i < r.h * 3; i++) { const yy = py + (i * ph) / (r.h * 3); ctx.moveTo(px + 5, yy); ctx.lineTo(px + pw - 5, yy); }
+    for (let i = 1; i < r.w * 3; i++) { const xx = px + (i * pw) / (r.w * 3); ctx.moveTo(xx, py + 5); ctx.lineTo(xx, py + ph - 5); }
+    ctx.stroke();
+    // 院心树
+    const tx = px + pw * 0.54, ty = py + ph * 0.48;
+    ctx.beginPath(); ctx.arc(tx, ty, Math.min(pw, ph) * 0.16, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(78,112,66,.14)"; ctx.fill();
+    ctx.strokeStyle = "rgba(78,112,66,.52)"; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx, ty + 3); ctx.lineTo(tx, ty + Math.min(pw, ph) * 0.20); ctx.strokeStyle = "#5d4730"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath();
+    for (let k = 0; k < 7; k++) {
+      const a = (k / 7) * Math.PI * 2, rr = Math.min(pw, ph) * (0.11 + (k % 2) * 0.025);
+      ctx.moveTo(tx, ty); ctx.lineTo(tx + Math.cos(a) * rr, ty + Math.sin(a) * rr);
+    }
+    ctx.strokeStyle = "rgba(78,112,66,.30)"; ctx.lineWidth = 1; ctx.stroke();
+    // 四角置石，不画围墙
+    ctx.fillStyle = "rgba(110,100,84,.45)";
+    for (const [qx, qy] of [[px + 5, py + 5], [px + pw - 7, py + 5], [px + 5, py + ph - 7], [px + pw - 7, py + ph - 7]]) {
+      ctx.beginPath(); ctx.arc(qx + 1, qy + 1, Math.max(1.2, cell * 0.02), 0, Math.PI * 2); ctx.fill();
+    }
+    drawPlanLabel("天井", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
+  // 水池：室外水面
+  function drawPond(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#e9f3f4"; ctx.fillRect(px, py, pw, ph);
+    ctx.beginPath(); ctx.ellipse(px + pw / 2, py + ph / 2, pw * 0.40, ph * 0.32, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(102,166,178,.28)"; ctx.fill();
+    ctx.strokeStyle = "#5f8790"; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.strokeStyle = "rgba(44,74,86,.35)"; ctx.lineWidth = 1;
+    for (let i = 1; i < 4; i++) {
+      const yy = py + ph * (0.35 + i * 0.09);
+      ctx.beginPath(); ctx.moveTo(px + pw * 0.24, yy);
+      for (let xx = px + pw * 0.24; xx < px + pw * 0.78; xx += 8) ctx.quadraticCurveTo(xx + 4, yy - 2, xx + 8, yy);
+      ctx.stroke();
+    }
+    // 荷叶
+    ctx.fillStyle = "rgba(78,112,66,.45)";
+    for (const [fx, fy] of [[0.34, 0.38], [0.68, 0.62], [0.60, 0.32]]) {
+      ctx.beginPath(); ctx.ellipse(px + pw * fx, py + ph * fy, cell * 0.07, cell * 0.035, -0.3, 0, Math.PI * 2); ctx.fill();
+    }
+    drawPlanLabel("水池", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
+  // 太湖石：庭院点景
+  function drawRock(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(110,100,84,.10)"; ctx.fillRect(px, py, pw, ph);
+    ctx.beginPath(); ctx.ellipse(px + pw / 2, py + ph * 0.64, pw * 0.30, ph * 0.12, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(60,58,52,.14)"; ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(px + pw * 0.24, py + ph * 0.78);
+    ctx.quadraticCurveTo(px + pw * 0.14, py + ph * 0.34, px + pw * 0.45, py + ph * 0.20);
+    ctx.quadraticCurveTo(px + pw * 0.78, py + ph * 0.10, px + pw * 0.78, py + ph * 0.50);
+    ctx.quadraticCurveTo(px + pw * 0.86, py + ph * 0.78, px + pw * 0.24, py + ph * 0.78);
+    ctx.fillStyle = "#c5cdd1"; ctx.fill(); ctx.strokeStyle = "#5d6a70"; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.beginPath(); ctx.arc(px + pw * 0.46, py + ph * 0.44, Math.max(2, cell * 0.07), 0, Math.PI * 2);
+    ctx.strokeStyle = "#6b777d"; ctx.lineWidth = 1; ctx.stroke();
+    drawPlanLabel("太湖石", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
+  // 影壁：一段短墙，不是房间
+  function drawScreen(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(238,231,213,.55)"; ctx.fillRect(px, py, pw, ph);
+    const wx = px + pw * 0.14, wy = py + ph * 0.40, ww = pw * 0.72, wh = Math.max(4, ph * 0.22);
+    ctx.fillStyle = "#d8cbb4"; ctx.fillRect(wx, wy, ww, wh);
+    ctx.strokeStyle = "#6b5a42"; ctx.lineWidth = 1.4; ctx.strokeRect(wx, wy, ww, wh);
+    ctx.fillStyle = "#9e2a22"; ctx.fillRect(wx + ww * 0.38, wy + wh * 0.16, ww * 0.24, wh * 0.68);
+    ctx.strokeStyle = "#4a3a2a"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(wx, wy - 3); ctx.lineTo(wx + ww, wy - 3); ctx.stroke();
+    drawPlanLabel("影壁", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
+  // 月洞门：带圆洞的墙段
+  function drawMoonGate(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(238,231,213,.68)"; ctx.fillRect(px, py, pw, ph);
+    const wy = py + ph * 0.44, wh = Math.max(4, ph * 0.20);
+    ctx.fillStyle = "#d8cbb4"; ctx.fillRect(px + pw * 0.08, wy, pw * 0.84, wh);
+    ctx.strokeStyle = "#6b5a42"; ctx.lineWidth = 1.2; ctx.strokeRect(px + pw * 0.08, wy, pw * 0.84, wh);
+    const cx = px + pw / 2, cy = wy + wh / 2, rr = Math.min(pw, ph) * 0.22;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.fillStyle = "#efe7d5"; ctx.fill();
+    ctx.strokeStyle = "#4f6b4b"; ctx.lineWidth = 1.6; ctx.stroke();
+    drawPlanLabel("月洞门", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
+  // 回廊：柱列 + 廊顶，不砌房间墙
+  function drawCorridor(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#f3ecdd"; ctx.fillRect(px, py, pw, ph);
+    ctx.strokeStyle = "rgba(120,95,60,.20)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 1; i < r.h * 5; i++) { const yy = py + (i * ph) / (r.h * 5); ctx.moveTo(px + 3, yy); ctx.lineTo(px + pw - 3, yy); }
+    ctx.stroke();
+    // 廊顶：中间一条灰瓦
+    ctx.fillStyle = "rgba(90,100,92,.20)"; ctx.fillRect(px + pw * 0.28, py + 2, pw * 0.44, ph - 4);
+    // 柱
+    ctx.fillStyle = "#5b4733";
+    for (let i = 0; i < r.h; i++) {
+      const yy = py + i * cell + cell * 0.5;
+      ctx.beginPath(); ctx.arc(px + 4, yy, Math.max(1.4, cell * 0.025), 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px + pw - 4, yy, Math.max(1.4, cell * 0.025), 0, Math.PI * 2); ctx.fill();
+    }
+    drawPlanLabel("回廊", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
+  // 门楼：有门、有匾、有台阶，不画室内家具
+  function drawGate(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    drawEave(px, py, pw, ph, "#7a2f28", alpha);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#f7ece6"; ctx.fillRect(px, py, pw, ph);
+    ctx.strokeStyle = "rgba(120,70,50,.30)"; ctx.lineWidth = 1;
+    for (let i = 0; i < r.h * 3; i++) { const yy = py + i * ph / (r.h * 3); ctx.beginPath(); ctx.moveTo(px + 3, yy); ctx.lineTo(px + pw - 3, yy); ctx.stroke(); }
+    const gx0 = px + pw * 0.18, gy0 = py + ph * 0.42, gw = pw * 0.64, gh = ph * 0.30;
+    ctx.fillStyle = "#8f2d26"; ctx.fillRect(gx0, gy0, gw, gh);
+    ctx.strokeStyle = "#5f1a16"; ctx.lineWidth = 1.4; ctx.strokeRect(gx0, gy0, gw, gh);
+    ctx.fillStyle = "#d9b75c";
+    for (let ix = 0; ix < 3; ix++) for (let iy = 0; iy < 2; iy++) {
+      ctx.beginPath(); ctx.arc(gx0 + gw * (0.22 + ix * 0.28), gy0 + gh * (0.30 + iy * 0.35), 1.2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = "#f4e6c8"; ctx.fillRect(px + pw * 0.28, py + ph * 0.22, pw * 0.44, ph * 0.11);
+    ctx.strokeStyle = "#6b4a2a"; ctx.lineWidth = 1; ctx.strokeRect(px + pw * 0.28, py + ph * 0.22, pw * 0.44, ph * 0.11);
+    // 台阶
+    ctx.strokeStyle = "#b9a48a"; ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(px + pw * 0.25, py + ph * 0.86 + i * 3); ctx.lineTo(px + pw * 0.75, py + ph * 0.86 + i * 3); ctx.stroke(); }
+    drawPlanLabel("门楼", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
+  // 戏台：开放台面 + 红柱 + 屋顶，不是房间
+  function drawStage(r, alpha = 1) {
+    const px = gx(r.x), py = roomTop(r), pw = r.w * cell, ph = r.h * cell;
+    drawEave(px, py, pw, ph, "#6f3a30", alpha);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#f8eae4"; ctx.fillRect(px, py, pw, ph);
+    ctx.fillStyle = "rgba(158,42,34,.12)"; ctx.fillRect(px + 5, py + 5, pw - 10, ph - 10);
+    ctx.fillStyle = "#7d2d26";
+    for (const [dx, dy] of [[0.12, 0.16], [0.88, 0.16], [0.12, 0.84], [0.88, 0.84]]) {
+      ctx.beginPath(); ctx.arc(px + pw * dx, py + ph * dy, Math.max(2.2, cell * 0.055), 0, Math.PI * 2); ctx.fill();
+    }
+    drawPlanLabel("戏台", px, py, pw, ph, alpha);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawRoom(r, alpha = 1, topOverride = null) {
+    const k = kindOf(r.t);
+    if (k === "courtyard") return drawCourtyard(r, alpha);
+    if (k === "pond") return drawPond(r, alpha);
+    if (k === "rock") return drawRock(r, alpha);
+    if (k === "screen") return drawScreen(r, alpha);
+    if (k === "moonGate") return drawMoonGate(r, alpha);
+    if (k === "corridor") return drawCorridor(r, alpha);
+    if (k === "gate") return drawGate(r, alpha);
+    if (k === "stage") return drawStage(r, alpha);
+    return drawBuildingRoom(r, alpha, topOverride);
+  }
+
   function drawGhost() {
     if (state.phase !== "playing" || !state.piece) return;
     const [w, h] = sizeOf(state.piece.t, state.piece.rot);
@@ -1378,11 +1593,21 @@
   }
 
   function drawOpenings(an) {
-    for (const w of an.windows) drawWindow(w, w.road);
-    for (const d of an.doors) drawDoor({ v: d.v, i: d.i, j: d.j }, false, doorSide(an, d));
+    // 只有封闭房间/门楼才画门窗外；天井、水池、山石、影壁、月洞门、回廊不按房间开洞。
+    for (const w of an.windows) {
+      const r = an.rooms[w.room];
+      if (!r || !isEnclosedKind(r.t)) continue;
+      drawWindow(w, w.road);
+    }
+    for (const d of an.doors) {
+      const a = an.rooms[d.a], b = an.rooms[d.b];
+      if (!a || !b || !isEnclosedKind(a.t) || !isEnclosedKind(b.t)) continue;
+      drawDoor({ v: d.v, i: d.i, j: d.j }, false, doorSide(an, d));
+    }
     if (an.entry && an.entry.seg) {
       const seg = an.entry.seg;
       const r = an.rooms[an.entry.room];
+      if (!r || !isEnclosedKind(r.t)) return;
       const side = seg.road ? 1 : (seg.v ? (r.x >= seg.i ? 1 : -1) : (r.y > seg.i ? 1 : -1));
       drawDoor(seg, true, side);
     }
