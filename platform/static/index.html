@@ -916,6 +916,13 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
     cursor:pointer; box-shadow:var(--shadow); display:none; align-items:center; justify-content:center;
   }
   .fab-bottle-status.show { display:inline-flex; }
+  .fab-game-stats {
+    position:fixed; right:22px; z-index:96; width:44px; height:44px; border-radius:50%;
+    border:1px solid var(--line); background:var(--card); color:var(--ink); font-size:18px;
+    cursor:pointer; box-shadow:var(--shadow); display:none; align-items:center; justify-content:center;
+  }
+  .fab-game-stats.show { display:inline-flex; }
+  .fab-game-stats.active { background:var(--tone-5); border-color:var(--tone-5); color:#fff; }
   #bottle-status-drawer { bottom:122px; } /* outer corner center aligns with the 22px status FAB inside */
   body.bottle-open #bottle-status-btn { background:var(--tone-5); border-color:var(--tone-5); color:#fff; }
   body.bottle-open #host { width:calc(100% - var(--kp-drawer-w,360px) - 24px); align-self:flex-start; }
@@ -1349,7 +1356,7 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
 <main>
   <!-- 工作台：看板卡片 -->
   <section class="view" id="view-home">
-    <div class="home-wrap">
+    <div class="home-wrap" id="content" data-template="directory-list">
       <div class="hello" id="hello"></div>
       <div class="home-tools">
         <div class="home-search-wrap">
@@ -1612,6 +1619,7 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
   <button class="fab-bug kp-round-btn kp-round-btn--fab" id="bug-btn" style="display:none" title="反馈问题">🐞</button>
   <button class="fab-bottle-status kp-round-btn kp-round-btn--fab" id="bottle-status-btn" title="我的漂流瓶">🍾</button>
   <button class="fab-ai kp-round-btn kp-round-btn--fab" id="ai-edge" title="AI 服务">🤖</button>
+  <button class="fab-game-stats kp-round-btn kp-round-btn--fab" id="game-stats-btn" title="游戏统计">📊</button>
   <button class="fab-ai-page kp-round-btn kp-round-btn--fab" id="ai-page-history" title="对话历史">🕘</button>
   <button class="fab-ai-page kp-round-btn kp-round-btn--fab" id="ai-page-config" title="AI 配置">⚙️</button>
 </div>
@@ -2894,6 +2902,10 @@ function updateDrawerTabs(){
   const bottleBtn = $("#bottle-status-btn");
   if (bottleBtn) bottleBtn.classList.toggle("show", onBottle);
   if (!onBottle) closeBottleStatusDrawer();
+  const gameStats = $("#game-stats-btn");
+  const onGames = !!app.session && inProject && app.current && app.current.id === "games";
+  if (gameStats) gameStats.classList.toggle("show", onGames);
+  if (!onGames && gameStats) gameStats.classList.remove("active");
   const onAi = !!app.session && inProject && isAi;
   const configFab = $("#ai-page-config"), histFab = $("#ai-page-history");
   if (configFab) configFab.classList.toggle("show", onAi);
@@ -3102,6 +3114,12 @@ function bindDrawers(){
   const drawCfg=$("#ai-drawer-settings"); if(drawCfg) drawCfg.onclick=()=>toggleAiSubDrawer("settings");
   const pageHist=$("#ai-page-history"); if(pageHist) pageHist.onclick=()=>sendAiPageTab("history");
   const pageCfg=$("#ai-page-config"); if(pageCfg) pageCfg.onclick=()=>sendAiPageTab("settings");
+  const gameStats=$("#game-stats-btn");
+  if(gameStats) gameStats.onclick=()=>{
+    const host=$("#host");
+    if(host && host.contentWindow){ try { host.contentWindow.postMessage({kpGameStats:true},"*"); } catch(e) {} }
+    gameStats.classList.toggle("active");
+  };
   window.addEventListener("message",(e)=>{
     if(e.data && e.data.kpAiPanelState !== undefined){
       aiPagePanel = e.data.kpAiPanelState || null;

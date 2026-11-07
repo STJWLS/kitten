@@ -166,7 +166,9 @@ root
 
 `ui.template = "directory-list"` 表示该页面是目录列表页：
 
+- 内容根固定为 `<div id="content" class="home-wrap" data-template="directory-list">`；
 - 搜索、标签筛选、计数、卡片、子页面入口；
 - 游戏中心 `/games/` 是第一个使用该模板的 module；
 - 工作台首页与游戏中心共用 `template.css` 的目录 list 组件；
-- 页面不出现全局 `<h1>`，标题由根壳 pbar 提供。
+- 页面不出现全局 `<h1>`，标题由根壳 pbar 提供；
+- 游戏中心的统计入口属于根壳右下按钮区：可见顺序为 `🐞 / 🤖 / 📊`，统计是第三个按钮；点击通过 `kpGameStats` 消息切换页面内统计面板，不在 section-head 另放统计按钮。

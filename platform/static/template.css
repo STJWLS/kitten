@@ -488,3 +488,6 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
   transition: color .15s, border-color .15s;
 }
 .sub-chip:hover { color: var(--ink); border-color: #d9cdb9; }
+
+.home-wrap { flex: 1; overflow: auto; padding: 26px 28px 40px; }
+.directory-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

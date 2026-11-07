@@ -6,8 +6,9 @@
 <title>游戏中心 · KittenPuppy4Ever</title>
 <link rel="stylesheet" href="/static/template.css">
 <style>
-  .game-head-actions { display:flex; gap:6px; align-items:center; }
-  .game-head-actions .btn { white-space:nowrap; }
+  .game-center-page { padding:0; max-width:none; min-height:100vh; }
+  .game-center-page .home-wrap { padding:26px 28px 40px; }
+  .game-center-page .hello { margin:4px 2px 16px; }
   .stats-panel { transition: opacity .2s, transform .2s; }
   .stats-panel.hidden { display:none; }
   .stat-line { display:flex; align-items:center; gap:10px; padding:9px 2px; border-bottom:1px dashed var(--line); font-size:12px; }
@@ -25,16 +26,9 @@
 </style>
 </head>
 <body data-project="games">
-<main class="page">
-  <section class="section">
-    <div class="section-head">
-      <h2>游戏目录</h2>
-      <span class="hint">选择一个游戏开始；目录支持搜索、标签筛选与统计。</span>
-      <div class="actions game-head-actions">
-        <button class="btn soft sm" id="refresh" type="button">刷新</button>
-        <button class="btn soft sm" id="stats" type="button">统计</button>
-      </div>
-    </div>
+<main class="page game-center-page">
+  <div id="content" class="home-wrap" data-template="directory-list">
+    <div class="hello" id="hello">游戏中心 · 选一个游戏开始</div>
     <div class="home-tools">
       <div class="home-search-wrap">
         <span class="home-search-icon">⌕</span>
@@ -42,19 +36,22 @@
         <button class="home-search-clear" id="clear" type="button" aria-label="清空">×</button>
       </div>
       <div class="home-tags" id="tags"></div>
-      <div class="home-count" id="count">正在加载…</div>
+      <div class="directory-meta">
+        <span class="home-count" id="count">正在加载…</span>
+        <button class="btn soft sm" id="refresh" type="button">刷新</button>
+      </div>
     </div>
     <div class="cards" id="cards"></div>
-  </section>
-  <section class="section stats-panel hidden" id="stats-panel">
-    <div class="section-head">
-      <h2>游戏中心统计</h2>
-      <span class="hint">来自目录树的实时结构统计</span>
-      <div class="actions"><button class="btn soft sm" id="stats-close" type="button">收起</button></div>
-    </div>
-    <div class="stat-big" id="stat-big"></div>
-    <div id="stat-list"></div>
-  </section>
+    <section class="section stats-panel hidden" id="stats-panel">
+      <div class="section-head">
+        <h2>游戏中心统计</h2>
+        <span class="hint">来自目录树的实时结构统计</span>
+        <div class="actions"><button class="btn soft sm" id="stats-close" type="button">收起</button></div>
+      </div>
+      <div class="stat-big" id="stat-big"></div>
+      <div id="stat-list"></div>
+    </section>
+  </div>
 </main>
 <script>
 const $ = (s) => document.querySelector(s);
@@ -159,13 +156,20 @@ $("#q").addEventListener("input", (e) => {
 });
 $("#clear").onclick = () => { q = ""; $("#q").value = ""; document.querySelector(".home-search-wrap").classList.remove("has-query"); render(); $("#q").focus(); };
 $("#refresh").onclick = load;
-$("#stats").onclick = () => {
+function toggleStats(force) {
   const panel = $("#stats-panel");
-  panel.classList.remove("hidden");
-  renderStats();
-  panel.scrollIntoView({behavior: "smooth", block: "start"});
-};
-$("#stats-close").onclick = () => $("#stats-panel").classList.add("hidden");
+  if (!panel) return;
+  const show = force === undefined ? panel.classList.contains("hidden") : !!force;
+  panel.classList.toggle("hidden", !show);
+  if (show) {
+    renderStats();
+    panel.scrollIntoView({behavior: "smooth", block: "start"});
+  }
+}
+window.addEventListener("message", (e) => {
+  if (e.data && e.data.kpGameStats) toggleStats();
+});
+$("#stats-close").onclick = () => toggleStats(false);
 load();
 </script>
 </body>
