@@ -172,5 +172,6 @@ root
 - 工作台首页与游戏中心共用 `template.css` 的目录 list 组件；
 - 页面不出现全局 `<h1>`，标题由根壳 pbar 提供；
 - 游戏中心的统计入口属于根壳右下按钮区：可见顺序为 `🐞 / 🤖 / 📊`，统计是第三个按钮；
-  点击打开 `game-stats-drawer`（右抽屉，R30，桌面 25vw，移动端全宽），不是页面内 section，也不是顶部按钮；
+  点击打开 `game-stats-drawer`（复用标准 `.ai-drawer.kp-drawer` 右侧抽屉模板，R30，桌面 25vw，移动端全宽）；
+  打开时给 `body` 加 `game-stats-open`，让 `#host` 宽度让位；关闭时恢复。不是页面内 section，也不是顶部按钮；
   抽屉在半径窗口树中登记为 `window > game-stats-drawer`。
