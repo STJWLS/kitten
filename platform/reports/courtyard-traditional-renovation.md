@@ -149,3 +149,12 @@
 - `C:/Users/Administrator/Documents/deepseek-harness/default-workspace/courtyard-elements-plan.png`
 - `C:/Users/Administrator/Documents/deepseek-harness/default-workspace/courtyard-new-start.png`
 - `C:/Users/Administrator/Documents/deepseek-harness/default-workspace/courtyard-iso-new.png`
+
+## 10. 图鉴输出
+
+- 构件系列总图：`courtyard-series/courtyard-elements-series.png`
+- 10×8 格子图：`courtyard-series/courtyard-grid-atlas.png`
+- 单件卡片：`courtyard-series/cards/<id>.png`
+- 单件原始截图：`courtyard-series/raw/<id>.png`
+
+图鉴由造院页面自身的 canvas 渲染，不另写一套绘制逻辑；每个构件单独落在格心，按各自 `kind` 输出。
