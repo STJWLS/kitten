@@ -924,6 +924,25 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
   .fab-game-stats.show { display:inline-flex; }
   .fab-game-stats.active { background:var(--tone-5); border-color:var(--tone-5); color:#fff; }
   #bottle-status-drawer { bottom:122px; } /* outer corner center aligns with the 22px status FAB inside */
+  .game-stats-drawer {
+    position:fixed; right:14px; top:120px; bottom:68px; width:25vw; z-index:90;
+    display:flex; flex-direction:column; overflow:hidden;
+    background:var(--tone-1); border:1px solid var(--tone-3);
+    border-radius:var(--kp-popup-radius,30px); box-shadow:-14px 10px 38px rgba(66,57,43,.16);
+    transform:translateX(calc(100% + 28px)); transition:transform .28s cubic-bezier(.22,1,.36,1);
+  }
+  .game-stats-drawer.open { transform:translateX(0); }
+  .game-stats-body { flex:1; min-height:0; overflow:auto; padding:10px 12px 20px; }
+  .game-stats-body .stat-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:12px; }
+  .game-stats-body .stat-grid .stat { padding:10px 12px; }
+  .game-stats-body .stat .v { font-size:22px; }
+  .game-stats-row { display:flex; align-items:center; gap:8px; padding:9px 2px; border-bottom:1px dashed var(--line); font-size:12px; }
+  .game-stats-row:last-child { border-bottom:0; }
+  .game-stats-row .t { flex:1; color:var(--ink); }
+  .game-stats-row .s { color:var(--muted); font-size:10.5px; }
+  @media (max-width:760px) {
+    .game-stats-drawer { left:0; right:0; width:100%; top:120px; bottom:68px; border-radius:30px; }
+  }
   body.bottle-open #bottle-status-btn { background:var(--tone-5); border-color:var(--tone-5); color:#fff; }
   body.bottle-open #host { width:calc(100% - var(--kp-drawer-w,360px) - 24px); align-self:flex-start; }
   .bottle-status-body { flex:1; min-height:0; overflow:auto; padding:10px 12px 30px; scrollbar-gutter:stable;
@@ -1647,6 +1666,10 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
     <div class="bottle-status-sub" id="bottle-status-sub">追踪我写出去的所有漂流瓶。</div>
     <div id="bottle-status-list"><div class="bs-empty">正在读取…</div></div>
   </div>
+</aside>
+<aside class="game-stats-drawer kp-drawer" id="game-stats-drawer" data-side="right" data-scope="module" data-button="game-stats-btn">
+  <div class="drawer-head"><b>📊 游戏统计</b><div class="drawer-actions"><button class="btn ghost sm" id="game-stats-close" type="button" title="关闭">关闭</button></div></div>
+  <div class="game-stats-body" id="game-stats-body"></div>
 </aside>
 <!-- 登录 -->
 <div class="login" id="login">
@@ -2905,7 +2928,7 @@ function updateDrawerTabs(){
   const gameStats = $("#game-stats-btn");
   const onGames = !!app.session && inProject && app.current && app.current.id === "games";
   if (gameStats) gameStats.classList.toggle("show", onGames);
-  if (!onGames && gameStats) gameStats.classList.remove("active");
+  if (!onGames && gameStats) { gameStats.classList.remove("active"); const gd = $("#game-stats-drawer"); if (gd) gd.classList.remove("open"); }
   const onAi = !!app.session && inProject && isAi;
   const configFab = $("#ai-page-config"), histFab = $("#ai-page-history");
   if (configFab) configFab.classList.toggle("show", onAi);
@@ -2918,6 +2941,33 @@ function updateDrawerTabs(){
     positionAiDrawer();
     positionKpDrawers();
   } catch (e) {}
+}
+function renderGameStatsDrawer(){
+  const body = $("#game-stats-body");
+  if (!body) return;
+  const games = app.nodes && app.nodes.games;
+  const kids = ((games && games.children) || []).filter((n) => !n.hidden && n.path);
+  const tagSet = new Set();
+  for (const n of kids) for (const t of (n.tags || [])) tagSet.add(t);
+  body.innerHTML =
+    '<div class="stat-grid">' +
+      '<div class="stat"><div class="k">游戏数量</div><div class="v">' + kids.length + '</div></div>' +
+      '<div class="stat"><div class="k">标签数量</div><div class="v">' + tagSet.size + '</div></div>' +
+      '<div class="stat"><div class="k">子页面</div><div class="v">' + kids.filter((n) => (n.children || []).some((c) => c.path && !c.hidden)).length + '</div></div>' +
+    '</div>' +
+    (kids.length ? kids.map((n, i) =>
+      '<div class="game-stats-row"><span class="s">' + String(i + 1).padStart(2, "0") + '</span>' +
+      '<span class="t">' + esc(n.icon || "🎮") + " " + esc(n.title) + '</span>' +
+      '<span class="s">' + esc(n.path) + '</span></div>').join("") : '<div class="empty">暂无游戏</div>');
+}
+function toggleGameStatsDrawer(force){
+  const drawer = $("#game-stats-drawer");
+  const btn = $("#game-stats-btn");
+  if (!drawer) return;
+  const open = force === undefined ? !drawer.classList.contains("open") : !!force;
+  drawer.classList.toggle("open", open);
+  if (btn) btn.classList.toggle("active", open);
+  if (open) { renderGameStatsDrawer(); positionKpDrawers(); }
 }
 function closeAiDrawer(clear){
   const d=$("#ai-drawer"); if(!d) return;
@@ -3115,11 +3165,9 @@ function bindDrawers(){
   const pageHist=$("#ai-page-history"); if(pageHist) pageHist.onclick=()=>sendAiPageTab("history");
   const pageCfg=$("#ai-page-config"); if(pageCfg) pageCfg.onclick=()=>sendAiPageTab("settings");
   const gameStats=$("#game-stats-btn");
-  if(gameStats) gameStats.onclick=()=>{
-    const host=$("#host");
-    if(host && host.contentWindow){ try { host.contentWindow.postMessage({kpGameStats:true},"*"); } catch(e) {} }
-    gameStats.classList.toggle("active");
-  };
+  if(gameStats) gameStats.onclick=()=>toggleGameStatsDrawer();
+  const gameStatsClose=$("#game-stats-close");
+  if(gameStatsClose) gameStatsClose.onclick=()=>toggleGameStatsDrawer(false);
   window.addEventListener("message",(e)=>{
     if(e.data && e.data.kpAiPanelState !== undefined){
       aiPagePanel = e.data.kpAiPanelState || null;
@@ -4092,9 +4140,10 @@ function setupPopupBases() {
   });
 }
 const KP_POPUP_TREE = {
-  window: { children: ["ai-drawer", "bottle-status-drawer", "debug", "settings-popup", "manage-popup", "bug-popup", "birthday-popup", "mail-popup"] },
+  window: { children: ["ai-drawer", "bottle-status-drawer", "game-stats-drawer", "debug", "settings-popup", "manage-popup", "bug-popup", "birthday-popup", "mail-popup"] },
   "ai-drawer": { parent: "window", button: "ai-edge" },
   "bottle-status-drawer": { parent: "window", button: "bottle-status-btn" },
+  "game-stats-drawer": { parent: "window", button: "game-stats-btn" },
   "debug": { parent: "window", button: "dbg-toggle" },
   "settings-popup": { parent: "window", children: ["settings-side-drawer", "settings-help-drawer"] },
   "settings-side-drawer": { parent: "settings-popup", button: "settings-side-toggle" },
@@ -4109,6 +4158,7 @@ const KP_POPUP_TREE = {
 const KP_POPUP_EL = {
   "ai-drawer": "#ai-drawer",
   "bottle-status-drawer": "#bottle-status-drawer",
+  "game-stats-drawer": "#game-stats-drawer",
   "debug": "#debug",
   "settings-popup": "#settings-modal .sm-box",
   "settings-side-drawer": "#settings-side-drawer",
@@ -4120,7 +4170,7 @@ const KP_POPUP_EL = {
   "mail-popup": "#mail-modal .sm-box",
   "mail-side-drawer": "#mail-side-drawer"
 };
-const KP_DRAWER_KEYS = new Set(["ai-drawer", "ai-history-drawer", "ai-settings-drawer", "bottle-status-drawer", "debug", "settings-side-drawer", "settings-help-drawer", "manage-side-drawer"]);
+const KP_DRAWER_KEYS = new Set(["ai-drawer", "ai-history-drawer", "ai-settings-drawer", "bottle-status-drawer", "game-stats-drawer", "debug", "settings-side-drawer", "settings-help-drawer", "manage-side-drawer"]);
 function kpPopupRadius(key) {
   // A top-level drawer is a mobile popup anchor (r+m); a drawer inside a drawer is full-bleed, no extra radius.
   if (KP_DRAWER_KEYS.has(key)) {
