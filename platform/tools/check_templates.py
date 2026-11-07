@@ -49,6 +49,19 @@ def main() -> int:
         errors.append("root must resolve to #module")
     if "#module.game" not in nodes:
         errors.append("missing #module.game")
+    game = nodes.get("#module.game")
+    ach = (game or {}).get("properties", {}).get("achievements")
+    if not isinstance(ach, list) or not ach:
+        errors.append("#module.game must define a non-empty achievements list")
+    else:
+        seen = set()
+        for a in ach:
+            if not isinstance(a, dict) or not all(isinstance(a.get(k), str) and a.get(k) for k in ("id", "title", "desc", "icon")):
+                errors.append("#module.game achievement missing id/title/desc/icon: %r" % (a,))
+                continue
+            if a["id"] in seen:
+                errors.append("duplicate achievement id: %s" % a["id"])
+            seen.add(a["id"])
     for path, node in nodes.items():
         if path != "#module" and "." not in path:
             errors.append("orphan/top-level template: %s" % path)

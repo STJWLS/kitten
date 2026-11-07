@@ -377,6 +377,48 @@
     best: Number(localStorage.getItem("kp_yard_best") || 0),
   };
 
+  // ---- 成就 ----
+  const ACH_FALLBACK = [
+    { id: "first_drop", title: "落子无悔", desc: "落下第一件构件", icon: "🧱" },
+    { id: "first_house", title: "第一座宅院", desc: "完成第一座宅院", icon: "🏠" },
+    { id: "grade_a", title: "甲等宅院", desc: "营造评分达到 90 分", icon: "🏅" },
+    { id: "eight_in", title: "八间俱全", desc: "八件构件全部收进地界", icon: "🧩" },
+    { id: "host_hit", title: "主家满意", desc: "达成主家要求", icon: "🤝" }
+  ];
+  function achList() {
+    const t = window.KP_TEMPLATE_RESOLVED;
+    return (t && Array.isArray(t.achievements) && t.achievements.length) ? t.achievements : ACH_FALLBACK;
+  }
+  function achStoreKey() {
+    const user = localStorage.getItem("kp_login_user") || sessionStorage.getItem("kp_login_user") || "guest";
+    return "kp_achievements_" + user;
+  }
+  function loadAchStore() {
+    try { return JSON.parse(localStorage.getItem(achStoreKey()) || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+  function saveAchStore(v) {
+    try { localStorage.setItem(achStoreKey(), JSON.stringify(v)); } catch (e) {}
+  }
+  function unlockAchievement(id) {
+    const def = achList().find((a) => a.id === id);
+    if (!def) return;
+    const game = window.__KP_MODULE__ || document.body.dataset.project || "courtyard";
+    const all = loadAchStore();
+    const per = all[game] || {};
+    if (per[id]) return;
+    per[id] = new Date().toISOString();
+    all[game] = per;
+    saveAchStore(all);
+    if (window.parent !== window) {
+      try {
+        window.parent.postMessage({ kpAchievement: {
+          game: game, id: id, title: def.title, desc: def.desc, icon: def.icon
+        }}, "*");
+      } catch (e) {}
+    }
+  }
+
   const PAD = 46;
   let cell = 76, cw = 660, LOT_TOP = 210, chh = 720;
 
@@ -458,6 +500,7 @@
     state.rooms.push(r);
     sfx(HOUSES[r.t].rare ? 720 : 520, 0.07);
     state.idx++;
+    if (state.idx === 1) unlockAchievement("first_drop");
     if (state.idx >= TOTAL) { finish(); return; }
     state.piece = state.bag[state.idx];
     const [w] = sizeOf(state.piece.t, state.piece.rot);
@@ -523,6 +566,10 @@
     el.modal.classList.remove("hidden");
     state.phase = "done";
     state.last = { an, res, name, grade, price };
+    unlockAchievement("first_house");
+    if (grade === "甲") unlockAchievement("grade_a");
+    if (res.overflow === 0) unlockAchievement("eight_in");
+    if (res.hit) unlockAchievement("host_hit");
     startIsoAnim(an);
   }
 

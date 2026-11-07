@@ -932,6 +932,34 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
   .game-stats-row:last-child { border-bottom:0; }
   .game-stats-row .t { flex:1; color:var(--ink); }
   .game-stats-row .s { color:var(--muted); font-size:10.5px; }
+  .game-stats-ach-title { margin:14px 0 6px; font-size:11px; color:var(--muted); letter-spacing:.04em; }
+  .game-ach-group { margin-bottom:12px; }
+  .game-ach-game { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; color:var(--ink); font-weight:650; padding:6px 2px; }
+  .game-ach-game .n { color:var(--muted); font-weight:400; font-size:10.5px; }
+  .game-ach-item { display:flex; align-items:flex-start; gap:8px; padding:7px 8px; border-radius:10px; border:1px solid var(--line); background:var(--tone-1); margin-bottom:5px; }
+  .game-ach-item .i { font-size:17px; flex:none; }
+  .game-ach-item .t { display:block; font-size:11.5px; color:var(--ink); font-weight:600; }
+  .game-ach-item .d { display:block; font-size:10px; color:var(--muted); margin-top:2px; line-height:1.5; }
+  .game-ach-item.locked { opacity:.42; filter:grayscale(1); }
+  #achievement-toast {
+    position:fixed; right:22px; top:calc(var(--kp-header-h, 52px) + 16px); z-index:300;
+    display:flex; align-items:center; gap:12px; width:min(360px, calc(100vw - 32px));
+    padding:13px 15px; border:1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
+    border-radius:16px; background:var(--card); color:var(--ink);
+    box-shadow:0 18px 50px rgba(66,57,43,.22);
+    opacity:0; transform:translateY(-12px) scale(.97); pointer-events:none;
+    transition:opacity .24s cubic-bezier(.22,1,.36,1), transform .24s cubic-bezier(.22,1,.36,1);
+  }
+  #achievement-toast.show { opacity:1; transform:translateY(0) scale(1); }
+  .ach-toast-icon { width:44px; height:44px; display:flex; align-items:center; justify-content:center; flex:none;
+    border-radius:13px; font-size:23px; background:color-mix(in srgb, var(--accent) 18%, #fff); }
+  .ach-toast-copy { min-width:0; }
+  .ach-toast-kicker { font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:700; }
+  .ach-toast-title { font-size:14px; font-weight:700; margin-top:2px; }
+  .ach-toast-desc { font-size:10.5px; color:var(--muted); margin-top:2px; line-height:1.45; }
+  @media (max-width:760px) {
+    #achievement-toast { right:8px; top:calc(var(--kp-header-h, 52px) + 8px); width:calc(100vw - 16px); }
+  }
   body.bottle-open #bottle-status-btn { background:var(--tone-5); border-color:var(--tone-5); color:#fff; }
   body.bottle-open #host,
   body.game-stats-open #host { width:calc(100% - var(--kp-drawer-w,360px) - 24px); align-self:flex-start; }
@@ -1661,6 +1689,15 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
   <div class="drawer-head"><b>📊 游戏统计</b><div class="drawer-actions"><button class="btn ghost sm" id="game-stats-close" type="button" title="关闭">关闭</button></div></div>
   <div class="game-stats-body" id="game-stats-body"></div>
 </aside>
+<!-- 成就解锁提示（Steam 风格） -->
+<div id="achievement-toast" aria-live="polite" aria-atomic="true">
+  <span class="ach-toast-icon" id="ach-toast-icon">🏆</span>
+  <div class="ach-toast-copy">
+    <div class="ach-toast-kicker">成就解锁</div>
+    <div class="ach-toast-title" id="ach-toast-title"></div>
+    <div class="ach-toast-desc" id="ach-toast-desc"></div>
+  </div>
+</div>
 <!-- 登录 -->
 <div class="login" id="login">
   <div class="login-card" id="login-card">
@@ -2686,6 +2723,7 @@ function postPath() {
 window.addEventListener("message", (e) => {
   const host = document.getElementById("host");
   if (!host || e.source !== host.contentWindow) return;
+  if (e.data && e.data.kpAchievement) { queueAchievement(e.data.kpAchievement); return; }
   const p = e.data && e.data.kpNavigate;
   if (typeof p !== "string" || p.charAt(0) !== "/" || !nodeByPath(p)) return;
   goPath(p);
@@ -2940,6 +2978,76 @@ function updateDrawerTabs(){
     positionKpDrawers();
   } catch (e) {}
 }
+let kpTreePromise = null;
+function loadTemplateTree(){
+  if (!kpTreePromise) {
+    kpTreePromise = fetch("/static/template-tree.json", {cache:"no-store"})
+      .then((r) => r.json())
+      .then((doc) => {
+        const nodes = {};
+        (function walk(node, parent, parentProps){
+          const raw = String(node.id || "").replace(/^#/, "");
+          const id = parent ? parent + "." + raw : "#" + raw;
+          const props = Object.assign({}, parentProps || {}, node.properties || {});
+          nodes[id] = {id, properties: props};
+          (node.children || []).forEach((c) => walk(c, id, props));
+        })(doc.root, "", {});
+        return nodes;
+      })
+      .catch((e) => { kpTreePromise = null; throw e; });
+  }
+  return kpTreePromise;
+}
+function renderGameAchievements(body, kids){
+  loadTemplateTree().then((nodes) => {
+    const tpl = nodes["#module.game"];
+    const defaults = (tpl && tpl.properties.achievements) || [];
+    const user = app.session ? app.session.user : "guest";
+    let done = {};
+    try { done = JSON.parse(localStorage.getItem("kp_achievements_" + user) || "{}") || {}; } catch(e) {}
+    const block = document.createElement("div");
+    block.className = "game-ach-list";
+    block.innerHTML = '<div class="game-stats-ach-title">成就达成情况</div>' +
+      (kids.length ? kids.map((n) => {
+        const defs = (n.ui && n.ui.achievements) || defaults;
+        const got = done[n.id] || {};
+        const count = defs.filter((a) => got[a.id]).length;
+        return '<div class="game-ach-group">' +
+          '<div class="game-ach-game"><span>' + esc(n.icon || "🎮") + " " + esc(n.title) + '</span><span class="n">' + count + "/" + defs.length + '</span></div>' +
+          (defs.length ? defs.map((a) => {
+            const on = !!got[a.id];
+            return '<div class="game-ach-item' + (on ? "" : " locked") + '" title="' + esc(on ? "已达成" : "未达成") + '">' +
+              '<span class="i">' + esc(a.icon || "🏆") + '</span><span><span class="t">' + esc(a.title || a.id) + '</span>' +
+              '<span class="d">' + esc(a.desc || "") + '</span></span></div>';
+          }).join("") : '<div class="game-ach-item locked"><span class="i">🏆</span><span class="d">这个游戏还没有配置成就</span></div>') +
+          '</div>';
+      }).join("") : '<div class="empty">暂无游戏</div>');
+    body.appendChild(block);
+  }).catch(() => {});
+}
+const achievementQueue = [];
+let achievementTimer = null;
+function queueAchievement(a){
+  if (!a || !a.title) return;
+  achievementQueue.push(a);
+  if (!achievementTimer) showNextAchievement();
+}
+function showNextAchievement(){
+  const el = $("#achievement-toast");
+  const a = achievementQueue.shift();
+  if (!el || !a) { achievementTimer = null; return; }
+  const gameName = app.nodes && app.nodes[a.game] ? app.nodes[a.game].title : a.game;
+  $("#ach-toast-icon").textContent = a.icon || "🏆";
+  $("#ach-toast-title").textContent = a.title;
+  $("#ach-toast-desc").textContent = (gameName ? gameName + " · " : "") + (a.desc || "");
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+  achievementTimer = setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => { achievementTimer = null; showNextAchievement(); }, 260);
+  }, 3600);
+}
 function renderGameStatsDrawer(){
   const body = $("#game-stats-body");
   if (!body) return;
@@ -2957,6 +3065,7 @@ function renderGameStatsDrawer(){
       '<div class="game-stats-row"><span class="s">' + String(i + 1).padStart(2, "0") + '</span>' +
       '<span class="t">' + esc(n.icon || "🎮") + " " + esc(n.title) + '</span>' +
       '<span class="s">' + esc(n.path) + '</span></div>').join("") : '<div class="empty">暂无游戏</div>');
+  renderGameAchievements(body, kids);
 }
 function toggleGameStatsDrawer(force){
   const drawer = $("#game-stats-drawer");

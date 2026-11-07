@@ -16,7 +16,14 @@
         "properties": {
           "pageClasses": ["module-game"],
           "contentTemplate": "directory-list",
-          "contentId": "content"
+          "contentId": "content",
+          "achievements": [
+            {"id": "first_drop", "title": "落子无悔", "desc": "落下第一件构件", "icon": "🧱"},
+            {"id": "first_house", "title": "第一座宅院", "desc": "完成第一座宅院", "icon": "🏠"},
+            {"id": "grade_a", "title": "甲等宅院", "desc": "营造评分达到 90 分", "icon": "🏅"},
+            {"id": "eight_in", "title": "八间俱全", "desc": "八件构件全部收进地界", "icon": "🧩"},
+            {"id": "host_hit", "title": "主家满意", "desc": "达成主家要求", "icon": "🤝"}
+          ]
         }
       }
     ]

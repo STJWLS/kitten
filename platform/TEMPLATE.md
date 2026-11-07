@@ -224,6 +224,23 @@ python tools/check_templates.py
   pageClasses: [page, module-page, module-game]
   contentTemplate: directory-list
   contentId: content
+  achievements:
+    - first_drop / 落子无悔 / 落下第一件构件 / 🧱
+    - first_house / 第一座宅院 / 完成第一座宅院 / 🏠
+    - grade_a / 甲等宅院 / 营造评分达到 90 分 / 🏅
+    - eight_in / 八间俱全 / 八件构件全部收进地界 / 🧩
+    - host_hit / 主家满意 / 达成主家要求 / 🤝
 ```
+
+成就达成状态由游戏页面写入：
+
+```text
+localStorage.kp_achievements_<user> = {
+  "<game-id>": { "<achievement-id>": "<ISO timestamp>" }
+}
+```
+
+解锁时游戏页面向根壳发送 `kpAchievement` 消息，根壳显示 Steam 风格右上角提示；
+统计抽屉读取同一份 localStorage，未达成的成就使用 `locked` 灰色样式。
 
 游戏中心使用 `ui.template = "#module.game"`；其余 module 未显式声明时使用 `#module`。

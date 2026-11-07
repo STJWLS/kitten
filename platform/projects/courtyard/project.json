@@ -27,6 +27,7 @@
   },
   "path": "/games/courtyard/",
   "ui": {
+    "template": "#module.game",
     "theme": {
       "accent": "#9e2a22"
     }
