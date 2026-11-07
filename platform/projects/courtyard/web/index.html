@@ -672,14 +672,17 @@
 
     const top = an.top;
     const rooms = an.rooms;
-    const maxZ = 2.8;
+    const maxZ = (opts.focus && opts.focus.z != null) ? opts.focus.z : 2.8;
     const raw = (x, y, z) => [
       lerpN(x, (x - y) * ISO_CA, t),
       lerpN(-y, -(x + y) * ISO_SA - z * ISO_ZK, t),
     ];
-    // 视野
+    // 视野：默认整院；传 focus 时聚焦到单件，供构件图鉴使用
+    const focus = opts.focus;
+    const fx0 = focus ? focus.x : -1.4, fx1 = focus ? focus.x + focus.w : W + 1.4;
+    const fy0 = focus ? focus.y : -1.2, fy1 = focus ? focus.y + focus.h : top + 0.6;
     let mnx = Infinity, mxx = -Infinity, mny = Infinity, mxy = -Infinity;
-    for (const x of [-1.4, W + 1.4]) for (const y of [-1.2, top + 0.6]) for (const z of [0, maxZ]) {
+    for (const x of [fx0, fx1]) for (const y of [fy0, fy1]) for (const z of [0, maxZ]) {
       const [a, b] = raw(x, y, z);
       mnx = Math.min(mnx, a); mxx = Math.max(mxx, a); mny = Math.min(mny, b); mxy = Math.max(mxy, b);
     }
@@ -744,6 +747,74 @@
       }
       g.stroke();
     }
+    // ---- 非房间要素的轴测体量/点景 ----
+    for (const r of rooms) {
+      const k = kindOf(r.t);
+      const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+      if (k === "courtyard") {
+        const foot = P(cx, cy, 0), trunkTop = P(cx, cy, 0.72);
+        line(foot, trunkTop, "#5d4730", Math.max(2, sc * 0.05));
+        const canopy = 0.34 * sc;
+        g.beginPath(); g.ellipse(trunkTop[0], trunkTop[1] - canopy * 0.25, canopy, canopy * 0.55, 0, 0, Math.PI * 2);
+        g.fillStyle = "rgba(78,112,66,.52)"; g.fill();
+        g.strokeStyle = "rgba(58,88,50,.75)"; g.lineWidth = 1; g.stroke();
+        // 置石
+        for (const [ox, oy] of [[-0.28, 0.24], [0.27, -0.18]]) {
+          const q = P(cx + ox, cy + oy, 0.12);
+          g.beginPath(); g.ellipse(q[0], q[1], sc * 0.09, sc * 0.055, 0, 0, Math.PI * 2);
+          g.fillStyle = "rgba(110,100,84,.45)"; g.fill();
+        }
+      } else if (k === "pond") {
+        quad([P(r.x + 0.1, r.y + 0.1, 0.02), P(r.x + r.w - 0.1, r.y + 0.1, 0.02),
+              P(r.x + r.w - 0.1, r.y + r.h - 0.1, 0.02), P(r.x + 0.1, r.y + r.h - 0.1, 0.02)],
+             "rgba(105,170,180,.50)", "#5f8790", 1.2);
+        g.strokeStyle = "rgba(44,74,86,.45)"; g.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+          const yy = r.y + r.h * (0.25 + i * 0.14);
+          const a = P(r.x + 0.2, yy, 0.03), b = P(r.x + r.w - 0.2, yy, 0.03);
+          g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
+        }
+      } else if (k === "rock") {
+        const c = P(cx, cy, 0.32);
+        g.beginPath();
+        g.moveTo(c[0] - sc * 0.13, c[1] + sc * 0.24);
+        g.lineTo(c[0] - sc * 0.20, c[1] - sc * 0.16);
+        g.lineTo(c[0] + sc * 0.02, c[1] - sc * 0.36);
+        g.lineTo(c[0] + sc * 0.18, c[1] - sc * 0.08);
+        g.lineTo(c[0] + sc * 0.14, c[1] + sc * 0.28);
+        g.closePath(); g.fillStyle = "#c5cdd1"; g.fill(); g.strokeStyle = "#5d6a70"; g.lineWidth = 1.5; g.stroke();
+      } else if (k === "screen") {
+        const x0 = r.x + 0.16, x1 = r.x + r.w - 0.16, yy = r.y + r.h / 2, z1 = 0.92;
+        quad([P(x0, yy, 0), P(x1, yy, 0), P(x1, yy, z1), P(x0, yy, z1)], "#d8cbb4", "#6b5a42", 1.2);
+        quad([P(x0 + 0.25, yy - 0.01, 0.24), P(x1 - 0.25, yy - 0.01, 0.24), P(x1 - 0.25, yy - 0.01, 0.78), P(x0 + 0.25, yy - 0.01, 0.78)], "rgba(158,42,34,.80)", null);
+      } else if (k === "moonGate") {
+        const yy = r.y + r.h / 2, z1 = 0.95;
+        const a0 = r.x + 0.06, a1 = r.x + r.w * 0.36, b0 = r.x + r.w * 0.64, b1 = r.x + r.w - 0.06;
+        quad([P(a0, yy, 0), P(a1, yy, 0), P(a1, yy, z1), P(a0, yy, z1)], "#d8cbb4", "#6b5a42", 1.2);
+        quad([P(b0, yy, 0), P(b1, yy, 0), P(b1, yy, z1), P(b0, yy, z1)], "#d8cbb4", "#6b5a42", 1.2);
+        const c = P(cx, yy, 0.52);
+        g.beginPath(); g.arc(c[0], c[1], sc * 0.25, 0, Math.PI * 2);
+        g.fillStyle = "rgba(239,231,213,.92)"; g.fill(); g.strokeStyle = "#4f6b4b"; g.lineWidth = 1.8; g.stroke();
+      } else if (k === "corridor") {
+        g.strokeStyle = "#5b4733"; g.lineWidth = Math.max(1.2, sc * 0.035);
+        for (let i = 0; i <= r.h; i++) {
+          const yy = r.y + i;
+          line(P(r.x + 0.1, yy, 0), P(r.x + 0.1, yy, 0.62), "#5b4733", Math.max(1.2, sc * 0.03));
+          line(P(r.x + r.w - 0.1, yy, 0), P(r.x + r.w - 0.1, yy, 0.62), "#5b4733", Math.max(1.2, sc * 0.03));
+        }
+      } else if (k === "stage") {
+        g.strokeStyle = "#7d2d26"; g.lineWidth = Math.max(1.4, sc * 0.04);
+        for (const [ox, oy] of [[0.16, 0.16], [0.84, 0.16], [0.16, 0.84], [0.84, 0.84]]) {
+          line(P(r.x + r.w * ox, r.y + r.h * oy, 0), P(r.x + r.w * ox, r.y + r.h * oy, 0.95), "#7d2d26", Math.max(1.4, sc * 0.04));
+        }
+      } else if (k === "gate") {
+        // 门楼正面朱门
+        const yy = r.y + r.h * 0.52;
+        quad([P(r.x + r.w * 0.20, yy, 0.05), P(r.x + r.w * 0.80, yy, 0.05),
+              P(r.x + r.w * 0.80, yy, 0.72), P(r.x + r.w * 0.20, yy, 0.72)], "#8f2d26", "#5f1a16", 1.2);
+      }
+    }
+
     // 夹缝
     for (const gap of an.gaps) for (const [gx0, gy0] of gap) {
       quad([P(gx0, gy0, 0), P(gx0 + 1, gy0, 0), P(gx0 + 1, gy0 + 1, 0), P(gx0, gy0 + 1, 0)], "#2b2b2e", null);
@@ -767,8 +838,10 @@
       const ia = isIndoor(a), ib = isIndoor(b);
       if (!ia && !ib) return 0;
       if (ia && ib) return 0.55;
+      const inside = ia ? a : b;
+      const hh = inside >= 0 ? roomHeight(rooms[inside]) * 0.82 : 0.85;
       const front = !ia;
-      return front ? 0.16 : 0.95;
+      return front ? 0.16 : Math.max(0.55, hh);
     };
     const addWall = (v, x, y, a, b) => {
       const hh = wallH(a, b);
@@ -805,8 +878,8 @@
     // ---- 屋顶：灰瓦、正脊、檐口 ----
     for (const r of rooms) {
       const k = id(r);
-      if (!["zheng", "xiang", "shu", "men", "tai", "lang"].includes(k)) continue;
-      const h0 = roomHeight(r);
+      if (!["zheng", "xiang", "shu", "jing", "chu", "men", "tai", "lang"].includes(k)) continue;
+      const h0 = Math.max(0.55, roomHeight(r) * 0.82 + 0.04);
       const e = 0.10;
       const topPts = [
         P(r.x - e, r.y - e, h0), P(r.x + r.w + e, r.y - e, h0),
@@ -1675,6 +1748,23 @@
   $("#deed-again").onclick = () => { stopIsoAnim(); el.modal.classList.add("hidden"); state.round++; startRound(); };
   $("#sound").onclick = (e) => { state.muted = !state.muted; e.target.textContent = "音效：" + (state.muted ? "关" : "开"); };
 
+  // QA：单件轴测图，供构件图鉴使用；不参与正常游戏流程。
+  function renderIsoDemo(type) {
+    if (!HOUSES[type]) return null;
+    stopIsoAnim();
+    const def = HOUSES[type];
+    const r = { t: type, rot: 0, x: 1, y: 1, w: def.w, h: def.h };
+    const an = analyze([r]);
+    const c = $("#iso");
+    c.width = 720; c.height = 420;
+    c.style.width = "720px"; c.style.height = "420px";
+    $("#deed-modal").classList.remove("hidden");
+    const pad = Math.min(1.1, 0.55 + Math.max(r.w, r.h) * 0.18);
+    drawIso(c.getContext("2d"), c.width, c.height, an, 0, {
+      t: 1, focus: { x: r.x - pad, y: r.y - pad, w: r.w + pad * 2, h: r.h + pad * 2, z: Math.max(0.9, roomHeight(r) + 0.55) }
+    });
+    return { type, name: def.name, kind: def.kind, w: def.w, h: def.h, width: c.width, height: c.height };
+  }
   // QA：把单个构件放到格心，供图鉴/回归截图；不参与正常游戏流程。
   function renderDemo(type) {
     if (!HOUSES[type]) return null;
@@ -1692,7 +1782,7 @@
     };
   }
   // 调试出口（只读）：给自动化检查用
-  window.__kpYard = { get state() { return state; }, analyze, landing, renderDemo };
+  window.__kpYard = { get state() { return state; }, analyze, landing, renderDemo, renderIsoDemo };
 
   // ---- QA：?auto=1 直接模拟 8 件并出宅院契 ----
   function autoPlay() {

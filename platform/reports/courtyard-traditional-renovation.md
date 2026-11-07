@@ -158,3 +158,7 @@
 - 单件原始截图：`courtyard-series/raw/<id>.png`
 
 图鉴由造院页面自身的 canvas 渲染，不另写一套绘制逻辑；每个构件单独落在格心，按各自 `kind` 输出。
+- 轴测系列总图：`courtyard-series/courtyard-elements-iso-series.png`
+- 10×8 轴测格子图：`courtyard-series/courtyard-grid-iso-atlas.png`
+- 单件轴测卡片：`courtyard-series/cards/<id>-iso.png`
+- 单件轴测原始图：`courtyard-series/iso/<id>.png`
