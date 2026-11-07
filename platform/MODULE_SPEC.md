@@ -1,6 +1,6 @@
 # KittenPuppy4Ever · 后端 Module 规范（MODULE_SPEC.md）
 
-> 版本：v1 · 2026-11-07 · 适用目录：`platform/`
+> 版本：v2 · 2026-11-07 · 适用目录：`platform/`
 >
 > 事实来源（本规范不是凭空写的，每条规则都能在这些文件里找到依据）：
 > - `platform/kernel/registry.py` —— manifest 继承链、默认值、类继承校验、扫描/错误处理；
@@ -36,9 +36,10 @@
    - 缺 `capabilities` → 用 base 继承链上的能力列表，**行为正确**。
    - 结论：**缺 base / 缺 capabilities 是 WARN，不是违规**。
 2. **有兜底默认值**：`id`（目录名）、`parent`（`root`）、`title`（id）、`icon`（📄）、`desc`（空串）、`order`（100）、`view`（`{"kind":"auto"}`）缺失时内核有可用默认，**WARN**。
-3. **空值不是可用默认**：`path` 缺失时 registry 给 `""`。模块仍能从首页卡片经 `?p=<id>` 打开，但没有规范 URL/深链，详情见 §6.1。规范要求常规可导航 module 写 `path`，但内核不报错，**记 WARN**（不是加载错误）。
+3. **路由/刷新契约**：`path` 对可见 module **必填**。缺失时 registry 给 `""`，只能走首页 `?p=<id>` 回退；没有 GitHub 风格子路径，也没有可刷新的规范 URL。可见 module 缺 `path` 记 **ERROR**；显式 `hidden:true` 的工具模块可按例外记 **WARN**，但必须同时登记。
+4. **GitHub Pages 壳**：有 `path` 还必须有 `KittenPuppy4Ever/<path>/index.html` 静态壳；否则 GitHub Pages 刷新 404，记 **ERROR**。
 
-> 简言之：**缺省可继承 / 可兜底 → WARN；字段值/类型/结构把内核契约弄坏 → ERROR。**
+> 简言之：**缺省可继承 / 可兜底 → WARN；字段值/类型/结构/路由契约被破坏 → ERROR。**
 
 ---
 
@@ -140,7 +141,7 @@ bases/root.json 不是项目基类：只有根节点 id/title/icon/desc，不参
 | `base` | string | 必须在 `bases/` 存在且在 `registry.BASES` 注册 | 缺失→`json-doc`；未知→静默回退（见 §2.3） | 缺失 **WARN**（继承）；类型/不存在/未注册/链坏 **ERROR** |
 | `capabilities` | string[] | 可选；缺省继承；值建议在 base 词表内 | 缺失→继承链列表；值不校验 | 缺失 **WARN**（继承）；类型/元素 **ERROR**；词表外 **WARN** |
 | `view` | object `{kind, dir?, url?}` | 可选；缺省 `auto`；`custom` 必须有 `web/index.html` | `setdefault {"kind":"auto"}`；kind 非法按 auto | 缺失 **WARN**；类型/kind 非法/custom 缺目录或 index/越界 **ERROR** |
-| `path` | string，`/` 开头，全局唯一 | 常规可导航 module 必填；建议以 `/` 结尾 | 缺失→`""`（模块仍可从首页卡片经 `?p=id` 打开，但无规范 URL）；重复→前端路由/旧 URL 表互相覆盖 | 缺失 **WARN**；类型/不以 `/` 开头/重复 **ERROR**；尾斜杠/空白 **WARN** |
+| `path` | string，`/` 开头，全局唯一 | 可见 module **必填**；建议以 `/` 结尾；同时必须有对应 Pages 壳 | 缺失→`""`（首页 `?p=id` 回退，无 GitHub 子页面）；重复→前端路由/旧 URL 表互相覆盖 | 可见 module 缺失 **ERROR**；hidden 例外缺失 **WARN**；类型/不以 `/` 开头/重复 **ERROR**；尾斜杠/空白 **WARN**；Pages 壳缺失 **ERROR** |
 | `ui` | object（`ui.theme.accent` 等） | 可选；tree 暴露给前端做主题 | `{}` | 类型/`accent` 类型 **ERROR** |
 | 未知顶层键 | — | 不允许（可能是拼写错误） | 完全忽略 | **WARN** |
 | `dir` | — | 保留键，不要写 | registry 用实际目录覆盖 | **WARN** |
@@ -181,11 +182,15 @@ bases/root.json 不是项目基类：只有根节点 id/title/icon/desc，不参
 - `E_VIEW_TYPE`、`E_VIEW_KIND_TYPE`、`E_VIEW_KIND_INVALID`（非法 kind 会被静默当 auto，与声明不符）；
 - `E_VIEW_DIR_TYPE`、`E_VIEW_DIR_ESCAPE`、`E_VIEW_DIR_MISSING`、`E_VIEW_INDEX_MISSING`、`E_VIEW_INDEX_EMPTY`（custom view 404/空白）。
 
-### 4.5 path
+### 4.5 path 与 GitHub 子页面
+- `E_PATH_MISSING`：可见 module 未声明 `path`（无 GitHub 风格子路径/刷新 URL）；显式 `hidden:true` 可例外，记 `W_PATH_HIDDEN_EXCEPTION`；
 - `E_PATH_TYPE`：非字符串；
 - `E_PATH_SLASH`：已声明但不以 `/` 开头（不能作为 URL）；
-- `E_PATH_DUPLICATE`：多模块同 path（`app.routes` / `canonical_paths` 后者覆盖前者）。
-- 缺失 path **不在此列**，见 §6.1。
+- `E_PATH_DUPLICATE`：多模块同 path（`app.routes` / `canonical_paths` 后者覆盖前者）；
+- `E_PAGES_SHELL_MISSING`：缺少 `KittenPuppy4Ever/<path>/index.html`（GitHub Pages 刷新会 404）；
+- `E_PAGES_PATH_UNSAFE` / `E_PAGES_SHELL_READ`：Pages 壳路径越界或读取失败；
+- `W_PAGES_SHELL_FRAME` / `W_PAGES_SHELL_BASE` / `W_PAGES_SHELL_PATH` / `W_PAGES_SHELL_HISTORY`：壳存在但刷新/iframe/入口/路径同步标记不完整。
+- 生成入口：`python tools/sync_pages_shells.py`；刷新验收见 §9.5。
 
 ### 4.6 其它字段类型契约
 - `E_FIELD_TYPE`（title/icon/desc 非字符串）、`E_ORDER_TYPE`、`E_HIDDEN_TYPE`、
@@ -218,7 +223,8 @@ bases/root.json 不是项目基类：只有根节点 id/title/icon/desc，不参
 | `W_BASE_DEFAULTED` | 缺 `base`；registry 默认 `json-doc` 继承（**非违规**） |
 | `W_CAPS_INHERITED` | 缺 `capabilities`；继承 base 链列表（**非违规**） |
 | `W_CAP_UNKNOWN` | capability 不在 base 词表；内核不校验，属协议声明偏离 / 文档债 |
-| `W_PATH_MISSING` | 缺 `path`；registry 给 `""`，模块仍可经首页卡片 `?p=id` 打开，但没有规范 URL/深链（**规范偏离，非加载错误**） |
+| `W_PATH_HIDDEN_EXCEPTION` | `hidden:true` module 未声明 path；允许工具入口，但无 GitHub 子页面/刷新保证 |
+| `W_PAGES_ROOT_MISSING` | 未找到 `KittenPuppy4Ever/`；无法验证 GitHub 子页面壳 |
 | `W_ID_DEFAULTED` | 缺 `id`；默认目录名（行为正确） |
 | `W_PARENT_DEFAULTED` | 缺 `parent`；默认 `root`（行为正确） |
 | `W_FIELD_DEFAULTED` / `W_FIELD_EMPTY` | title/icon/desc 缺失或空串，走兜底 |
@@ -238,27 +244,19 @@ bases/root.json 不是项目基类：只有根节点 id/title/icon/desc，不参
 
 > 这一节是本规范对“registry 实际行为”与“规范要求”分歧的正式裁决，也是 `check_modules.py` 当前输出的依据。
 
-### 6.1 scratchpad：缺 base / capabilities / path
+### 6.1 scratchpad：已补齐 base / capabilities / path
 
-现状（`platform/projects/scratchpad/project.json`）：有 `id/parent/order/title/icon/desc/view/tags`，**没有** `base`、`capabilities`、`path`。
+`projects/scratchpad/project.json` 现已显式声明：
 
-| 字段 | registry 实际行为 | 判定 |
-| --- | --- | --- |
-| `base` | `own.get("base") or "json-doc"` → 按 `json-doc` 继承 | **WARN**（可选继承，非违规） |
-| `capabilities` | 继承 json-doc 链 → `["state","action","audit","crud"]` | **WARN**（可选继承，非违规） |
-| `path` | `spec.get("path") or ""`；tree 节点 path 为 `""` | **WARN**（规范偏离，非加载错误） |
+```json
+"base": "json-doc",
+"capabilities": ["state", "action", "audit", "crud"],
+"path": "/scratchpad/"
+```
 
-`path` 缺失的真实后果（已对照 `static/index.html` 与 `server.py` 核实）：
+并生成 `KittenPuppy4Ever/scratchpad/index.html` Pages 壳。
 
-- 首页卡片**仍会显示**：`renderHome` 的 `allRoots` 只过滤 `hidden`，不看 `path`；
-- 点击卡片**仍能打开**：`navigate(node)` 在没有 `path` 时走
-  `pushState({p:id}, "", "/home?p=scratchpad")` → `renderProject` → iframe `/p/scratchpad/`；
-- `/p/scratchpad/` 由 `VIEW_RE` 托管，**始终可访问**（与 path 无关）；
-- 缺失的是：`app.routes` 不索引（没有 `/scratchpad/` 这个规范 URL、不能直接深链）、
-  `canonical_paths` 不收录（旧 URL 兼容表）、作为子页面时不显示 chip、地址栏是 `/home?p=scratchpad` 而不是 `/scratchpad/`。
-
-**结论**：缺 `base`/`capabilities` 是 WARN（“缺省可继承”）；缺 `path` 是 WARN（规范要求常规可导航 module 有 path，但 registry 不报错、前端有 `?p=id` 回退，不构成加载错误）。
-**建议**：若 scratchpad 应作为常规模块出现，补 `"path": "/scratchpad/"`；若它刻意是隐藏/工具模块，应显式加 `"hidden": true` 并在本规范登记为“无 path 例外”。当前校验结果：`PASS` + 3 条 WARN。
+历史结论仍保留为参考：`base`/`capabilities` 缺失时 registry 会正确继承，属于 WARN；但 `path` 对可见 module 是硬性路由契约，缺失会失去 GitHub 风格子页面和刷新能力，现在按 `ERROR` 处理。
 
 ### 6.2 mock：capabilities 含 `"upstream"`
 
@@ -276,13 +274,12 @@ bases/root.json 不是项目基类：只有根节点 id/title/icon/desc，不参
 ### 6.4 当前判定汇总（2026-11-07 实测）
 
 ```
-9 modules · PASS 9 · FAIL 0 · 硬性错误 0 · 建议 5
+9 modules · PASS 9 · FAIL 0 · 硬性错误 0 · 建议 2
 mock       : W_CAP_UNKNOWN(upstream)
 schedule   : W_CAP_UNKNOWN(remind)
-scratchpad : W_BASE_DEFAULTED + W_CAPS_INHERITED + W_PATH_MISSING
 ```
 
-> 若团队决定把“capabilities 闭集”“path 必填”升级为硬规则，应同时修改本规范、把对应 WARN 升为 ERROR，并**先修好** mock/schedule/scratchpad——在此之前，把这三项报成 ERROR 会与 registry 实际行为不符（模块能正常加载和访问），所以校验器保持 WARN。
+> 可见 module 缺 `path` 已从 WARN 升级为 ERROR；当前 9 个可见 module 都有 `path` 和 Pages 壳，故无 path 错误。
 
 ---
 
@@ -388,8 +385,33 @@ python D:\KittenPuppy4Ever\platform\tools\check_modules.py --root D:\KittenPuppy
 ### 9.4 已知限制
 
 - `project.py` 用 AST 静态解析（不 import），`E_PY_IMPORT_SIDE_EFFECT` 是启发式：明确可疑的顶层调用会报，间接调用可能漏报；
-- 模板检查只覆盖 `template.css`/`data-project`/`<header>` 三类低风险项，不做 HTML/CSS 结构校验；
+- 模板检查覆盖 `template.css`/`data-project`/`<header>`/`main.page`/`section.section`/`<h1>`；不做完整 HTML/CSS 结构或视觉校验；
+- Pages 壳检查只验证文件存在与关键标记（iframe/entry.json/路径还原/replaceState），不替代浏览器 E2E；
 - 校验器与 `kernel/registry.py` 的 `BASES` 通过 AST 同步；若 registry 结构大改（如 `BASES` 不再是字面量 Dict），会退回内置映射并输出 `W_REGISTRY_BASES_FALLBACK`。
+
+### 9.5 GitHub 子页面刷新验收
+
+新 module 必须完成：
+
+```bash
+# 1) 生成/更新所有 module 的 Pages 壳
+python tools/sync_pages_shells.py
+# 2) 静态门禁：0 ERROR，且存在 E_PAGES_SHELL_*
+python tools/check_modules.py
+# 3) 部署后浏览器 E2E（本机可用 Playwright）
+#    打开 https://stjwls.github.io/kitten/KittenPuppy4Ever/<path>/
+#    刷新，断言 URL 不变、不是 404、iframe 仍在
+```
+
+验收标准：
+
+- GitHub Pages 路径返回 200；
+- 刷新后 `location.pathname` 不变；
+- 页面不是 GitHub 404；
+- iframe 加载的是同一 module；
+- 后端 `/p/<id>/` 与 `/<path>/` 均 200。
+
+`tools/sync_pages_shells.py` 从 manifest 的 `path` 生成壳；壳运行时读取 `entry.json`，因此隧道地址变化不需要重建壳。
 
 ---
 
@@ -417,13 +439,18 @@ python D:\KittenPuppy4Ever\platform\tools\check_modules.py --root D:\KittenPuppy
    不在 import 期做 I/O；覆盖 `merge`/`on_action` 时保持 `rev` 与 ACL 语义；
 4. 需要自定义页面 → `view.kind=custom`、`view.dir=web`、`web/index.html`（按 TEMPLATE.md）；
 5. `path` 选一个未被占用的 URL，以 `/` 开头、以 `/` 结尾；
-6. 跑 `python tools/check_modules.py`，ERROR 必须为 0；WARN 逐条确认；
-7. 若新增 base 或 capability：先改 `bases/*.json`、`kernel/registry.py` 的 `BASES`，再更新本规范 §10。
+6. 生成 Pages 壳：`python tools/sync_pages_shells.py`；确认 `KittenPuppy4Ever/<path>/index.html` 已存在；
+7. 跑 `python tools/check_modules.py`，ERROR 必须为 0（含 `E_PATH_MISSING`、`E_PAGES_SHELL_MISSING`），WARN 逐条确认；
+8. 部署后按 §9.5 做 GitHub 子页面刷新 E2E；
+9. 若新增 base 或 capability：先改 `bases/*.json`、`kernel/registry.py` 的 `BASES`，再更新本规范 §10。
 
 ---
 
 ## 12. 变更记录
 
+- **v2 · 2026-11-07**：将可见 module 的 `path` 升级为硬性要求（`E_PATH_MISSING`）；
+  新增 GitHub Pages 壳检查（`E_PAGES_SHELL_MISSING`）与生成器 `tools/sync_pages_shells.py`；
+  新增 §9.5 刷新 E2E 验收；scratchpad 已补 base/capabilities/path 并生成壳。
 - **v1 · 2026-11-07**：首版。基于 registry/bases/TEMPLATE.md/现有 9 个 module 提炼；
   明确 ERROR/WARN 分级、缺省继承与兜底行为、`path`/`capabilities` 的定性依据；
-  配套只读校验器 `tools/check_modules.py`（当前 9 PASS / 0 FAIL / 5 WARN）。
+  配套只读校验器 `tools/check_modules.py`。

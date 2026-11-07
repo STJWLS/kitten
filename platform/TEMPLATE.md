@@ -69,3 +69,14 @@
 4. 内容结构改为 `.page > .section…`；卡片/按钮/标签统一用模板组件类；
 5. 项目专有组件（课表网格、转录气泡、评分卡）保留自己的类，但颜色/圆角/字号必须引用模板令牌；
 6. 数据接口不变：课表/许愿池继续用 `/api/state`、`/api/save`；Mock 用 `/mock/api/*`；地图用查看器数据源。
+
+## 5. 路由与刷新
+
+页面模板之外，可见 module 还必须具备可刷新的 GitHub 风格子页面：
+
+- `project.json` 声明唯一的 `path`（如 `/my-tab/`）；
+- 生成 `KittenPuppy4Ever/<path>/index.html` Pages 壳：`python tools/sync_pages_shells.py`；
+- 壳读取 `entry.json` 后 iframe 到后端同路径，并把内层 `kpPath` 用 `replaceState` 同步回地址栏；
+- 验收：GitHub Pages 子页面 200，刷新后 URL 不变、页面不 404。
+
+详见 `MODULE_SPEC.md` §4.5 / §9.5。

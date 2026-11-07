@@ -3,8 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="preconnect" href="https://02f5c6734009.tail4ba04e.ts.net" crossorigin>
-<link rel="dns-prefetch" href="//02f5c6734009.tail4ba04e.ts.net">
 <title>KittenPuppy4Ever</title>
 <style>
   html, body { height: 100%; margin: 0; background: #f8f4ec; }
@@ -21,32 +19,36 @@
 <div id="msg"><div><b>🐱🐶 KittenPuppy4Ever</b>正在连接工作台…</div></div>
 <script>
 (function () {
-  var BASE = "https://02f5c6734009.tail4ba04e.ts.net";
   var PREFIX = "/kitten/KittenPuppy4Ever";
   var path = location.pathname.indexOf(PREFIX) === 0
     ? (location.pathname.slice(PREFIX.length) || "/")
     : "/";
   if (path.charAt(0) !== "/") path = "/" + path;
   var f = document.getElementById("frame");
-  var target = BASE + path + (path.indexOf("?") >= 0 ? "&" : "?") + "kp_frame=1";
-  f.src = target;  // 在解析期赋值：避免动态 iframe 加载失败
+  var msg = document.getElementById("msg");
   var loaded = false;
-  f.onload = function () {
-    loaded = true;
-    document.getElementById("msg").classList.add("hidden");
-  };
-  setTimeout(function () {
-    if (loaded) return;
-    document.querySelector("#msg div").innerHTML =
-      "<b>🐱🐶 KittenPuppy4Ever</b>工作台加载较慢…" +
-      '<div style="margin-top:10px"><a href="' + target + '">直接打开</a></div>';
-  }, 15000);
+  function showError(text) {
+    msg.classList.remove("hidden");
+    msg.innerHTML = "<div><b>🐱🐶 KittenPuppy4Ever</b>" + text +
+      '<div style="margin-top:10px"><a href="/kitten/KittenPuppy4Ever/entry.json">查看 entry.json</a></div></div>';
+  }
+  fetch(PREFIX + "/entry.json?ts=" + Date.now(), {cache: "no-store"})
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d || !d.url) throw new Error("entry.json 未配置 url");
+      var base = d.url.replace(/\/+$/, "");
+      var target = base + path + (path.indexOf("?") >= 0 ? "&" : "?") + "kp_frame=1";
+      f.src = target;
+      f.onload = function () { loaded = true; msg.classList.add("hidden"); };
+      setTimeout(function () {
+        if (!loaded) showError("工作台加载较慢…");
+      }, 15000);
+    })
+    .catch(function (e) { showError("无法读取入口：" + e.message); });
+
   window.addEventListener("message", function (e) {
-    if (e.origin !== new URL(BASE).origin) return;
-    if (e.data && e.data.kpLanding) {
-      location.href = PREFIX + "/";
-      return;
-    }
+    try { if (e.origin !== new URL(PREFIX + "/entry.json", location.href).origin) return; } catch (err) { return; }
+    if (e.data && e.data.kpLanding) { location.href = PREFIX + "/"; return; }
     var p = e.data && e.data.kpPath;
     if (typeof p !== "string" || p.charAt(0) !== "/") return;
     var want = PREFIX + p;

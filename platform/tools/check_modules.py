@@ -36,7 +36,7 @@ import os
 import re
 import sys
 
-TOOL_VERSION = 1
+TOOL_VERSION = 2
 
 VIEW_KINDS = ("auto", "custom", "legacy")
 ACL_KEYS = ("read", "write")
@@ -980,15 +980,17 @@ class ModuleChecker:
         # path -------------------------------------------------------------
         path_value = ""
         raw_path = doc.get("path")
+        hidden = doc.get("hidden") is True
         if raw_path is None:
-            W("W_PATH_MISSING",
-              "未声明 path；registry 会给空字符串。模块仍会出现在首页卡片"
-              "（static/index.html 的 renderHome 只过滤 hidden，不看 path），点击时走 "
-              "navigate() 的 /home?p=%s 回退打开，也能直接访问 /p/%s/；"
-              "但没有规范 URL/深链，server 的 canonical_paths 不收录，"
-              "作为子页面时也不显示 chip。规范要求常规可导航 module 声明 path，"
-              "故记 WARN（不是加载错误）；若刻意省略，应同时 hidden:true 并在规范里登记例外"
-              % (effective_id, effective_id))
+            if hidden:
+                W("W_PATH_HIDDEN_EXCEPTION",
+                  "hidden module 未声明 path；允许作为工具/调试入口通过 /p/%s/ 访问，"
+                  "但不保证 GitHub 风格子页面与刷新" % effective_id)
+            else:
+                E("E_PATH_MISSING",
+                  "未声明 path；可见 module 必须有稳定 URL。registry 会给空字符串，"
+                  "点击只能走 /home?p=%s 回退，GitHub Pages 没有可刷新的规范子页面；"
+                  "请补 \"path\": \"/%s/\" 并生成 Pages 壳" % (effective_id, effective_id))
         elif not isinstance(raw_path, str):
             E("E_PATH_TYPE", "path 必须是字符串")
         elif not raw_path.startswith("/"):
@@ -1004,6 +1006,7 @@ class ModuleChecker:
                 E("E_PATH_DUPLICATE",
                   "path=%r 被多个模块使用：%s（前端路由/旧 URL 会互相覆盖）"
                   % (raw_path, ", ".join(sorted(same_path))))
+            self._check_pages_shell(effective_id, path_value, errors, warnings)
 
         # project.py -------------------------------------------------------
         py_path = os.path.join(module_dir, "project.py")
@@ -1030,6 +1033,39 @@ class ModuleChecker:
         }
 
     # -- TEMPLATE.md 的轻量静态检查（建议项） -------------------------------
+    @staticmethod
+    def _check_pages_shell(module_id, path, errors, warnings):
+        """A navigable module needs a static GitHub Pages path shell."""
+        pages_root = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "KittenPuppy4Ever"))
+        if not os.path.isdir(pages_root):
+            warnings.append(issue("W_PAGES_ROOT_MISSING",
+                                  "未找到 KittenPuppy4Ever/ Pages 目录；无法验证 GitHub 子页面壳"))
+            return
+        rel = path.strip("/")
+        if not rel or rel.startswith("../") or "/../" in rel:
+            errors.append(issue("E_PAGES_PATH_UNSAFE", "path=%r 不能生成安全 Pages 壳" % path))
+            return
+        shell = os.path.join(pages_root, *rel.split("/"), "index.html")
+        if not os.path.isfile(shell):
+            errors.append(issue(
+                "E_PAGES_SHELL_MISSING",
+                "缺少 GitHub Pages 子页面壳：KittenPuppy4Ever/%s/index.html；"
+                "刷新 https://stjwls.github.io/kitten/KittenPuppy4Ever%s 会 404" % (rel, path)))
+            return
+        try:
+            text = read_text(shell, 256 * 1024)
+        except OSError as exc:
+            errors.append(issue("E_PAGES_SHELL_READ", "Pages 壳读取失败：%s" % exc))
+            return
+        if "id=\"frame\"" not in text and "id='frame'" not in text:
+            warnings.append(issue("W_PAGES_SHELL_FRAME", "Pages 壳缺少 #frame iframe"))
+        if "entry.json" not in text and "BASE =" not in text and "var BASE" not in text:
+            warnings.append(issue("W_PAGES_SHELL_BASE", "Pages 壳没有 entry.json/BASE 入口"))
+        if "location.pathname" not in text:
+            warnings.append(issue("W_PAGES_SHELL_PATH", "Pages 壳没有从 location.pathname 还原子路径"))
+        if "replaceState" not in text:
+            warnings.append(issue("W_PAGES_SHELL_HISTORY", "Pages 壳没有 replaceState 同步子路径"))
+
     @staticmethod
     def _check_template(module_id, index_path, errors, warnings):
         try:

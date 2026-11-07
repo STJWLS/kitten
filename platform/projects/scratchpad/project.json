@@ -5,10 +5,13 @@
   "title": "临时便签",
   "icon": "📝",
   "desc": "临时便签：随手记录与整理文本条目。",
+  "base": "json-doc",
+  "capabilities": ["state", "action", "audit", "crud"],
   "view": {
     "kind": "custom",
     "dir": "web"
   },
+  "path": "/scratchpad/",
   "tags": [
     "记录",
     "写作",
