@@ -64,7 +64,7 @@
   <section class="section yard-section">
     <div class="section-head">
       <h2>宅基地</h2>
-      <span class="hint">吊车在院墙外来回，点一下落下当前构件</span>
+      <span class="hint">按合院进深落子：正房、两厢、门楼、影壁；点一下落下当前构件</span>
       <div class="actions">
         <span class="chip" id="round-chip">第 1 座</span>
         <span class="chip" id="best-chip">最佳 —</span>
@@ -73,14 +73,14 @@
     <div class="yard-hud">
       <div class="req" id="req">主家要求加载中…</div>
       <div class="yard-meta">
-        <span class="chip" id="left-chip">余 8 间</span>
+        <span class="chip" id="left-chip">余 8 件</span>
         <span class="chip" id="piece-chip">—</span>
         <span class="chip" id="crane-chip">—</span>
       </div>
     </div>
     <div class="yard-wrap"><canvas id="yard" width="660" height="760"></canvas></div>
     <div class="yard-banner" id="banner"></div>
-    <div class="yard-tip">点击画面 / 空格落子 · <kbd>A</kbd><kbd>D</kbd> 手动移动吊车 · 相邻房间自动开门、朝外/朝街墙面自动开窗 · 院门朝南（画面下方）</div>
+    <div class="yard-tip">点击画面 / 空格落子 · <kbd>A</kbd><kbd>D</kbd> 手动移动吊车 · 相邻房间自动开门、朝外/朝街墙面自动开窗 · 院门朝南（画面下方） · 正房三开间，两厢三开间</div>
     <div class="yard-actions">
       <button class="btn soft sm" id="restart">重起一座</button>
       <button class="btn soft sm" id="sound">音效：开</button>
@@ -88,13 +88,13 @@
   </section>
 
   <section class="section">
-    <div class="section-head"><h2>营造笔记</h2><span class="hint">每座宅子 8 件构件，落满即验收</span></div>
+    <div class="section-head"><h2>营造笔记</h2><span class="hint">每座宅子 8 件构件，按合院规矩落满即验收</span></div>
     <div class="list" id="notes">
-      <div class="row"><span class="k">01</span><span class="grow"><div class="t">天井</div><div class="s">每格天井都算透气，越多越吉；但别把院子堵死。</div></span></div>
-      <div class="row"><span class="k">02</span><span class="grow"><div class="t">门楼</div><div class="s">落在地界最南（画面最下）一排，才算正经院门。</div></span></div>
-      <div class="row"><span class="k">03</span><span class="grow"><div class="t">正房</div><div class="s">靠北（画面上方）为坐北朝南，主家最看重这一条。</div></span></div>
-      <div class="row"><span class="k">04</span><span class="grow"><div class="t">稀有构件</div><div class="s">月洞门、戏台、太湖石可遇不可求，遇上了记得留位置。</div></span></div>
-      <div class="row"><span class="k">05</span><span class="grow"><div class="t">门窗</div><div class="s">落定后按相邻关系自动开门（带门弧），朝街/朝院墙面自动开窗；门楼临街那面会标红「门」。</div></span></div>
+      <div class="row"><span class="k">01</span><span class="grow"><div class="t">正房</div><div class="s">三开间、两进深，是全院最高、最正的体量；居中则中轴立得住。</div></span></div>
+      <div class="row"><span class="k">02</span><span class="grow"><div class="t">两厢</div><div class="s">厢房三开间、两进深，分列院心东西两侧，形成围合。</div></span></div>
+      <div class="row"><span class="k">03</span><span class="grow"><div class="t">门楼</div><div class="s">一间两进，落在最南临街处，才算正经院门；门楼内立影壁。</div></span></div>
+      <div class="row"><span class="k">04</span><span class="grow"><div class="t">天井与回廊</div><div class="s">院心留空才有采光；回廊沿院一周，连接正房与两厢。</div></span></div>
+      <div class="row"><span class="k">05</span><span class="grow"><div class="t">门窗与屋面</div><div class="s">相邻房间自动开门，朝街/朝院墙面开窗；正房与厢房用灰瓦、白墙、朱柱。</div></span></div>
     </div>
   </section>
 
@@ -139,7 +139,7 @@
    非方形构件可旋转；8 件后做图结构分析（相邻自动开门、入口、可达性、夹缝、开敞天井），
    再按 8 条主家委托与格局瑕疵评分。视觉与文案为中式原创。 */
 (() => {
-  const W = 6, H = 6, TOTAL = 8;
+  const W = 10, H = 8, TOTAL = 8;
   const canvas = document.getElementById("yard");
   const ctx = canvas.getContext("2d");
   const $ = (s) => document.querySelector(s);
@@ -149,26 +149,30 @@
     best: $("#best-chip"), modal: $("#deed-modal"),
   };
 
+  // 传统四合院构件尺度：面阔（东西）× 进深（南北），单位=格
+  // 正房三开间；厢房三开间、两进深；门楼一间两进；天井与回廊按院落尺度。
   const HOUSES = {
-    zheng: { name: "正房", w: 3, h: 2, color: "#d8b48a", ink: "#6b4a2a" },
-    xiang: { name: "厢房", w: 2, h: 2, color: "#cfd8c4", ink: "#3f5a3a" },
-    shu:   { name: "书房", w: 2, h: 2, color: "#cdd9e2", ink: "#3c5566" },
-    jing:  { name: "净房", w: 1, h: 1, color: "#d8d2c4", ink: "#5a5448" },
-    chu:   { name: "厨房", w: 1, h: 1, color: "#e0c79a", ink: "#6b4a2a" },
-    men:   { name: "门楼", w: 1, h: 1, color: "#b4433a", ink: "#f7e9df" },
-    tian:  { name: "天井", w: 2, h: 1, color: "#e7dcc4", ink: "#7a6448" },
-    lang:  { name: "回廊", w: 1, h: 3, color: "#c9b897", ink: "#5a4a30" },
-    hu:    { name: "影壁", w: 1, h: 1, color: "#b9a48a", ink: "#4a3a2a" },
-    yue:   { name: "月洞门", w: 1, h: 2, color: "#a9bfa5", ink: "#2f4a2c", rare: true },
-    tai:   { name: "戏台", w: 2, h: 2, color: "#c78d7a", ink: "#5c2a20", rare: true },
-    shi:   { name: "太湖石", w: 1, h: 1, color: "#b9c1c6", ink: "#3c4a52", rare: true },
-    chi:   { name: "水池", w: 2, h: 1, color: "#a9c7cf", ink: "#2c4a56", rare: true },
+    zheng: { name: "正房", w: 3, h: 2, color: "#e6d3b3", ink: "#6b4a2a" },
+    xiang: { name: "厢房", w: 2, h: 3, color: "#dce6d6", ink: "#3f5a3a" },
+    shu:   { name: "书房", w: 2, h: 2, color: "#dbe5e9", ink: "#3c5566" },
+    jing:  { name: "净房", w: 1, h: 1, color: "#e9e4d8", ink: "#5a5448" },
+    chu:   { name: "厨房", w: 2, h: 1, color: "#ead6ae", ink: "#6b4a2a" },
+    men:   { name: "门楼", w: 1, h: 2, color: "#b4433a", ink: "#f7e9df" },
+    tian:  { name: "天井", w: 2, h: 2, color: "#eee7d7", ink: "#7a6448" },
+    lang:  { name: "回廊", w: 1, h: 4, color: "#d3c19e", ink: "#5a4a30" },
+    hu:    { name: "影壁", w: 1, h: 1, color: "#c3ae92", ink: "#4a3a2a" },
+    yue:   { name: "月洞门", w: 1, h: 2, color: "#b6cdb0", ink: "#2f4a2c", rare: true },
+    tai:   { name: "戏台", w: 3, h: 2, color: "#c78d7a", ink: "#5c2a20", rare: true },
+    shi:   { name: "太湖石", w: 1, h: 1, color: "#c5cdd1", ink: "#3c4a52", rare: true },
+    chi:   { name: "水池", w: 2, h: 2, color: "#b9d6dc", ink: "#2c4a56", rare: true },
   };
-  const CORE = ["zheng", "xiang", "shu", "jing", "chu", "men"];
-  const EXTRAS = [["tian", 2], ["lang", 2], ["hu", 1.5], ["jing", 1], ["chu", 1],
-                  ["xiang", 0.8], ["shu", 0.6], ["zheng", 0.5]];
+  // 一座院子的基本料单：正房、两厢、书房、净房、厨房、门楼、影壁 8 件。
+  // 偶发移除一件并补入天井/回廊/稀有构件，保持"一院八件"的落子结构。
+  const CORE = ["zheng", "xiang", "xiang", "shu", "jing", "chu", "men", "hu"];
+  const EXTRAS = [["tian", 3], ["lang", 2.4], ["hu", 2], ["jing", 0.8], ["chu", 0.8],
+                  ["xiang", 0.5], ["shu", 0.4], ["zheng", 0.3]];
   const RARE_POOL = ["yue", "tai", "shi", "chi"];
-  const RARE_CHAIN = [0.5, 0.55, 0.4];
+  const RARE_CHAIN = [0.45, 0.45, 0.3];
   const BED = ["xiang", "shu"];
 
   const idOf = (r) => r.t;
@@ -186,7 +190,8 @@
   }
   function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
-  // 一副 8 件的"料单"：6 件必需 + 2 件补充，偶发 1~3 件稀有构件（替换最不紧要的一件）
+  // 一副 8 件的"料单"：正房、两厢、书房、净房、厨房、门楼 7 件为基本院落，
+  // 再补 1 件天井/回廊/影壁等；偶发稀有构件替换补充件。
   function makeBag() {
     let ids = [...CORE];
     if (Math.random() < 0.22) ids.splice(Math.floor(Math.random() * ids.length), 1);
@@ -296,7 +301,7 @@
     });
 
     // 入口：门楼朝街 > 门楼朝院 > 朝街的房间借窗
-    const PREF = ["zheng", "xiang", "shu", "tian", "men", "chu", "jing", "lang", "hu"];
+    const PREF = ["men", "zheng", "xiang", "shu", "lang", "tian", "chu", "jing", "hu", "tai", "yue"];
     let entry = null;
     const gens = rooms.map((r, i) => i).filter((i) => idOf(rooms[i]) === "men");
     const roadGen = gens.find((i) => faces[i].road > 0);
@@ -353,19 +358,44 @@
     for (const r of rooms) counts[idOf(r)] = (counts[idOf(r)] || 0) + 1;
     let openYard = 0;
     for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (open[x][y] && owner[x][y] === -1) openYard++;
-    return { rooms, top, owner, open, gaps, adj, doors, windows, faces, entry, dist, prev, counts, openYard };
+    // 院落格局：正房居中、两厢分列、影壁迎门、院心留空。
+    const centerOf = (r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
+    const zhengIdx = rooms.findIndex((r) => idOf(r) === "zheng");
+    const wingIdx = rooms.map((r, i) => i).filter((i) => idOf(rooms[i]) === "xiang");
+    const menIdx = rooms.findIndex((r) => idOf(r) === "men");
+    const huIdx = rooms.findIndex((r) => idOf(r) === "hu");
+    const zhengAxis = zhengIdx >= 0 && rooms[zhengIdx].w >= 3 &&
+      Math.abs(centerOf(rooms[zhengIdx]).x - W / 2) <= 1.5;
+    const wingsBoth = wingIdx.some((i) => centerOf(rooms[i]).x < W / 2) &&
+      wingIdx.some((i) => centerOf(rooms[i]).x > W / 2);
+    const huGate = huIdx >= 0 && menIdx >= 0 &&
+      (adj[huIdx].includes(menIdx) ||
+       Math.abs(centerOf(rooms[huIdx]).x - centerOf(rooms[menIdx]).x) +
+       Math.abs(centerOf(rooms[huIdx]).y - centerOf(rooms[menIdx]).y) <= 2.5);
+    let courtOpen = 0;
+    for (let x = Math.floor(W / 2) - 2; x <= Math.ceil(W / 2) + 1; x++) {
+      for (let y = Math.floor(H / 2) - 2; y <= Math.ceil(H / 2) + 1; y++) {
+        if (x >= 0 && x < W && y >= 0 && y < H && open[x][y] && owner[x][y] === -1) courtOpen++;
+      }
+    }
+    const layout = {
+      zhengAxis, wingsBoth, huGate, courtOpen,
+      hasZheng: zhengIdx >= 0, hasWings: wingIdx.length,
+      hasGate: menIdx >= 0, hasScreen: huIdx >= 0,
+    };
+    return { rooms, top, owner, open, gaps, adj, doors, windows, faces, entry, dist, prev, counts, openYard, layout };
   }
 
-  // ---- 8 条主家委托（对齐 madori 的 REQUESTS） ----
+  // ---- 8 条主家委托：从"能住"升级为"合院规矩" ----
   const REQUESTS = [
-    { id: "jing-ne", text: "净房要落在东北角", ok: (an) => an.rooms.some((r) => idOf(r) === "jing" && r.x * 2 >= W && r.y * 2 >= H) },
-    { id: "men-road", text: "门楼要正对街面", ok: (an) => an.entry?.kind === "road" },
-    { id: "bed-sun", text: "卧室要见光（朝街或朝院）", ok: (an) => an.rooms.some((r, i) => isBed(r) && (an.faces[i].out > 0 || an.faces[i].road > 0)) },
-    { id: "jing-bed", text: "净房要挨着卧室", ok: (an) => an.rooms.some((r, i) => idOf(r) === "jing" && an.adj[i].some((b) => isBed(an.rooms[b]))) },
+    { id: "zheng-axis", text: "正房要居中，保持三开间", ok: (an) => an.layout.zhengAxis },
+    { id: "men-road", text: "门楼要正对南面街", ok: (an) => an.entry?.kind === "road" },
+    { id: "wings-flank", text: "东西两厢要分列院心两侧", ok: (an) => an.layout.wingsBoth },
+    { id: "court-open", text: "院心要留出天井，不能堵死", ok: (an) => an.layout.courtOpen >= 4 && an.openYard >= 8 },
+    { id: "hu-gate", text: "影壁要迎门而立", ok: (an) => an.layout.huGate },
     { id: "short", text: "动线要短，别绕院", ok: (an) => an.entry && !an.dist.includes(-1) && Math.max(...an.dist) <= 3 },
-    { id: "garden", text: "院里要留出空地", ok: (an) => an.openYard >= 6 },
-    { id: "fit", text: "八间都要收进地界", ok: (an) => an.rooms.every((r) => r.y + r.h <= H) },
-    { id: "jing-far", text: "净房要离正房远些", ok: (an) => an.rooms.some((r) => idOf(r) === "jing") && !an.rooms.some((r, i) => idOf(r) === "jing" && an.adj[i].some((b) => idOf(an.rooms[b]) === "zheng")) },
+    { id: "fit", text: "八件都要收进宅基地", ok: (an) => an.rooms.every((r) => r.y + r.h <= H) },
+    { id: "jing-quiet", text: "净房要避开正房和门楼", ok: (an) => an.rooms.some((r, i) => idOf(r) === "jing" && !an.adj[i].some((b) => ["zheng", "men"].includes(idOf(an.rooms[b])))) },
   ];
   const ENTRY_CN = { road: "门楼临街", yard: "院门朝内", window: "借窗出入" };
   const NAMES = ["听雨院", "枕石斋", "半亩园", "抱朴居", "栖霞小筑", "晚香堂", "云水间", "竹里馆", "不系舟", "拾光院", "隅园", "青藤书屋"];
@@ -382,7 +412,7 @@
     { id: "first_drop", title: "落子无悔", desc: "落下第一件构件", icon: "🧱" },
     { id: "first_house", title: "第一座宅院", desc: "完成第一座宅院", icon: "🏠" },
     { id: "grade_a", title: "甲等宅院", desc: "营造评分达到 90 分", icon: "🏅" },
-    { id: "eight_in", title: "八间俱全", desc: "八件构件全部收进地界", icon: "🧩" },
+    { id: "eight_in", title: "八作俱全", desc: "八件构件全部收进宅基地", icon: "🧩" },
     { id: "host_hit", title: "主家满意", desc: "达成主家要求", icon: "🤝" }
   ];
   function achList() {
@@ -419,15 +449,16 @@
     }
   }
 
-  const PAD = 46;
-  let cell = 76, cw = 660, LOT_TOP = 210, chh = 720;
+  let PAD = 46;
+  let cell = 72, cw = 660, LOT_TOP = 210, chh = 720;
 
   function layout() {
     const maxW = Math.min(660, canvas.parentElement.clientWidth || 660);
     cw = maxW;
-    cell = Math.max(44, Math.min(78, Math.floor((cw - PAD * 2) / W), Math.floor(690 / (H + 2))));
+    PAD = Math.max(18, Math.min(46, Math.floor(cw * 0.06)));
+    cell = Math.max(34, Math.min(78, Math.floor((cw - PAD * 2) / W), Math.floor(690 / (H + 2))));
     LOT_TOP = 64 + 2 * cell + 16;
-    chh = LOT_TOP + H * cell + 54;
+    chh = LOT_TOP + H * cell + 60;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.round(cw * dpr);
     canvas.height = Math.round(chh * dpr);
@@ -514,18 +545,25 @@
     let score = 52;
     const notes = [];
     const overflow = an.rooms.filter((r) => r.y + r.h > H).length;
-    if (overflow) { score -= 8 * overflow; notes.push("有 " + overflow + " 间溢出地界，验收时被扣了分。"); }
-    else { score += 12; notes.push("八间全部收进地界。"); }
+    if (overflow) { score -= 8 * overflow; notes.push("有 " + overflow + " 件溢出宅基地，验收时被扣了分。"); }
+    else { score += 12; notes.push("八件全部收进宅基地。"); }
     score += Math.min(18, an.openYard * 2);
     if (an.openYard >= 4) notes.push("院里留出 " + an.openYard + " 格空地，穿堂风正好。");
     if (an.entry && an.entry.kind === "road") { score += 10; notes.push("门楼临街，出入体面。"); }
     else if (an.entry && an.entry.kind === "yard") { score += 3; notes.push("院门朝内，稍显迂回。"); }
     else if (an.entry && an.entry.kind === "window") notes.push("没有门楼，只能借窗出入。");
     else { score -= 10; notes.push("四面封死，找不到入口。"); }
+    const L = an.layout;
+    if (L.zhengAxis) { score += 8; notes.push("正房居中，三开间，是合院的骨架。"); }
+    else if (L.hasZheng) { score -= 4; notes.push("正房偏了，院子的中轴没有立住。"); }
+    if (L.wingsBoth) { score += 8; notes.push("东西两厢分列，合院格局齐整。"); }
+    else if (L.hasWings) { notes.push("只有一厢，院子还差半边。"); }
+    if (L.huGate) { score += 4; notes.push("影壁迎门，挡住直冲的视线。"); }
+    if (L.courtOpen >= 4) { score += 6; notes.push("院心留空，天井采光通透。"); }
     const gaps = an.gaps.reduce((s, g) => s + g.length, 0);
     if (gaps) { score -= Math.min(12, gaps * 3); notes.push("有 " + gaps * 2 + " 帖无从进入的夹缝。"); }
     const lost = an.entry ? an.dist.filter((d) => d < 0).length : 0;
-    if (lost) { score -= 4 * lost; notes.push("有 " + lost + " 间从入口走不到。"); }
+    if (lost) { score -= 4 * lost; notes.push("有 " + lost + " 件从入口走不到。"); }
     if (an.rooms.some((r) => HOUSES[r.t].rare)) { score += 5; notes.push("院中有稀罕物，主家面上有光。"); }
     const hit = req.ok(an);
     if (hit) score += 20;
@@ -591,27 +629,31 @@
     };
   }
 
-  const ROOF = { zheng: "#465a55", xiang: "#52655d", shu: "#566a63", men: "#7a2f28",
-    jing: "#6b6a60", chu: "#7a6247", tian: "#b9c3a9", lang: "#8a7a5c",
+  const ROOF = { zheng: "#4e5b55", xiang: "#55665d", shu: "#566a63", men: "#7a2f28",
+    jing: "#6d6a60", chu: "#7a6247", tian: "#b9c3a9", lang: "#8a7a5c",
     hu: "#8a7a66", yue: "#4f6b4b", tai: "#6f3a30", shi: "#6b747a", chi: "#5f8790" };
-  const WALL = { zheng: "#e8d6b6", xiang: "#d9e3cf", shu: "#d5e2ea", men: "#c05a4d",
-    jing: "#e2ded2", chu: "#e7d2a8", tian: "#e9e1cd", lang: "#d6c6a4",
-    hu: "#d3c3ad", yue: "#c2d6bd", tai: "#d8a291", shi: "#c9d0d4", chi: "#b7d2d8" };
+  const WALL = { zheng: "#f3ead8", xiang: "#eef2e8", shu: "#eaf1f2", men: "#c05a4d",
+    jing: "#ebe6da", chu: "#f4e4c3", tian: "#e9e1cd", lang: "#e5d9c0",
+    hu: "#e8dfcf", yue: "#d3e2cd", tai: "#e7c3b4", shi: "#d5dbde", chi: "#c4dde2" };
 
   function roomHeight(r) {
     const id = r.t;
-    if (id === "tian") return 0.12;
-    if (id === "chi") return 0.08;
-    if (id === "zheng") return 1.7;
-    if (id === "xiang" || id === "shu") return 1.35;
-    if (id === "men") return 1.2;
-    if (id === "lang") return 0.85;
+    if (id === "tian") return 0.08;
+    if (id === "chi") return 0.05;
+    if (id === "shi") return 0.55;
+    if (id === "zheng") return 2.0;
+    if (id === "xiang") return 1.45;
+    if (id === "shu") return 1.35;
+    if (id === "men") return 1.55;
+    if (id === "tai") return 1.65;
+    if (id === "lang") return 0.75;
+    if (id === "hu") return 1.05;
     return 1.0;
   }
 
   const ISO_CA = 0.82, ISO_SA = 0.47, ISO_ZK = 0.92;
   const lerpN = (a, b, t) => a + (b - a) * t;
-  const OPEN_KINDS = ["tian", "chi"];
+  const OPEN_KINDS = ["tian", "chi", "shi"];
 
   function drawIso(g, w, h, an, flow, opts = {}) {
     const t = Math.max(0, Math.min(1, opts.t == null ? 1 : opts.t));
@@ -622,7 +664,7 @@
 
     const top = an.top;
     const rooms = an.rooms;
-    const maxZ = 1.05;
+    const maxZ = 2.8;
     const raw = (x, y, z) => [
       lerpN(x, (x - y) * ISO_CA, t),
       lerpN(-y, -(x + y) * ISO_SA - z * ISO_ZK, t),
@@ -663,9 +705,9 @@
     g.setLineDash([]);
     quad([P(0, 0, 0), P(W, 0, 0), P(W, top, 0), P(0, top, 0)], "#ede9df", "#b9b5ab", 1);
 
-    const FLOOR = { zheng: "#fbf7ee", xiang: "#f3f6ec", shu: "#eef4f7", jing: "#f7f5f0",
-      chu: "#faf4e6", men: "#f6ece7", tian: "#f1ecdf", lang: "#f5efe2", hu: "#f4efe6",
-      yue: "#eef4ea", tai: "#f7e9e3", shi: "#f1f3f4", chi: "#e9f2f4" };
+    const FLOOR = { zheng: "#f8f2e6", xiang: "#f4f7ef", shu: "#eef4f6", jing: "#f5f1e8",
+      chu: "#faf2df", men: "#f7ece6", tian: "#eee6d5", lang: "#f3ecdd", hu: "#f0e8da",
+      yue: "#eef4ea", tai: "#f8eae4", shi: "#eef1f1", chi: "#e5f1f3" };
     for (const r of rooms) {
       const k = id(r);
       quad([P(r.x, r.y, 0), P(r.x + r.w, r.y, 0), P(r.x + r.w, r.y + r.h, 0), P(r.x, r.y + r.h, 0)],
@@ -752,6 +794,49 @@
     items.sort((a, b) => b.key - a.key);
     for (const it of items) it.draw();
 
+    // ---- 屋顶：灰瓦、正脊、檐口 ----
+    for (const r of rooms) {
+      const k = id(r);
+      if (!["zheng", "xiang", "shu", "men", "tai", "lang"].includes(k)) continue;
+      const h0 = roomHeight(r);
+      const e = 0.10;
+      const topPts = [
+        P(r.x - e, r.y - e, h0), P(r.x + r.w + e, r.y - e, h0),
+        P(r.x + r.w + e, r.y + r.h + e, h0), P(r.x - e, r.y + r.h + e, h0)
+      ];
+      quad(topPts, ROOF[k] || "#4e5b55", "#2e2b27", 1);
+      // 正脊：沿长边
+      const alongX = r.w >= r.h;
+      const a = alongX ? P(r.x + 0.12, r.y + r.h / 2, h0 + 0.16) : P(r.x + r.w / 2, r.y + 0.12, h0 + 0.16);
+      const b = alongX ? P(r.x + r.w - 0.12, r.y + r.h / 2, h0 + 0.16) : P(r.x + r.w / 2, r.y + r.h - 0.12, h0 + 0.16);
+      line(a, b, "#2f2c28", Math.max(1.2, sc * 0.025));
+      // 瓦垄
+      g.strokeStyle = "rgba(245,240,226,.16)"; g.lineWidth = 1;
+      g.beginPath();
+      if (alongX) {
+        for (let yy = r.y + 0.28; yy < r.y + r.h; yy += 0.36) {
+          const p0 = P(r.x - e, yy, h0), p1 = P(r.x + r.w + e, yy, h0);
+          g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
+        }
+      } else {
+        for (let xx = r.x + 0.28; xx < r.x + r.w; xx += 0.36) {
+          const p0 = P(xx, r.y - e, h0), p1 = P(xx, r.y + r.h + e, h0);
+          g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
+        }
+      }
+      g.stroke();
+      // 檐角起翘
+      g.strokeStyle = "#2f2c28"; g.lineWidth = 1.2;
+      for (const [qx, qy, sx, sy] of [
+        [r.x - e, r.y - e, -1, -1], [r.x + r.w + e, r.y - e, 1, -1],
+        [r.x - e, r.y + r.h + e, -1, 1], [r.x + r.w + e, r.y + r.h + e, 1, 1]
+      ]) {
+        const q0 = P(qx, qy, h0);
+        const q1 = P(qx + sx * 0.18, qy + sy * 0.05, h0 + 0.08);
+        line(q0, q1, "#2f2c28", 1.2);
+      }
+    }
+
     // ---- 标签 ----
     if (t > 0.45) {
       g.globalAlpha = Math.min(1, (t - 0.45) / 0.25);
@@ -776,7 +861,7 @@
       for (let i = 0; i < rooms.length; i++) if (an.prev[i] >= 0) edges.push({ a: an.prev[i], b: i, d: an.dist[i] });
       edges.sort((x, y) => x.d - y.d);
       const n = edges.length, cur = Math.min(1, flow) * n;
-      const c1 = (idx) => { const r = rooms[idx]; return P(r.x + r.w / 2, r.y + r.h / 2, 1.12); };
+      const c1 = (idx) => { const r = rooms[idx]; return P(r.x + r.w / 2, r.y + r.h / 2, 2.55); };
       g.lineCap = "round";
       for (let k = 0; k < edges.length; k++) {
         const e = edges[k], A = c1(e.a), B = c1(e.b);
@@ -814,9 +899,9 @@
         const wx = cA.x + (cB.x - cA.x) * f;
         const wy = cA.y + (cB.y - cA.y) * f;
         const bob = Math.abs(Math.sin(flow * 40)) * 0.05;
-        const foot = P(wx, wy, 0.02 + bob);
-        const hip = P(wx, wy, 0.34 + bob);
-        const head = P(wx, wy, 0.52 + bob);
+        const foot = P(wx, wy, 2.22 + bob);
+        const hip = P(wx, wy, 2.42 + bob);
+        const head = P(wx, wy, 2.60 + bob);
         const lw = Math.max(2.1, sc * 0.05);
         line([foot[0] - sc * 0.04, foot[1]], [hip[0], hip[1]], "#d23a2c", lw);
         line([foot[0] + sc * 0.04, foot[1]], [hip[0], hip[1]], "#d23a2c", lw);
@@ -864,14 +949,14 @@
     g.fillStyle = "#9e2a22"; g.font = "700 20px 'Songti SC', serif";
     g.fillText(L.grade + " 等宅", 56 + nameW + 18, 126);
     g.fillStyle = "#8a7358"; g.font = "12px 'Songti SC', serif";
-    g.fillText("第 " + state.round + " 座 · 八件落成 · 坐北朝南", 56, 156);
+    g.fillText("第 " + state.round + " 座 · 八件落成 · 合院格局", 56, 156);
     // 宣传语
     const catchText = L.res.hit ? "主家满意，当场添了茶钱。" : "主家还在琢磨，但院子已经立起来了。";
     g.fillStyle = "#4a3a2a"; g.font = "15px 'Songti SC', serif";
     g.fillText(catchText, 56, 200);
     // 规格
     const rows = [
-      ["占地", L.an.rooms.length + " 间 · 高 " + L.res.top + " 层"],
+      ["占地", L.an.rooms.length + " 件 · 高 " + L.res.top + " 层"],
       ["天井", L.res.openYard + " 格空地"],
       ["门第", L.res.doors + " 道门 · " + (L.an.entry ? ENTRY_CN[L.an.entry.kind] : "无入口")],
       ["委托", L.res.hit ? "达成" : "未达成"],
@@ -954,19 +1039,34 @@
     for (let y = 0; y < chh; y += 7) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke(); }
   }
   function drawLot() {
-    // 地界与网格
-    ctx.strokeStyle = "#b08b5a"; ctx.lineWidth = 2;
+    // 地界、院墙与合院中轴
+    ctx.strokeStyle = "#9c8462"; ctx.lineWidth = 1.5;
     roundRect(gx(0) - 8, LOT_TOP - 8, W * cell + 16, H * cell + 16, 12);
     ctx.stroke();
     ctx.fillStyle = "rgba(176,139,90,.05)"; ctx.fill();
+    // 院墙：双线，内为白墙，外为灰砖
+    ctx.strokeStyle = "rgba(120,95,60,.30)"; ctx.lineWidth = Math.max(2, cell * 0.035);
+    ctx.strokeRect(gx(0) - 2, LOT_TOP - 2, W * cell + 4, H * cell + 4);
     ctx.strokeStyle = "rgba(120,95,60,.16)"; ctx.lineWidth = 1;
+    ctx.strokeRect(gx(0) + 2, LOT_TOP + 2, W * cell - 4, H * cell - 4);
+    // 方格：青砖铺地
     for (let x = 0; x <= W; x++) { ctx.beginPath(); ctx.moveTo(gx(x), LOT_TOP); ctx.lineTo(gx(x), LOT_TOP + H * cell); ctx.stroke(); }
     for (let y = 0; y <= H; y++) { ctx.beginPath(); ctx.moveTo(gx(0), LOT_TOP + y * cell); ctx.lineTo(gx(W), LOT_TOP + y * cell); ctx.stroke(); }
+    // 中轴
+    ctx.save();
+    ctx.setLineDash([cell * 0.22, cell * 0.18]);
+    ctx.strokeStyle = "rgba(158,42,34,.22)"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(gx(W / 2), LOT_TOP - 2); ctx.lineTo(gx(W / 2), LOT_TOP + H * cell + 2); ctx.stroke();
+    ctx.restore();
     // 街道
-    ctx.fillStyle = "rgba(90,110,90,.08)";
-    ctx.fillRect(gx(0) - 8, LOT_TOP + H * cell + 8, W * cell + 16, 18);
-    ctx.fillStyle = "#9e2a22"; ctx.font = "11px 'Songti SC', serif"; ctx.textAlign = "center";
-    ctx.fillText("街 · 院门朝南", gx(W / 2), LOT_TOP + H * cell + 40);
+    ctx.fillStyle = "rgba(90,110,90,.10)";
+    ctx.fillRect(gx(0) - 8, LOT_TOP + H * cell + 8, W * cell + 16, 20);
+    ctx.fillStyle = "#9e2a22"; ctx.font = "600 11px 'Songti SC', serif"; ctx.textAlign = "center";
+    ctx.fillText("南 · 街", gx(W / 2), LOT_TOP + H * cell + 38);
+    ctx.fillStyle = "rgba(90,70,40,.65)"; ctx.font = "10px 'Songti SC', serif";
+    ctx.textAlign = "left"; ctx.fillText("西", gx(0) - 16, LOT_TOP + H * cell / 2);
+    ctx.textAlign = "right"; ctx.fillText("东", gx(W) + 16, LOT_TOP + H * cell / 2);
+    ctx.textAlign = "center"; ctx.fillText("北", gx(W / 2), LOT_TOP - 18);
     // 吊车轨道
     ctx.strokeStyle = "#9e2a22"; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(gx(0) - 12, 54); ctx.lineTo(gx(W) + 12, 54); ctx.stroke();
@@ -980,60 +1080,89 @@
     const px = gx(r.x), py = (topOverride == null ? roomTop(r) : topOverride);
     const pw = r.w * cell, ph = r.h * cell;
     const id = r.t;
-    const FILL = { zheng: "#fbf7ee", xiang: "#f3f6ec", shu: "#eef4f7", jing: "#f7f5f0",
-      chu: "#faf4e6", men: "#f6ece7", tian: "#f1ecdf", lang: "#f5efe2", hu: "#f4efe6",
-      yue: "#eef4ea", tai: "#f7e9e3", shi: "#f1f3f4", chi: "#e9f2f4" };
+    const FILL = {
+      zheng: "#f8f2e6", xiang: "#f4f7ef", shu: "#eef4f6", jing: "#f5f1e8",
+      chu: "#faf2df", men: "#f7ece6", tian: "#eee6d5", lang: "#f3ecdd",
+      hu: "#f0e8da", yue: "#eef4ea", tai: "#f8eae4", shi: "#eef1f1", chi: "#e5f1f3"
+    };
+    const ROOF = {
+      zheng: "#4e5b55", xiang: "#55665d", shu: "#566a63", men: "#7a2f28",
+      jing: "#6d6a60", chu: "#7a6247", lang: "#8a7a5c", hu: "#8a7a66",
+      yue: "#4f6b4b", tai: "#6f3a30", shi: "#6b747a", chi: "#5f8790", tian: "#b9c3a9"
+    };
+    const OPEN = id === "tian" || id === "chi" || id === "shi";
+    const BUILDING = ["zheng", "xiang", "shu", "men", "tai"].includes(id);
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = FILL[id] || "#fbf7ee";
+
+    // 灰瓦出檐：在墙体外侧压一圈深灰瓦口，四角起翘
+    if (!OPEN && id !== "hu" && id !== "lang") {
+      const e = Math.max(2.5, cell * 0.055);
+      ctx.fillStyle = "rgba(62,66,62,.18)";
+      ctx.fillRect(px - e, py - e, pw + e * 2, ph + e * 2);
+      ctx.strokeStyle = ROOF[id] || "#4e5b55";
+      ctx.lineWidth = Math.max(1.2, cell * 0.018);
+      ctx.strokeRect(px - e, py - e, pw + e * 2, ph + e * 2);
+      // 起翘的檐角
+      ctx.beginPath();
+      for (const [cx0, cy0, sx, sy] of [[px - e, py - e, -1, -1], [px + pw + e, py - e, 1, -1], [px - e, py + ph + e, -1, 1], [px + pw + e, py + ph + e, 1, 1]]) {
+        ctx.moveTo(cx0, cy0); ctx.quadraticCurveTo(cx0 + sx * cell * 0.10, cy0 + sy * cell * 0.02, cx0 + sx * cell * 0.17, cy0 + sy * cell * 0.10);
+      }
+      ctx.stroke();
+    }
+
+    // 地面铺装
+    ctx.fillStyle = FILL[id] || "#f8f2e6";
     ctx.fillRect(px, py, pw, ph);
 
-    // 室内纹理：榻榻米 / 地板 / 厨房 / 净房 / 天井 / 水池
+    // 室内纹理：木地板 / 青砖 / 水面 / 庭院
     ctx.save();
     ctx.beginPath(); ctx.rect(px, py, pw, ph); ctx.clip();
-    ctx.strokeStyle = "rgba(70,60,45,.28)";
+    ctx.strokeStyle = "rgba(70,60,45,.24)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    if (id === "xiang") {
-      for (let cx = 0; cx < r.w; cx++) for (let cy = 0; cy < r.h; cy++) {
-        const bx = gx(r.x) + cx * cell + 4, by = (topOverride == null ? roomTop(r) : topOverride) + cy * cell + 4;
-        ctx.rect(bx, by, cell - 8, cell - 8);
-        if ((cx + cy) % 2) { ctx.moveTo(bx + cell / 2 - 4, by + 2); ctx.lineTo(bx + cell / 2 - 4, by + cell - 10); }
-        else { ctx.moveTo(bx + 2, by + cell / 2 - 4); ctx.lineTo(bx + cell - 10, by + cell / 2 - 4); }
-      }
-    } else if (id === "zheng" || id === "shu") {
-      for (let i = 1; i < r.w * 4; i++) {
-        const xx = px + (i * pw) / (r.w * 4);
-        ctx.moveTo(xx, py + 4); ctx.lineTo(xx, py + ph - 4);
-      }
+    if (id === "xiang" || id === "shu" || id === "zheng") {
+      // 木地板：顺进深铺板
+      for (let i = 1; i < r.h * 4; i++) { const yy = py + (i * ph) / (r.h * 4); ctx.moveTo(px + 5, yy); ctx.lineTo(px + pw - 5, yy); }
+      // 开间柱网
+      for (let i = 1; i < r.w; i++) { const xx = px + i * cell; ctx.moveTo(xx, py + 4); ctx.lineTo(xx, py + ph - 4); }
     } else if (id === "lang") {
-      for (let i = 1; i < r.h * 3; i++) {
-        const yy = py + (i * ph) / (r.h * 3);
-        ctx.moveTo(px + 4, yy); ctx.lineTo(px + pw - 4, yy);
-      }
+      for (let i = 1; i < r.h * 5; i++) { const yy = py + (i * ph) / (r.h * 5); ctx.moveTo(px + 4, yy); ctx.lineTo(px + pw - 4, yy); }
     } else if (id === "tian") {
-      for (let i = 0; i < 18; i++) {
-        const xx = px + 6 + Math.random() * Math.max(1, pw - 12);
-        const yy = py + 6 + Math.random() * Math.max(1, ph - 12);
-        ctx.moveTo(xx, yy); ctx.lineTo(xx + 1.2, yy + 1.2);
+      // 天井青砖：十字缝
+      for (let i = 1; i < r.h * 3; i++) { const yy = py + (i * ph) / (r.h * 3); ctx.moveTo(px + 6, yy); ctx.lineTo(px + pw - 6, yy); }
+      for (let i = 1; i < r.w * 3; i++) { const xx = px + (i * pw) / (r.w * 3); ctx.moveTo(xx, py + 6); ctx.lineTo(xx, py + ph - 6); }
+      ctx.stroke();
+      // 院心一棵树
+      const tx = px + pw * 0.52, ty = py + ph * 0.48;
+      ctx.beginPath(); ctx.arc(tx, ty, Math.min(pw, ph) * 0.17, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(78,112,66,.16)"; ctx.fill();
+      ctx.strokeStyle = "rgba(78,112,66,.55)"; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(tx, ty + 4); ctx.lineTo(tx, ty + Math.min(pw, ph) * 0.2); ctx.strokeStyle = "#5d4730"; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath();
+      for (let k = 0; k < 7; k++) {
+        const a = (k / 7) * Math.PI * 2;
+        const rr = Math.min(pw, ph) * (0.12 + (k % 2) * 0.025);
+        ctx.moveTo(tx, ty); ctx.lineTo(tx + Math.cos(a) * rr, ty + Math.sin(a) * rr);
       }
+      ctx.strokeStyle = "rgba(78,112,66,.32)"; ctx.lineWidth = 1; ctx.stroke();
     } else if (id === "chi") {
-      for (let i = 1; i < 5; i++) {
-        const yy = py + (i * ph) / 5;
+      for (let i = 1; i < 6; i++) {
+        const yy = py + (i * ph) / 6;
         ctx.moveTo(px + 6, yy);
         for (let xx = px + 6; xx < px + pw - 6; xx += 8) ctx.quadraticCurveTo(xx + 4, yy - 3, xx + 8, yy);
       }
     } else if (id === "men") {
-      for (let i = -4; i < 8; i++) {
-        ctx.moveTo(px + (i * cell) / 5, py + ph);
-        ctx.lineTo(px + (i * cell) / 5 + cell * 0.6, py + ph - cell * 0.6);
-      }
+      // 门楼：正面门钉大门 + 石阶
+      ctx.strokeStyle = "rgba(90,40,32,.32)";
+      for (let i = -4; i < 8; i++) { ctx.moveTo(px + (i * cell) / 5, py + ph); ctx.lineTo(px + (i * cell) / 5 + cell * 0.6, py + ph - cell * 0.6); }
     } else if (id === "hu") {
+      // 影壁：砖框与中心方胜
       for (let i = 1; i < 4; i++) { ctx.moveTo(px + 4, py + (i * ph) / 4); ctx.lineTo(px + pw - 4, py + (i * ph) / 4); }
-      ctx.moveTo(px + 4, py + 4); ctx.lineTo(px + pw - 4, py + ph - 4);
     }
     ctx.stroke();
+    ctx.restore();
 
-    // 固定家具
+    // 固定家具 / 构件
     ctx.strokeStyle = "#2a2a2c"; ctx.fillStyle = "#fff"; ctx.lineWidth = 1.1;
     if (id === "chu") {
       const kx = px + cell * 0.12, ky = py + cell * 0.12;
@@ -1043,34 +1172,111 @@
       ctx.strokeRect(px + cell * 0.32, py + cell * 0.08, cell * 0.36, cell * 0.12);
       ctx.beginPath(); ctx.ellipse(px + cell * 0.5, py + cell * 0.38, cell * 0.13, cell * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
     } else if (id === "zheng") {
-      // 正厅条案与两把椅
+      // 明间条案、次间坐榻
       ctx.strokeRect(px + pw * 0.36, py + 6, pw * 0.28, cell * 0.24);
-      ctx.strokeRect(px + pw * 0.18, py + cell * 0.42, cell * 0.34, cell * 0.3);
-      ctx.strokeRect(px + pw * 0.62, py + cell * 0.42, cell * 0.34, cell * 0.3);
+      ctx.strokeRect(px + pw * 0.16, py + cell * 0.45, cell * 0.45, cell * 0.32);
+      ctx.strokeRect(px + pw * 0.66, py + cell * 0.45, cell * 0.45, cell * 0.32);
     } else if (id === "shu") {
       ctx.strokeRect(px + pw * 0.4, py + ph * 0.34, pw * 0.2, ph * 0.26);
+    } else if (id === "men") {
+      // 朱红大门、门钉、匾额
+      ctx.fillStyle = "#8f2d26";
+      ctx.fillRect(px + pw * 0.26, py + ph * 0.52, pw * 0.48, ph * 0.24);
+      ctx.strokeStyle = "#5f1a16"; ctx.strokeRect(px + pw * 0.26, py + ph * 0.52, pw * 0.48, ph * 0.24);
+      ctx.fillStyle = "#d9b75c";
+      for (let gx0 = 0; gx0 < 3; gx0++) for (let gy0 = 0; gy0 < 2; gy0++) {
+        ctx.beginPath(); ctx.arc(px + pw * (0.30 + gx0 * 0.10), py + ph * (0.57 + gy0 * 0.08), 1.1, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = "#f4e6c8";
+      ctx.fillRect(px + pw * 0.33, py + ph * 0.30, pw * 0.34, ph * 0.10);
+      ctx.strokeStyle = "#6b4a2a"; ctx.strokeRect(px + pw * 0.33, py + ph * 0.30, pw * 0.34, ph * 0.10);
+    } else if (id === "hu") {
+      ctx.fillStyle = "rgba(158,42,34,.75)";
+      ctx.fillRect(px + pw * 0.22, py + ph * 0.26, pw * 0.56, ph * 0.48);
+      ctx.strokeStyle = "#f2e2c8"; ctx.lineWidth = 1;
+      ctx.strokeRect(px + pw * 0.28, py + ph * 0.34, pw * 0.44, ph * 0.32);
+      ctx.fillStyle = "#f2e2c8"; ctx.font = "700 " + Math.max(9, cell * 0.18) + "px 'Songti SC', serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("福", px + pw / 2, py + ph / 2);
+    } else if (id === "lang") {
+      // 回廊柱列
+      ctx.fillStyle = "#3e3a34";
+      for (let i = 1; i < r.h; i++) {
+        const yy = py + i * cell;
+        ctx.fillRect(px + 2, yy - 2, 3.2, 3.2);
+        ctx.fillRect(px + pw - 5.2, yy - 2, 3.2, 3.2);
+      }
+    } else if (id === "yue") {
+      // 月洞门：圆洞与砖框
+      const cx = px + pw / 2, cy = py + ph / 2, rr = Math.min(pw, ph) * 0.32;
+      ctx.strokeStyle = "#f8f2e6"; ctx.lineWidth = Math.max(5, cell * 0.10);
+      ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = "#4e6b4b"; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.stroke();
+    } else if (id === "tai") {
+      // 戏台：红柱、台面
+      ctx.fillStyle = "rgba(158,42,34,.18)";
+      ctx.fillRect(px + 4, py + 4, pw - 8, ph - 8);
+      ctx.fillStyle = "#7d2d26";
+      for (const [dx, dy] of [[0.15, 0.2], [0.85, 0.2], [0.15, 0.8], [0.85, 0.8]]) {
+        ctx.beginPath(); ctx.arc(px + pw * dx, py + ph * dy, Math.max(2.2, cell * 0.055), 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (id === "shi") {
+      // 太湖石：瘦皱漏透
+      ctx.fillStyle = "#c5cdd1";
+      ctx.beginPath();
+      ctx.moveTo(px + pw * 0.18, py + ph * 0.84);
+      ctx.quadraticCurveTo(px + pw * 0.10, py + ph * 0.35, px + pw * 0.45, py + ph * 0.18);
+      ctx.quadraticCurveTo(px + pw * 0.85, py + ph * 0.10, px + pw * 0.82, py + ph * 0.55);
+      ctx.quadraticCurveTo(px + pw * 0.90, py + ph * 0.88, px + pw * 0.18, py + ph * 0.84);
+      ctx.fill(); ctx.strokeStyle = "#5d6a70"; ctx.stroke();
+      ctx.beginPath(); ctx.arc(px + pw * 0.45, py + ph * 0.45, Math.max(2, cell * 0.07), 0, Math.PI * 2);
+      ctx.strokeStyle = "#6b777d"; ctx.stroke();
     }
-    ctx.restore();
 
-    // 墙：粗黑线
+    // 屋面/柱网：在墙体之上压一道细线，保持平面可读
+    if (BUILDING) {
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = "rgba(70,62,52,.28)"; ctx.lineWidth = 1;
+      const ridgeY = py + ph / 2;
+      ctx.beginPath(); ctx.moveTo(px + 5, ridgeY); ctx.lineTo(px + pw - 5, ridgeY); ctx.stroke();
+      // 正脊两端的小翘头
+      ctx.strokeStyle = ROOF[id] || "#4e5b55"; ctx.lineWidth = Math.max(1.2, cell * 0.02);
+      ctx.beginPath();
+      ctx.moveTo(px + 4, ridgeY); ctx.quadraticCurveTo(px + 1, ridgeY - cell * 0.05, px + 2, ridgeY - cell * 0.16);
+      ctx.moveTo(px + pw - 4, ridgeY); ctx.quadraticCurveTo(px + pw - 1, ridgeY - cell * 0.05, px + pw - 2, ridgeY - cell * 0.16);
+      ctx.stroke();
+      // 开间柱点
+      ctx.fillStyle = "rgba(52,44,36,.55)";
+      for (let i = 1; i < r.w; i++) {
+        const xx = px + i * cell;
+        for (const yy of [py + 5, py + ph - 5]) {
+          ctx.beginPath(); ctx.arc(xx, yy, Math.max(1.2, cell * 0.018), 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+
+    // 墙体
     ctx.globalAlpha = alpha;
-    ctx.strokeStyle = "#242427";
-    ctx.lineWidth = Math.max(2.6, cell * 0.052);
+    ctx.strokeStyle = "#2d2b28";
+    ctx.lineWidth = Math.max(2.2, cell * 0.045);
     ctx.strokeRect(px, py, pw, ph);
-    ctx.globalAlpha = 1;
 
-    // 标签：白底文字
+    // 标签：木牌样式
     const name = HOUSES[id].name;
-    ctx.font = "600 " + Math.max(9, Math.min(13, cell * 0.17)) + "px 'Songti SC', 'SimSun', serif";
+    ctx.font = "600 " + Math.max(8, Math.min(12, cell * 0.155)) + "px 'Songti SC', 'SimSun', serif";
     const tw = ctx.measureText(name).width;
     const cx = px + pw / 2, cy = py + ph / 2;
     if (pw > tw + 10 && ph > 20) {
-      ctx.fillStyle = "rgba(255,255,255,.88)";
-      ctx.fillRect(cx - tw / 2 - 3, cy - 9, tw + 6, 17);
-      ctx.fillStyle = "#242427";
+      ctx.fillStyle = "rgba(248,242,230,.92)";
+      ctx.fillRect(cx - tw / 2 - 4, cy - 9, tw + 8, 18);
+      ctx.strokeStyle = "rgba(122,96,60,.55)"; ctx.lineWidth = 1;
+      ctx.strokeRect(cx - tw / 2 - 4, cy - 9, tw + 8, 18);
+      ctx.fillStyle = "#3a3028";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(name, cx, cy + 1);
     }
+    ctx.globalAlpha = 1;
   }
 
   function drawGhost() {
