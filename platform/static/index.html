@@ -4074,7 +4074,7 @@ function setupPopupBases() {
   });
 }
 const KP_POPUP_TREE = {
-  window: { children: ["ai-drawer", "bottle-status-drawer", "debug", "settings-popup", "manage-popup", "bug-popup", "birthday-popup"] },
+  window: { children: ["ai-drawer", "bottle-status-drawer", "debug", "settings-popup", "manage-popup", "bug-popup", "birthday-popup", "mail-popup"] },
   "ai-drawer": { parent: "window", button: "ai-edge" },
   "bottle-status-drawer": { parent: "window", button: "bottle-status-btn" },
   "debug": { parent: "window", button: "dbg-toggle" },
@@ -4122,6 +4122,39 @@ function setupPopupTreeRadius() {
     el.style.setProperty("--kp-popup-radius", radius + "px");
     el.dataset.kpRadius = String(radius);
   });
+}
+function validateKpPopupTree() {
+  const errors = [];
+  const seen = new Set();
+  function walk(key, parent) {
+    if (seen.has(key)) { errors.push("cycle/duplicate: " + key); return; }
+    seen.add(key);
+    const node = KP_POPUP_TREE[key] || {};
+    if (key !== "window" && node.parent !== parent) {
+      errors.push(key + " parent=" + node.parent + " expected=" + parent);
+    }
+    if (key !== "window") {
+      const sel = KP_POPUP_EL[key];
+      const el = sel ? document.querySelector(sel) : null;
+      if (!sel) errors.push(key + " missing KP_POPUP_EL");
+      else if (!el) errors.push(key + " missing element " + sel);
+      else if (el.style.getPropertyValue("--kp-popup-radius") !== kpPopupRadius(key) + "px") {
+        errors.push(key + " radius var mismatch");
+      }
+    }
+    (node.children || []).forEach((child) => walk(child, key));
+  }
+  walk("window", null);
+  Object.keys(KP_POPUP_TREE).forEach((key) => {
+    if (key !== "window" && !seen.has(key)) errors.push("orphan: " + key);
+  });
+  document.querySelectorAll(".kp-drawer[data-button]").forEach((drawer) => {
+    const btn = document.getElementById(drawer.dataset.button);
+    if (!btn) errors.push(drawer.id + " data-button=" + drawer.dataset.button + " missing");
+  });
+  window.__KP_TREE_ERRORS__ = errors;
+  if (errors.length) console.warn("[kp-template] window tree:", errors);
+  return errors;
 }
 function syncDrawerTriggers() {
   document.querySelectorAll(".kp-drawer[data-button]").forEach((drawer) => {
@@ -4179,6 +4212,7 @@ syncMobileViewport();
 setupPopupTreeRadius();
 setupSmSideDrawers();
 setupDrawerButtonBindings();
+validateKpPopupTree();
 const settingsHelpBtn = $("#settings-help-btn");
 const settingsHelpDrawer = $("#settings-help-drawer");
 if (settingsHelpBtn && settingsHelpDrawer) {

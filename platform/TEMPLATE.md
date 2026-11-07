@@ -81,11 +81,67 @@
 
 详见 `MODULE_SPEC.md` §4.5 / §9.5。
 
-## 6. 窗口/路由树规则
+## 6. 窗口树（半径计算）与路由树
 
-每个界面必须同时维护“路由树”和“窗口树”，二者不能脱节：
+“窗口树”专指 **Popup/Drawer 的静态层级树**，用来计算 `--kp-popup-radius`。
+它和“页面内 section 的 DOM 层级”不是一回事；“路由树”是另一条独立的 module/path 树。
 
-### 6.1 路由树
+### 6.1 半径窗口树
+
+网页端唯一权威：
+
+```js
+KP_POPUP_TREE   // key -> { parent, children, button }
+KP_POPUP_EL     // key -> CSS selector
+KP_DRAWER_KEYS  // 哪些 key 是抽屉
+```
+
+树根固定：
+
+```text
+window
+├── ai-drawer
+├── bottle-status-drawer
+├── debug
+├── settings-popup
+│   ├── settings-side-drawer
+│   └── settings-help-drawer
+├── manage-popup
+│   └── manage-side-drawer
+├── bug-popup
+├── birthday-popup
+└── mail-popup
+    └── mail-side-drawer
+```
+
+半径算法固定为：
+
+```text
+m = 8
+
+抽屉：
+  父节点也是抽屉 → 0
+  否则           → 22 + m = 30
+
+非抽屉 Popup：
+  没有 children → 22 + m = 30
+  有 children   → m + max(child radius) = 38
+```
+
+规则：
+
+- 每个 Popup/Drawer 必须同时登记 `KP_POPUP_TREE` 和 `KP_POPUP_EL`；
+- 抽屉必须登记进 `KP_DRAWER_KEYS`；抽屉的 `data-button` 必须能找到绑定按钮；
+- `parent` 必须存在，禁止孤儿子节点和环；
+- 圆角只能由 `kpPopupRadius()` 计算并写到 `--kp-popup-radius`；
+  禁止在 Popup/Drawer 上手写 `border-radius`；
+- `window` 之外的所有节点必须能从 `window` 可达；
+- 新增/移动窗口后必须重跑 `setupPopupTreeRadius()`；
+- 运行时校验函数 `validateKpPopupTree()` 会检查：
+  父子存在、元素存在、半径变量与递归结果一致；
+- 原生 `KpTemplate.java` 必须维护同一棵树和同一套半径算法。
+
+### 6.2 路由树
 
 ```text
 root
@@ -98,26 +154,15 @@ root
 - `parent` 只能指向 `root` 或已存在的 module；
 - 校验器对应 `E_PARENT_PATH_MISMATCH`、`E_PARENT_UNKNOWN`、`E_PARENT_CYCLE`。
 
-### 6.2 页面窗口树
+### 6.3 移动端窗口规则
 
-每个页面只有一个窗口根：
+- 非抽屉 Popup 宽度：`100% - 2m`；
+- 嵌套抽屉：`inset:0`、宽高 100%、`border-radius:0`；
+- 顶层抽屉：保留 `R30`（按半径树）；
+- 抽屉开关、关闭键：44px，关闭键始终最上层；
+- 内容 padding：桌面 `2m + 抽屉让位`，移动端固定 `2m`。
 
-```text
-main.page
-└── section.section
-    ├── section-head
-    ├── toolbar / grid / list / cards
-    └── modal / drawer（必须是页面内的后代节点，默认关闭）
-```
-
-- 不允许多个互不归属的 `main.page`；
-- 弹层/抽屉必须是当前页面的后代，不得跨页面复用同一 DOM；
-- `id` 在同一页面内唯一，禁止把子页面 window 挂到父页面之外；
-- 目录 list 页面（工作台、游戏中心）使用同一组：
-  `home-tools`、`home-search-wrap`、`home-tags`、`cards`、`card`；
-- 列表卡片点击必须通过路由树导航：在根壳内用 `kpNavigate` 消息更新父路由，不能只改 iframe 自身 URL。
-
-### 6.3 目录 list 模板
+### 6.4 目录 list 模板
 
 `ui.template = "directory-list"` 表示该页面是目录列表页：
 
