@@ -425,3 +425,16 @@ FAIL  scratchpad E_PATH_MISSING: 未声明 path（视为硬性必填）
 ---
 
 *报告结束。本报告只读审计，未改动任何模块或平台代码。*
+
+---
+
+## 补充：2026-11-07 模板统一化后复审
+
+审计后已按 `TEMPLATE.md` 统一页面骨架，以下为当前状态：
+
+- `projects/bottle/web/index.html`：改为 `main.page.bottle-page` + 两个 `section.section`（海面、已打开），移除页面级 `<h1>`，按钮移入 `.section-head .actions`；
+- `projects/ai/web/index.html`：`section.ai-chat` 增加模板 `section` 类，保留 AI 专有布局覆盖；
+- `tools/check_modules.py`：模板静态检查新增 `main.page`、`section.section`、无全局 `<h1>`；
+- 复审命令：`python tools/check_modules.py`
+- 复审结果：`9 PASS / 0 FAIL / 5 WARN`，模板类 WARN 为 0；剩余 5 条仍是 mock `upstream`、schedule `remind`、scratchpad `base/capabilities/path`，与页面模板无关。
+- 因此原 §3.1 中 bottle 的“页面骨架 WARN”已关闭，bottle 现在通过模板结构检查。

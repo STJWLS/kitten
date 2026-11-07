@@ -81,6 +81,9 @@ SIDE_EFFECT_DOTTED_MARKERS = (
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 DATA_PROJECT_RE = re.compile(r"""data-project\s*=\s*["']([^"']+)["']""")
 HEADER_TAG_RE = re.compile(r"<header[\s>]", re.IGNORECASE)
+MAIN_PAGE_RE = re.compile(r"""<main\b[^>]*class\s*=\s*["'][^"']*\bpage\b""", re.IGNORECASE)
+SECTION_TEMPLATE_RE = re.compile(r"""<section\b[^>]*class\s*=\s*["'][^"']*\bsection\b""", re.IGNORECASE)
+H1_RE = re.compile(r"<h1[\s>]", re.IGNORECASE)
 
 
 # ---------------------------------------------------------------------------
@@ -1054,6 +1057,18 @@ class ModuleChecker:
             warnings.append(issue(
                 "W_TEMPLATE_HEADER",
                 "custom 页面出现 <header>；页头/返回/登录门禁应由根壳统一提供（TEMPLATE.md）"))
+        if not MAIN_PAGE_RE.search(text):
+            warnings.append(issue(
+                "W_TEMPLATE_PAGE",
+                "custom 页面缺少 <main class=\"page\"> 页面骨架（TEMPLATE.md §1）"))
+        if not SECTION_TEMPLATE_RE.search(text):
+            warnings.append(issue(
+                "W_TEMPLATE_SECTION",
+                "custom 页面缺少 <section class=\"section\"> 区块骨架（TEMPLATE.md §1）"))
+        if H1_RE.search(text):
+            warnings.append(issue(
+                "W_TEMPLATE_H1",
+                "custom 页面出现 <h1> 全局标题；标题/描述应由根壳项目栏统一提供（TEMPLATE.md §1）"))
 
 
 # ---------------------------------------------------------------------------

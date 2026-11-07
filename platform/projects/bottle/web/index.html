@@ -30,14 +30,13 @@
   html { background: transparent !important; }
   body { margin:0; background:var(--bg, #f8f4ec) !important; color:var(--ink); font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; overflow:hidden; }
   body[data-project] { background:var(--bg, #f8f4ec) !important; }
-  .wrap { width:min(1120px, 94vw); height:100vh; margin:0 auto; padding:18px 0 20px; display:flex; flex-direction:column; box-sizing:border-box; }
-  .head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
-  .head h1 { font-size:18px; margin:0; }
-  .head .hint { color:var(--muted); font-size:11.5px; }
-  .head .chips { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .bottle-page { max-width:none; width:min(1120px, 94vw); height:100vh; margin:0 auto; padding:18px 0 20px; gap:10px; box-sizing:border-box; }
+  .bottle-board { flex:1; min-height:0; display:flex; flex-direction:column; padding:16px 18px; }
+  .bottle-board .stage { flex:1; min-height:0; position:relative; border-radius:12px; overflow:hidden;
+    background:transparent; box-shadow:none; }
   .chip { border:1px solid var(--line); background:var(--card); border-radius:999px; padding:4px 10px; font-size:11px; color:var(--ink); cursor:default; }
   button.chip { cursor:pointer; }
-  .stage { position:relative; flex:1; min-height:320px; border-radius:0; overflow:hidden;
+  .stage { position:relative; flex:1; min-height:320px; border-radius:12px; overflow:hidden;
     background:transparent; box-shadow:none; }
   #pond { display:block; width:100%; height:100%; cursor:grab; touch-action:none; background:transparent !important; }
   #pond.dragging { cursor:grabbing; }
@@ -55,8 +54,8 @@
   .locked-toast::after { content:""; position:absolute; left:50%; bottom:-6px; width:10px; height:10px; transform:translateX(-50%) rotate(45deg);
     background:var(--card); border-right:1px solid color-mix(in srgb,var(--accent) 28%,var(--line)); border-bottom:1px solid color-mix(in srgb,var(--accent) 28%,var(--line)); }
   @keyframes toastIn { from { opacity:0; transform:translateY(4px) scale(.97); } to { opacity:1; transform:none; } }
-  .archive-panel { flex:0 0 158px; min-height:120px; margin-top:10px; border-top:1px solid var(--line); padding-top:8px; overflow:auto; }
-  .archive-head { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+  .archive-panel { flex:0 0 158px; min-height:120px; padding:10px 12px; overflow:auto; }
+  .archive-head { margin-bottom:7px; }
   .archive-head h2 { font-size:13px; margin:0; }
   .archive-head .hint { font-size:10.5px; color:var(--muted); }
   .archive-list { display:grid; gap:6px; }
@@ -88,10 +87,10 @@
   .tip .open-hint { color:var(--accent); font-weight:700; margin-top:4px; }
 
 @media (max-width: 760px) {
-  .wrap { width: 96vw; padding: 10px 0 12px; }
-  .head { gap: 6px; margin-bottom: 6px; }
-  .head h1, .head .hint { display: none; }
-  .head .chips { margin-left: 0; width: 100%; gap: 5px; }
+  .bottle-page { width: 96vw; padding: 10px 0 12px; }
+  .bottle-board .section-head { gap: 6px; margin-bottom: 6px; }
+  .bottle-board .section-head h2, .bottle-board .section-head .hint { display: none; }
+  .bottle-board .section-head .actions { margin-left: 0; width: 100%; gap: 5px; }
   .chip { font-size: 10px; padding: 3px 8px; }
   .stage { min-height: 280px; }
   .archive-panel { flex-basis: 150px; }
@@ -101,20 +100,26 @@
 </style>
 </head>
 <body data-project="bottle">
-<div class="wrap">
-  <div class="head">
-    <h1>🍾 时光漂流瓶</h1>
-    <span class="hint">圆面积 = 持续时间 · 圆环 = 时间进度 · 拖动后松手有惯性</span>
-    <div class="chips"><span class="chip" id="cnt">—</span><span class="chip" id="rev">—</span><button class="chip" id="compose" type="button">＋ 写一个漂流瓶</button><button class="chip" id="refresh" type="button">刷新</button></div>
-  </div>
-  <div class="stage"><canvas id="pond"></canvas></div>
-  <section class="archive-panel">
-    <div class="archive-head"><h2>已打开</h2><span class="hint" id="acount">—</span></div>
+<main class="page bottle-page">
+  <section class="section bottle-board">
+    <div class="section-head">
+      <h2>海面</h2>
+      <span class="hint">圆面积 = 持续时间 · 圆环 = 时间进度 · 拖动后松手有惯性</span>
+      <div class="actions">
+        <span class="chip" id="cnt">—</span><span class="chip" id="rev">—</span>
+        <button class="chip" id="compose" type="button">＋ 写一个漂流瓶</button>
+        <button class="chip" id="refresh" type="button">刷新</button>
+      </div>
+    </div>
+    <div class="stage"><canvas id="pond"></canvas></div>
+  </section>
+  <section class="section archive-panel">
+    <div class="section-head archive-head"><h2>已打开</h2><span class="hint" id="acount">—</span></div>
     <div class="archive-list" id="archive-list"></div>
     <div class="archive-empty" id="archive-empty">还没有已打开的漂流瓶。</div>
   </section>
   <div class="foot">悬停看信息 · 拖动圆环 · 双击已到期的圆环打开</div>
-</div>
+</main>
 <div class="tip" id="tip"></div>
 <div class="locked-toast" id="locked-toast"></div>
 

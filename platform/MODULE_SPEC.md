@@ -228,7 +228,7 @@ bases/root.json 不是项目基类：只有根节点 id/title/icon/desc，不参
 | `W_UNKNOWN_FIELD` / `W_RESERVED_DIR` / `W_VIEW_UNKNOWN_KEY` / `W_ACL_UNKNOWN_KEY` | 拼写/冗余/无用键 |
 | `W_PATH_TRAILING_SLASH` / `W_PATH_WHITESPACE` | 规范化建议 |
 | `W_PY_BASE_ATTR` / `W_PY_BASE_ATTR_MISMATCH` / `W_PY_BASE_LOOSER` / `W_PY_PROJECT_ALIAS` | project.py 与 manifest 的声明一致性问题（registry 不读取 `base` 类属性） |
-| `W_TEMPLATE_CSS` / `W_TEMPLATE_PROJECT_ATTR` / `W_TEMPLATE_HEADER` | 页面模板规范（TEMPLATE.md）的轻量静态检查 |
+| `W_TEMPLATE_CSS` / `W_TEMPLATE_PROJECT_ATTR` / `W_TEMPLATE_HEADER` / `W_TEMPLATE_PAGE` / `W_TEMPLATE_SECTION` / `W_TEMPLATE_H1` | 页面模板规范（TEMPLATE.md）的轻量静态检查：template.css、data-project、无 `<header>`、`main.page`、`section.section`、无全局 `<h1>` |
 | `W_BASE_UNREGISTERED` | `bases/*.json` 存在但未在 `BASES` 注册（不能作为项目 base） |
 | `W_PROJECTS_STRAY_FILE` | `projects/` 下的非目录条目（registry 忽略） |
 
