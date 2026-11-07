@@ -669,6 +669,22 @@ class ModuleChecker:
                 dir_name, dir_path, doc, effective_ids[dir_name], known_ids,
                 dup_ids, dup_paths, cycles))
 
+        # 窗口/路由树：子 module 的 path 必须是父 path 的后代，禁止跨越父级。
+        by_id = {item["id"]: item for item in self.modules}
+        for item in self.modules:
+            eff = item.get("effective") or {}
+            parent = eff.get("parent")
+            child_path = eff.get("path") or ""
+            if parent != "root" and parent in by_id:
+                parent_eff = by_id[parent].get("effective") or {}
+                parent_path = parent_eff.get("path") or ""
+                if child_path and parent_path and not child_path.startswith(parent_path.rstrip("/") + "/"):
+                    item["errors"].append(issue(
+                        "E_PARENT_PATH_MISMATCH",
+                        "子 module path=%r 不在父 module %r 的 path=%r 之下；"
+                        "窗口/路由树会变成跨父级孤儿" % (child_path, parent, parent_path)))
+                    item["status"] = "FAIL"
+
         self.modules.sort(key=lambda item: item["dir"])
         return self._report()
 

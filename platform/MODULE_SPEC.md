@@ -9,7 +9,7 @@
 > - `platform/TEMPLATE.md` —— 页面模板 v1；
 > - `platform/kernel/server.py` —— `/p/<id>/`、`_serve_view`、`canonical_paths`、`/api/p/<id>`；
 > - `platform/static/index.html` —— 当前运行的树索引、首页卡片、`navigate()` 的 `?p=id` 回退（`static/check.js` 是未引用残留，不作为依据）；
-> - `platform/projects/*/project.json`、`project.py`、`web/index.html` —— 现有 9 个 module 的既成事实。
+> - `platform/projects/*/project.json`、`project.py`、`web/index.html` —— 现有 10 个 module 的既成事实（含 games 目录父级）。
 >
 > 配套只读校验器：`platform/tools/check_modules.py`。
 
@@ -172,6 +172,7 @@ bases/root.json 不是项目基类：只有根节点 id/title/icon/desc，不参
 ### 4.2 树结构
 - `E_PARENT_TYPE` / `E_PARENT_UNKNOWN` / `E_PARENT_SELF` / `E_PARENT_CYCLE`：
   `tree()` 只从 `root` 向下构建；未知 parent 或环上的节点不会出现在 `/api/tree`，模块不可见。
+- `E_PARENT_PATH_MISMATCH`：子 module 的 `path` 不在父 module 的 `path` 之下；路由/窗口树会出现跨父级孤儿。子页面必须如 `/games/courtyard/` 位于 `/games/` 之下。
 
 ### 4.3 base / capabilities
 - `E_BASE_TYPE`、`E_BASE_MISSING`、`E_BASE_UNREGISTERED`、`E_BASE_CHAIN`：见 §2.3；
@@ -274,12 +275,14 @@ bases/root.json 不是项目基类：只有根节点 id/title/icon/desc，不参
 ### 6.4 当前判定汇总（2026-11-07 实测）
 
 ```
-9 modules · PASS 9 · FAIL 0 · 硬性错误 0 · 建议 2
+10 modules · PASS 10 · FAIL 0 · 硬性错误 0 · 建议 2
+games      : PASS /games/
+courtyard  : PASS /games/courtyard/（parent=games）
 mock       : W_CAP_UNKNOWN(upstream)
 schedule   : W_CAP_UNKNOWN(remind)
 ```
 
-> 可见 module 缺 `path` 已从 WARN 升级为 ERROR；当前 9 个可见 module 都有 `path` 和 Pages 壳，故无 path 错误。
+> 可见 module 缺 `path` 已从 WARN 升级为 ERROR；当前 10 个可见 module 都有 `path`、父路径嵌套正确、Pages 壳齐全，故无 path/树错误。
 
 ---
 

@@ -3316,6 +3316,13 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/home", "/home/"):
             return self._serve_file(os.path.join(self.server.static_dir, "index.html"))
 
+        if path.rstrip("/") == "/courtyard":
+            # 造院升级为游戏中心的第一个子游戏；旧 URL 保留并跳到新路径。
+            target = "/games/courtyard/"
+            if parsed.query:
+                target += "?" + parsed.query
+            raise _Redirect(target)
+
         if path.rstrip("/") in self.server.canonical_paths:
             # 旧版 URL 结构：/dashboard/ · /dashboard/map/ · /wishpool/ · /mock/
             # 统一返回同一个壳，由前端按地址栏路径决定渲染"工作台"还是某个看板。

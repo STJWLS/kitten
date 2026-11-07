@@ -1,0 +1,28 @@
+{
+  "id": "games",
+  "parent": "root",
+  "order": 25,
+  "title": "游戏中心",
+  "icon": "🎮",
+  "desc": "游戏目录：从工作台进入游戏中心，挑选想玩的游戏。",
+  "base": "json-doc",
+  "capabilities": [
+    "state"
+  ],
+  "view": {
+    "kind": "custom",
+    "dir": "web"
+  },
+  "path": "/games/",
+  "ui": {
+    "template": "directory-list",
+    "theme": {
+      "accent": "#6f5aa8"
+    }
+  },
+  "tags": [
+    "游戏",
+    "目录",
+    "娱乐"
+  ]
+}

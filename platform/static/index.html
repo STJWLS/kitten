@@ -2660,6 +2660,16 @@ function postPath() {
   } catch (e) {}
 }
 
+// Module pages request navigation through the shell instead of changing only
+// their own iframe URL; this keeps the GitHub wrapper path and refresh state.
+window.addEventListener("message", (e) => {
+  const host = document.getElementById("host");
+  if (!host || e.source !== host.contentWindow) return;
+  const p = e.data && e.data.kpNavigate;
+  if (typeof p !== "string" || p.charAt(0) !== "/" || !nodeByPath(p)) return;
+  goPath(p);
+});
+
 function routeFromLocation() {
   const params = new URLSearchParams(location.search);
   const pid = params.get("p");

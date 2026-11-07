@@ -80,3 +80,48 @@
 - 验收：GitHub Pages 子页面 200，刷新后 URL 不变、页面不 404。
 
 详见 `MODULE_SPEC.md` §4.5 / §9.5。
+
+## 6. 窗口/路由树规则
+
+每个界面必须同时维护“路由树”和“窗口树”，二者不能脱节：
+
+### 6.1 路由树
+
+```text
+root
+└── games                 /games/
+    └── courtyard         /games/courtyard/
+```
+
+- 子 module 的 `path` 必须位于父 module `path` 之下；
+- 禁止孤儿子页面、环、与父级平级的路径；
+- `parent` 只能指向 `root` 或已存在的 module；
+- 校验器对应 `E_PARENT_PATH_MISMATCH`、`E_PARENT_UNKNOWN`、`E_PARENT_CYCLE`。
+
+### 6.2 页面窗口树
+
+每个页面只有一个窗口根：
+
+```text
+main.page
+└── section.section
+    ├── section-head
+    ├── toolbar / grid / list / cards
+    └── modal / drawer（必须是页面内的后代节点，默认关闭）
+```
+
+- 不允许多个互不归属的 `main.page`；
+- 弹层/抽屉必须是当前页面的后代，不得跨页面复用同一 DOM；
+- `id` 在同一页面内唯一，禁止把子页面 window 挂到父页面之外；
+- 目录 list 页面（工作台、游戏中心）使用同一组：
+  `home-tools`、`home-search-wrap`、`home-tags`、`cards`、`card`；
+- 列表卡片点击必须通过路由树导航：在根壳内用 `kpNavigate` 消息更新父路由，不能只改 iframe 自身 URL。
+
+### 6.3 目录 list 模板
+
+`ui.template = "directory-list"` 表示该页面是目录列表页：
+
+- 搜索、标签筛选、计数、卡片、子页面入口；
+- 游戏中心 `/games/` 是第一个使用该模板的 module；
+- 工作台首页与游戏中心共用 `template.css` 的目录 list 组件；
+- 页面不出现全局 `<h1>`，标题由根壳 pbar 提供。

@@ -436,8 +436,9 @@ FAIL  scratchpad E_PATH_MISSING: 未声明 path（视为硬性必填）
 - `projects/ai/web/index.html`：`section.ai-chat` 增加模板 `section` 类，保留 AI 专有布局覆盖；
 - `tools/check_modules.py`：模板静态检查新增 `main.page`、`section.section`、无全局 `<h1>`；
 - 复审命令：`python tools/check_modules.py`
-- 复审结果：`9 PASS / 0 FAIL / 2 WARN`；剩余 2 条是 mock `upstream`、schedule `remind`，与页面模板无关。
+- 复审结果：`10 PASS / 0 FAIL / 2 WARN`；剩余 2 条是 mock `upstream`、schedule `remind`，与页面模板无关。
 - 原 §3.1 中 bottle 的“页面骨架 WARN”已关闭，bottle 现在通过模板结构检查。
 - `scratchpad` 已补 `base/capabilities/path`，不再走 `?p=` 回退；`path` 对可见 module 已升级为硬性 ERROR。
-- 已追加 GitHub Pages 子页面壳检查：9 个 module 的 `KittenPuppy4Ever/<path>/index.html` 全部存在，且含 iframe/entry.json/路径还原/replaceState 标记。
+- 已追加 GitHub Pages 子页面壳检查：10 个 module 的 `KittenPuppy4Ever/<path>/index.html` 全部存在，且含 iframe/entry.json/路径还原/replaceState 标记。
 - `scratchpad` 的 GitHub Pages 子页面：`/kitten/KittenPuppy4Ever/scratchpad/` 现在具备可刷新入口。
+- 新增 `games` 游戏中心（`/games/`），`courtyard` 改为其子游戏（`/games/courtyard/`），旧 `/courtyard/` 保留重定向。
