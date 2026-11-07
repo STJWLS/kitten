@@ -175,3 +175,38 @@ root
   点击打开 `game-stats-drawer`（复用标准 `.ai-drawer.kp-drawer` 右侧抽屉模板，R30，桌面 25vw，移动端全宽）；
   打开时给 `body` 加 `game-stats-open`，让 `#host` 宽度让位；关闭时恢复。不是页面内 section，也不是顶部按钮；
   抽屉在半径窗口树中登记为 `window > game-stats-drawer`。
+
+## 7. 模板树（页面模板继承）
+
+页面模板也是树，manifest 的 `ui.template` 指向树节点：
+
+```text
+#module
+└── #module.game
+```
+
+- `#module`：所有普通 module 的页面模板，默认值；
+- `#module.game`：游戏页面模板，`parent = "#module"`；
+- 子模板继承父模板全部 properties，自己的 properties 覆盖标量、合并对象、拼接去重数组；
+- 新增页面模板必须挂到树中，不能孤立存在；
+- 服务端从 `project.json` 的 `ui.template` 注入 `window.__KP_TEMPLATE__`（缺省 `#module`）；
+- `/static/template-tree.js` 解析继承并应用：
+  - `main.page` 加上解析后的 `pageClasses`；
+  - `data-template-resolved` 记录最终模板 id；
+  - `window.KP_TEMPLATE_RESOLVED` 暴露合并后的 properties。
+
+当前属性：
+
+```text
+#module
+  pageClasses: [page, module-page]
+  sectionClasses: [section]
+  contentTemplate: sections
+
+#module.game (inherits #module)
+  pageClasses: [page, module-page, module-game]
+  contentTemplate: directory-list
+  contentId: content
+```
+
+游戏中心使用 `ui.template = "#module.game"`；其余 module 未显式声明时使用 `#module`。

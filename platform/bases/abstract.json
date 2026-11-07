@@ -15,7 +15,7 @@
       "card": "#fffdf8",
       "line": "#e8dfd2"
     },
-    "template": "base@1"
+    "template": "#module"
   },
   "view": {"kind": "auto"}
 }

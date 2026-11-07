@@ -4925,8 +4925,15 @@ class Handler(BaseHTTPRequestHandler):
             text = text.replace("</head>", style + "</head>", 1)
         if theme:
             text = text.replace("<head>", "<head><script>window.__KP_THEME__=%s;</script>" % json.dumps(theme, ensure_ascii=False), 1)
+        template = "#module"
         if pid:
             text = text.replace("<head>", "<head><script>window.__KP_MODULE__=%s;</script>" % json.dumps(pid), 1)
+            try:
+                project = self.registry.get(pid)
+                template = ((project.manifest().get("ui") or {}).get("template") if project else None) or "#module"
+            except Exception:
+                template = "#module"
+            text = text.replace("<head>", "<head><script>window.__KP_TEMPLATE__=%s;</script><script src=\"/static/template-tree.js\"></script>" % json.dumps(template), 1)
         return text.replace("<head>", "<head>" + PERF_PATCH + AUTH_PATCH, 1)
 
     def _serve_view(self, pid, rest):

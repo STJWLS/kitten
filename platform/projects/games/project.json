@@ -15,7 +15,7 @@
   },
   "path": "/games/",
   "ui": {
-    "template": "directory-list",
+    "template": "#module.game",
     "theme": {
       "accent": "#6f5aa8"
     }
