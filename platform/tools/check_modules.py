@@ -83,6 +83,7 @@ DATA_PROJECT_RE = re.compile(r"""data-project\s*=\s*["']([^"']+)["']""")
 HEADER_TAG_RE = re.compile(r"<header[\s>]", re.IGNORECASE)
 MAIN_PAGE_RE = re.compile(r"""<main\b[^>]*class\s*=\s*["'][^"']*\bpage\b""", re.IGNORECASE)
 SECTION_TEMPLATE_RE = re.compile(r"""<section\b[^>]*class\s*=\s*["'][^"']*\bsection\b""", re.IGNORECASE)
+CONTENT_DIRECTORY_RE = re.compile(r"""<div\b[^>]*id\s*=\s*["']content["'][^>]*data-template\s*=\s*["']directory-list["']|<div\b[^>]*data-template\s*=\s*["']directory-list["'][^>]*id\s*=\s*["']content["']""", re.IGNORECASE)
 H1_RE = re.compile(r"<h1[\s>]", re.IGNORECASE)
 
 
@@ -1113,7 +1114,7 @@ class ModuleChecker:
             warnings.append(issue(
                 "W_TEMPLATE_PAGE",
                 "custom 页面缺少 <main class=\"page\"> 页面骨架（TEMPLATE.md §1）"))
-        if not SECTION_TEMPLATE_RE.search(text):
+        if not SECTION_TEMPLATE_RE.search(text) and not CONTENT_DIRECTORY_RE.search(text):
             warnings.append(issue(
                 "W_TEMPLATE_SECTION",
                 "custom 页面缺少 <section class=\"section\"> 区块骨架（TEMPLATE.md §1）"))

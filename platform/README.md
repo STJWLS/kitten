@@ -59,10 +59,11 @@ platform/
 
 1. 建目录 `projects/my-tab/`，写 `project.json`（id/parent/title/icon/base/capabilities/view/path）；可见模块 `path` 必填；
 2. 需要业务规则 → 加 `project.py`：`Project = <正确基类子类>`，覆盖 `merge` / `on_action`；
-3. 需要自定义界面 → `view.kind = "custom"` + `web/index.html`，使用 `/static/template.css`、`main.page > section.section` 模板骨架，不写页头/登录/全局 `<h1>`；
-4. 生成 GitHub Pages 路径壳：`python tools/sync_pages_shells.py`；
-5. 格式门禁：`python tools/check_modules.py`，ERROR 必须为 0（含 `E_PATH_MISSING`、`E_PAGES_SHELL_MISSING`）；
-6. 部署后做刷新 E2E：GitHub Pages 子页面 200，刷新后 URL 不变且内容仍在。
+3. 需要自定义界面 → `view.kind = "custom"` + `web/index.html`，使用 `/static/template.css`、`main.page > section.section` 模板骨架，不写页头/登录/全局 `<h1>`；`ui.template` 指向 `static/template-tree.json` 的路径（普通页面 `#module`，游戏页面 `#module.game`）；
+4. 新增/修改页面模板 → 改 `static/template-tree.json`，运行 `python tools/check_templates.py`；
+5. 生成 GitHub Pages 路径壳：`python tools/sync_pages_shells.py`；
+6. 格式门禁：`python tools/check_modules.py`，ERROR 必须为 0（含 `E_PATH_MISSING`、`E_PAGES_SHELL_MISSING`）；
+7. 部署后做刷新 E2E：GitHub Pages 子页面 200，刷新后 URL 不变且内容仍在。
 
 纯 CRUD 标签页也必须有 `path` 与 Pages 壳；内核自动给 `/p/<id>/` 通用视图与 set/append/remove/reset 动作。
 

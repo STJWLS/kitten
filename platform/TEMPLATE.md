@@ -27,6 +27,10 @@
 - 页面**不出现**登录框、身份切换、退出按钮：身份由根壳统一管理；
 - 页面**不出现**项目间导航（工作台/其它项目链接）：导航由根壳统一提供。
 
+> 目录列表页（工作台 / 游戏中心）允许用
+> `<div id="content" class="home-wrap" data-template="directory-list">`
+> 作为内容骨架，等价于模板中的 `section.section`；标题/描述仍由根壳 pbar 提供。
+
 ## 2. 设计令牌
 
 | 令牌 | 值 | 用途 |
@@ -178,22 +182,35 @@ root
 
 ## 7. 模板树（页面模板继承）
 
-页面模板也是树，manifest 的 `ui.template` 指向树节点：
+页面模板的权威文件：
+
+```text
+platform/static/template-tree.json
+```
+
+当前树：
 
 ```text
 #module
-└── #module.game
+└── #game                 → 选择路径为 #module.game
 ```
 
+- 节点文件里只写短 id：根 `#module`，子节点 `#game`；
+- 选中子节点时拼接为类属性式路径：`#module.game`；
 - `#module`：所有普通 module 的页面模板，默认值；
-- `#module.game`：游戏页面模板，`parent = "#module"`；
+- `#module.game`：游戏页面模板，继承 `#module` 全部 properties；
 - 子模板继承父模板全部 properties，自己的 properties 覆盖标量、合并对象、拼接去重数组；
 - 新增页面模板必须挂到树中，不能孤立存在；
 - 服务端从 `project.json` 的 `ui.template` 注入 `window.__KP_TEMPLATE__`（缺省 `#module`）；
-- `/static/template-tree.js` 解析继承并应用：
+- `/static/template-tree.js` 读取 JSON、解析继承并应用：
   - `main.page` 加上解析后的 `pageClasses`；
   - `data-template-resolved` 记录最终模板 id；
-  - `window.KP_TEMPLATE_RESOLVED` 暴露合并后的 properties。
+  - `window.KP_TEMPLATE_RESOLVED` 暴露合并后的 properties；
+- 新增/修改模板后运行：
+
+```bash
+python tools/check_templates.py
+```
 
 当前属性：
 

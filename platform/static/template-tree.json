@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "description": "Module page template tree. Node IDs are short names; selected template is the dotted path, e.g. #module.game.",
+  "root": {
+    "id": "#module",
+    "properties": {
+      "pageClasses": ["page", "module-page"],
+      "sectionClasses": ["section"],
+      "contentTemplate": "sections",
+      "pagePadding": "18px 20px 44px",
+      "pageMaxWidth": "1120px"
+    },
+    "children": [
+      {
+        "id": "#game",
+        "properties": {
+          "pageClasses": ["module-game"],
+          "contentTemplate": "directory-list",
+          "contentId": "content"
+        }
+      }
+    ]
+  }
+}
