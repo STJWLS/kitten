@@ -924,14 +924,6 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
   .fab-game-stats.show { display:inline-flex; }
   .fab-game-stats.active { background:var(--tone-5); border-color:var(--tone-5); color:#fff; }
   #bottle-status-drawer { bottom:122px; } /* outer corner center aligns with the 22px status FAB inside */
-  .game-stats-drawer {
-    position:fixed; right:14px; top:120px; bottom:68px; width:25vw; z-index:90;
-    display:flex; flex-direction:column; overflow:hidden;
-    background:var(--tone-1); border:1px solid var(--tone-3);
-    border-radius:var(--kp-popup-radius,30px); box-shadow:-14px 10px 38px rgba(66,57,43,.16);
-    transform:translateX(calc(100% + 28px)); transition:transform .28s cubic-bezier(.22,1,.36,1);
-  }
-  .game-stats-drawer.open { transform:translateX(0); }
   .game-stats-body { flex:1; min-height:0; overflow:auto; padding:10px 12px 20px; }
   .game-stats-body .stat-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:12px; }
   .game-stats-body .stat-grid .stat { padding:10px 12px; }
@@ -940,11 +932,9 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
   .game-stats-row:last-child { border-bottom:0; }
   .game-stats-row .t { flex:1; color:var(--ink); }
   .game-stats-row .s { color:var(--muted); font-size:10.5px; }
-  @media (max-width:760px) {
-    .game-stats-drawer { left:0; right:0; width:100%; top:120px; bottom:68px; border-radius:30px; }
-  }
   body.bottle-open #bottle-status-btn { background:var(--tone-5); border-color:var(--tone-5); color:#fff; }
-  body.bottle-open #host { width:calc(100% - var(--kp-drawer-w,360px) - 24px); align-self:flex-start; }
+  body.bottle-open #host,
+  body.game-stats-open #host { width:calc(100% - var(--kp-drawer-w,360px) - 24px); align-self:flex-start; }
   .bottle-status-body { flex:1; min-height:0; overflow:auto; padding:10px 12px 30px; scrollbar-gutter:stable;
     -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 18px), transparent 100%);
     mask-image:linear-gradient(to bottom, #000 calc(100% - 18px), transparent 100%); }
@@ -978,7 +968,7 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
     left: 0 !important; right: 0 !important; width: 100% !important;
     border-radius: var(--kp-popup-radius) !important;
   }
-  body.ai-open #host, body.bottle-open #host, body.debug-open #host {
+  body.ai-open #host, body.bottle-open #host, body.debug-open #host, body.game-stats-open #host {
     width: 100% !important; margin-left: 0 !important; align-self: stretch !important;
   }
   body.debug-open #view-home .home-wrap { margin-left: 0 !important; }
@@ -1667,7 +1657,7 @@ html[data-perf="low"] .bd-emoji-face { animation: none; }
     <div id="bottle-status-list"><div class="bs-empty">正在读取…</div></div>
   </div>
 </aside>
-<aside class="game-stats-drawer kp-drawer" id="game-stats-drawer" data-side="right" data-scope="module" data-button="game-stats-btn">
+<aside class="ai-drawer kp-drawer" id="game-stats-drawer" data-side="right" data-scope="module" data-button="game-stats-btn">
   <div class="drawer-head"><b>📊 游戏统计</b><div class="drawer-actions"><button class="btn ghost sm" id="game-stats-close" type="button" title="关闭">关闭</button></div></div>
   <div class="game-stats-body" id="game-stats-body"></div>
 </aside>
@@ -2934,6 +2924,7 @@ function updateDrawerTabs(){
       gameStats.classList.remove("active");
       const gd = $("#game-stats-drawer");
       if (gd) gd.classList.remove("open");
+      document.body.classList.remove("game-stats-open");
     }
   }
   const onAi = !!app.session && inProject && isAi;
@@ -2973,6 +2964,7 @@ function toggleGameStatsDrawer(force){
   if (!drawer) return;
   const open = force === undefined ? !drawer.classList.contains("open") : !!force;
   drawer.classList.toggle("open", open);
+  document.body.classList.toggle("game-stats-open", open);
   if (btn) btn.classList.toggle("active", open);
   if (open) { renderGameStatsDrawer(); positionKpDrawers(); }
 }
