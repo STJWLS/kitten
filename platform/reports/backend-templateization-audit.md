@@ -495,3 +495,17 @@ smoke_test.py                新增：custom API 健康检查
 - wishpool 数据形状正式迁移到 kp/1 `wishes/coins` project state；
 - custom view SDK 统一；
 - map / courtyard 数据边界。
+
+## 14. 第八批修复（2026-11-27）
+
+- manifest 新增可选 `data` 数据边界声明；
+- `registry.tree()` 暴露 `data`；
+- `check_modules` 增加 `E_DATA_TYPE / E_DATA_KIND / E_DATA_FIELD_TYPE`；
+- 已显式声明：
+  - `games` → `tree`
+  - `courtyard` → `client / localStorage`
+  - `map` → `static / schedule.json`
+  - `wishpool` → `legacy-store / compat`
+- `MODULE_SPEC.md` 新增数据边界章节。
+
+这不会改变页面行为，但把“静态数据、客户端状态、旧 store、模块树”从隐式约定变成可校验的 manifest 契约。

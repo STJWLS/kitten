@@ -163,6 +163,7 @@ class Registry:
                 "tags": list(spec.get("tags") or []),
                 "roles": list(spec.get("roles") or []),
                 "ui": spec.get("ui") or {},
+                "data": spec.get("data") or {},
                 "view": {
                     "kind": (spec.get("view") or {}).get("kind", "auto"),
                     "url": (spec.get("view") or {}).get("url"),

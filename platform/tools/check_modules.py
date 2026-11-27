@@ -46,7 +46,7 @@ EXTENSION_CAPABILITIES = ("upstream", "remind")
 MANIFEST_KNOWN_KEYS = {
     "id", "parent", "order", "title", "icon", "desc",
     "base", "capabilities", "acl", "ui", "view", "path",
-    "tags", "roles", "hidden",
+    "tags", "roles", "hidden", "data",
 }
 VIEW_KNOWN_KEYS = {"kind", "dir", "url"}
 
@@ -1000,6 +1000,19 @@ class ModuleChecker:
                     W("W_AUTO_VIEW_UNUSED_WEB",
                       "view.kind=auto 不使用 web/；web/index.html 不会被渲染，"
                       "若这是自定义页面应改为 custom")
+
+        # data boundary ---------------------------------------------------
+        raw_data = doc.get("data")
+        if raw_data is not None:
+            if not isinstance(raw_data, dict):
+                E("E_DATA_TYPE", "data 必须是对象")
+            else:
+                kind = raw_data.get("kind")
+                if not isinstance(kind, str) or not kind.strip():
+                    E("E_DATA_KIND", "data.kind 必须是非空字符串")
+                for k in ("source", "storage", "note"):
+                    if k in raw_data and not isinstance(raw_data[k], str):
+                        E("E_DATA_FIELD_TYPE", "data.%s 必须是字符串" % k)
 
         # path -------------------------------------------------------------
         path_value = ""

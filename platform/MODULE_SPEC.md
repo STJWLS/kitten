@@ -145,6 +145,7 @@ bases/root.json 不是项目基类：只有根节点 id/title/icon/desc，不参
 | `view` | object `{kind, dir?, url?}` | 可选；缺省 `auto`；`custom` 必须有 `web/index.html` | `setdefault {"kind":"auto"}`；kind 非法按 auto | 缺失 **WARN**；类型/kind 非法/custom 缺目录或 index/越界 **ERROR** |
 | `path` | string，`/` 开头，全局唯一 | 可见 module **必填**；建议以 `/` 结尾；同时必须有对应 Pages 壳 | 缺失→`""`（首页 `?p=id` 回退，无 GitHub 子页面）；重复→前端路由/旧 URL 表互相覆盖 | 可见 module 缺失 **ERROR**；hidden 例外缺失 **WARN**；类型/不以 `/` 开头/重复 **ERROR**；尾斜杠/空白 **WARN**；Pages 壳缺失 **ERROR** |
 | `ui` | object（`ui.theme.accent` 等） | 可选；tree 暴露给前端做主题 | `{}` | 类型/`accent` 类型 **ERROR** |
+| `data` | object `{kind, source?, storage?, note?}` | 可选；声明数据边界 | `{}` | 类型/`kind` 缺失 **ERROR** |
 | 未知顶层键 | — | 不允许（可能是拼写错误） | 完全忽略 | **WARN** |
 | `dir` | — | 保留键，不要写 | registry 用实际目录覆盖 | **WARN** |
 
@@ -500,3 +501,22 @@ abstract ← json-doc ← keyed
 
 `KeyedJsonDocProject` / `KeyedCoinProject` 默认按 `items`（可覆盖 merge_field）主键并集合并。  
 `schedule`、`bottle` 使用 `keyed`，`wishpool` 使用 `keyed-coin`。
+
+## 12. 数据边界声明（data）
+
+项目可在 manifest 声明：
+
+```json
+"data": {"kind": "static", "source": "schedule.json"}
+```
+
+当前显式声明：
+
+| module | data.kind | 说明 |
+|---|---|---|
+| games | tree | 只读模块树 |
+| courtyard | client | 页面 localStorage；服务端只托管页面 |
+| map | static | 读取 schedule 的静态投影 |
+| wishpool | legacy-store | 旧 wishes/coins 形状，入口限定在 wishpool module |
+
+其他 module 未声明时按 `{}` 处理，不改变运行行为。

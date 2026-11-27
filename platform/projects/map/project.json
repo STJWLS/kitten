@@ -25,5 +25,10 @@
   "tags": [
     "地图",
     "地点"
-  ]
+  ],
+  "data": {
+    "kind": "static",
+    "source": "schedule.json",
+    "note": "地点地图读取 schedule 的静态投影"
+  }
 }

@@ -37,5 +37,10 @@
     "许愿",
     "互动",
     "生活"
-  ]
+  ],
+  "data": {
+    "kind": "legacy-store",
+    "source": "compat.read_state",
+    "note": "旧 wishes/coins 数据形状，入口已限定在 wishpool module"
+  }
 }
