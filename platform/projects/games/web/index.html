@@ -32,11 +32,7 @@ const $ = (s) => document.querySelector(s);
 let games = null, q = "", tag = "";
 
 async function api(path) {
-  const r = await fetch(path, {headers: {"Accept": "application/json"}, cache: "no-store"});
-  let j = null;
-  try { j = await r.json(); } catch (e) {}
-  if (!r.ok || !j || !j.ok) throw new Error((j && j.error && j.error.message) || ("HTTP " + r.status));
-  return j;
+  return KpSdk.request(path);
 }
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));

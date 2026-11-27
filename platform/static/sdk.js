@@ -123,7 +123,12 @@
   // 轻量 HTTP helper：custom view 可逐步从各自的 fetch 包装迁移过来。
   window.KpSdk = {
     async request(url, opts) {
-      const r = await fetch(url, Object.assign({cache: "no-store"}, opts || {}));
+      opts = Object.assign({cache: "no-store"}, opts || {});
+      const token = localStorage.getItem("kp_token") || sessionStorage.getItem("kp_token");
+      if (token) {
+        opts.headers = Object.assign({}, opts.headers || {}, {Authorization: "Bearer " + token});
+      }
+      const r = await fetch(url, opts);
       let j = null;
       try { j = await r.json(); } catch (e) { throw new Error("非 JSON 响应（HTTP " + r.status + "）"); }
       if (!r.ok || (j && j.ok === false)) {

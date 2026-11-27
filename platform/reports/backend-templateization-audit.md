@@ -570,3 +570,26 @@ smoke_test.py                新增：custom API 健康检查
 
 - 其他 custom view 仍保留自己的 fetch 包装，可按页面逐步迁到 `KpSdk`；
 - courtyard 仍是 localStorage 客户端状态（边界已声明）。
+
+## 19. 第十三批修复（2026-11-27）
+
+- `KpSdk.request` 自动带 `kp_token`（localStorage / sessionStorage）；
+- 已把以下 custom view 的非流式请求包装迁到 `KpSdk`：
+  - `games`
+  - `ai`
+  - `schedule-debug`
+  - `bottle`
+  - `map`（上一批）
+- 自动视图继续使用 `KittenProjectView`；
+- 页面回归：
+  - games / ai / schedule-debug / bottle / map / scratchpad
+  - 均无 JS 错误，`window.KpSdk` 可用。
+
+未迁移的部分是刻意的：
+
+- `mock` 有流式反代，保留自己的 fetch；
+- `schedule` 有大量专用请求和旧页面同步逻辑；
+- `wishpool` 有旧 store 合并语义；
+- `courtyard` 是纯客户端游戏状态（manifest 已声明 `data.kind=client`）。
+
+至此模板化报告中可落地的部分已完成；剩余是这几个特殊视图的深度重构，不再是模板基础设施问题。

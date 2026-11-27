@@ -509,10 +509,7 @@ async function postJson(path, body) {
   return api(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
 }
 async function api(path, opts) {
-  const r = await fetch(path, Object.assign({cache:"no-store"}, opts || {}));
-  const j = await r.json().catch(() => ({ok:false,error:{message:"非 JSON"}}));
-  if (!r.ok || !j.ok) throw new Error((j.error && j.error.message) || ("HTTP " + r.status));
-  return j;
+  return KpSdk.request(path, opts);
 }
 function setMsg(t){ $("#msg").textContent = t || ""; }
 function renderFileChips(){
