@@ -33,7 +33,11 @@ def handle(handler, method, path, parsed):
         if not handler._can_access(user, "wishpool"):
             raise ProjectError("forbidden", "没有许愿池访问权限", 403)
         body = handler._read_json()
-        result = compat.save_state(handler.engine, body, role=user)
+        project = handler.registry.get("wishpool")
+        patch = {k: body[k] for k in ("wishes", "coins", "wish_notified") if k in body}
+        if patch and project is not None:
+            project.dispatch("patch", {"patch": patch}, rev=None, role=user, write_allowed=True)
+        result = compat.save_schedule(handler.engine, body, role=user)
         handler._json(result)
         return True
 

@@ -521,3 +521,20 @@ smoke_test.py                新增：custom API 健康检查
 - `/api/wishpool/save` 仍使用 legacy 合并语义（尚未拆成 kp/1 patch/action）；
 - custom view SDK 统一；
 - map / courtyard 仍是显式 static/client 数据边界。
+
+## 16. 第十批修复（2026-11-27）
+
+- `/api/wishpool/save` 已拆分：
+  - `wishes / coins / wish_notified` → `project.dispatch("patch")`
+  - `events / venues / t` → `compat.save_schedule()`，不再重写 wishpool 文档
+- 新增 `compat.save_schedule()`，保留 schedule/meta 合并与旧 t 语义；
+- 实测：
+  - GET `/api/wishpool/state` 返回 2 条愿望；
+  - POST `/api/wishpool/save` 保存当前快照，`saved=true`、`stale=false`；
+  - 页面无 JS 错误。
+
+剩余：
+
+- wishpool 页面 UI 仍使用旧 wishes/coins 字段（但读写已走项目状态/模块适配器）；
+- custom view SDK 统一；
+- map / courtyard 的 static/client 边界。

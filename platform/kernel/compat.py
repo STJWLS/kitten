@@ -191,3 +191,38 @@ def reconstruct_store(engine):
         if k not in ordered:
             ordered[k] = v           # 迁移时保留的未知顶层字段
     return ordered
+
+
+def save_schedule(engine, payload, role=None):
+    """Save only the schedule/meta projection, leaving wishpool docs untouched.
+
+    Used by the wishpool module-local adapter after wishes/coins have already
+    been written through the project protocol.
+    """
+    if not isinstance(payload, dict):
+        raise ProjectError("bad_request", "请求体必须是 JSON 对象")
+    cur = read_state(engine)
+    try:
+        new_t = int(payload.get("t", 0))
+    except Exception:
+        new_t = 0
+    if new_t < cur["t"]:
+        return {"saved": False, "stale": True, "protected": False}
+    events = payload.get("events") if isinstance(payload.get("events"), list) else []
+    venues = payload.get("venues") if isinstance(payload.get("venues"), list) else []
+    if not events and cur["events"]:
+        events = cur["events"]
+    if not venues and cur["venues"]:
+        venues = cur["venues"]
+    changed = 0
+    if events != cur["events"] or venues != cur["venues"]:
+        engine.write(SCHEDULE, {
+            "events": events, "venues": venues,
+            "reminders_sent": cur["reminders_sent"],
+        }, audit=_audit_append(engine, SCHEDULE, "wishpool_schedule_save", role, payload))
+        changed += 1
+    if new_t != cur["t"]:
+        engine.write(META, {"t": new_t, "extras": (engine.read(META)[1].get("extras") or {})},
+                     audit=_audit_append(engine, META, "wishpool_meta_save", role, payload))
+        changed += 1
+    return {"saved": True, "stale": False, "docs_written": changed, "t": new_t}
