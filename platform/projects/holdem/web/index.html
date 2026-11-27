@@ -929,6 +929,7 @@
     if (total > 0 && toCall > 0 && total < toCall) mode = "short_call";
     else if (total === toCall && toCall > 0) mode = "call";
     else if (total > 0 && target > g.currentBet && target >= minTo && target <= maxTo) mode = "raise";
+    else if (total > 0 && target > maxTo && target > g.currentBet) mode = "over_raise";
     else if (total > 0 && total > toCall) mode = "short_raise";
     else if (total === 0 && toCall === 0) mode = "check";
     const canBet = canAct && (mode === "call" || mode === "raise");
@@ -945,6 +946,7 @@
     else if (mode === "call") hint.innerHTML = '<span>自动识别：跟注 ' + fmt(toCall) + '</span>';
     else if (mode === "raise") hint.innerHTML = '<span>自动识别：' + (opening ? '下注到 ' : '加注到 ') + fmt(target) + '</span>';
     else if (g.betRule === 'fixedlimit' && g.raiseCount >= g.maxRaisesPerStreet) hint.innerHTML = '<span class="need">本轮加注已达上限</span>';
+    else if (mode === "over_raise") hint.innerHTML = '<span class="need">超过本轮上限，最高到 ' + fmt(maxTo) + '</span>';
     else if (mode === "short_raise") hint.innerHTML = '<span class="need">加注不足，至少选 ' + fmt(minTo - hero.bet) + ' 筹码</span>';
     else if (mode === "check") hint.innerHTML = '<span>未选筹码，可以过牌</span>';
     else if (toCall > 0) hint.innerHTML = '<span>请选筹码：跟注 ' + fmt(toCall) + ' 或更多</span>';

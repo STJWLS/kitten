@@ -91,6 +91,7 @@
       this.minRaise = this.bb;
       this.lastAggressor = -1;
       this.handNo = 0;
+      this.history = [];
       this.onUpdate = null; this.onLog = null; this.onHandLog = null; this.onGameOver = null; this.onAiAction = null; this.onHandResult = null; this.onHandStart = null; this.onChipMove = null; this.onRoundEnd = null; this._lastHandResult = null;
       this._over = false;
       for (let i = 0; i < this.playerCount; i++) {
@@ -113,6 +114,11 @@
       this.startHand();
     }
     log(text, cls) { if (this.onLog) this.onLog(text, cls); }
+    recordAction(seat, type, amount) {
+      const entry = { seat, type, amount: Number(amount) || 0, street: this.street };
+      this.history.push(entry);
+      if (this.players[seat]) this.players[seat].lastAction = type;
+    }
     update() { if (this.onUpdate) this.onUpdate(); }
     startHand() {
       if (this._over) return;
@@ -121,6 +127,7 @@
       this.handNo++;
       this.board = [];
       this._lastHandResult = null;
+      this.history = [];
       this.deck = shuffle(makeDeck());
       this.pot = 0;
       this.currentBet = 0;
@@ -129,7 +136,7 @@
       this.lastAggressor = -1;
       this.players.forEach((p) => {
         p.hole = []; p.bet = 0; p.contribution = 0;
-        p.folded = p.stack <= 0; p.allIn = false; p.acted = false;
+        p.folded = p.stack <= 0; p.allIn = false; p.acted = false; p.lastAction = "";
       });
       this.street = "preflop";
       this.dealer = (this.dealer + 1) % this.playerCount;
@@ -159,6 +166,7 @@
       p.stack -= pay; p.bet += pay; p.contribution += pay;
       if (p.stack === 0) p.allIn = true;
       if (pay && this.onChipMove) this.onChipMove({ seat, amount: pay, kind: "bet" });
+      this.recordAction(seat, "blind", pay);
       this.log(p.name + " 下" + label + " " + pay);
     }
     nextSeat(from) {
@@ -210,6 +218,11 @@
         pot: this.pot + this.players.reduce((s, x) => s + x.bet, 0),
         currentBet: this.currentBet,
         minRaise: this.minRaise,
+        stack: p.stack,
+        bet: p.bet,
+        history: this.history.map((h) => ({ ...h })),
+        raisesThisStreet: this.history.filter((h) => h.street === this.street && h.type === "raise").length,
+        lastAggressor: this.lastAggressor,
         minRaiseTo: Math.min(this.minRaiseTo(), this.maxRaiseTo(seat)),
         maxRaiseTo: this.maxRaiseTo(seat),
         betRule: this.betRule,
@@ -218,7 +231,7 @@
         toCall: Math.max(0, this.currentBet - p.bet),
         dealer: this.dealer,
         players: this.players.map((x) => ({
-          seat: x.seat, name: x.name, stack: x.stack, bet: x.bet, folded: x.folded, allIn: x.allIn, isHuman: x.isHuman,
+          seat: x.seat, name: x.name, stack: x.stack, bet: x.bet, folded: x.folded, allIn: x.allIn, isHuman: x.isHuman, lastAction: x.lastAction || "",
         })),
         bb: this.bb,
       };
@@ -233,10 +246,12 @@
       if (type === "fold") {
         if (toCall === 0) return false;
         p.folded = true; p.acted = true;
+        this.recordAction(i, "fold", 0);
         this.log(p.name + " 弃牌");
       } else if (type === "check") {
         if (toCall > 0) return false;
         p.acted = true;
+        this.recordAction(i, "check", 0);
         this.log(p.name + " 过牌");
       } else if (type === "call") {
         if (toCall <= 0) return false;
@@ -245,6 +260,7 @@
         if (p.stack === 0) p.allIn = true;
         p.acted = true;
         if (pay && this.onChipMove) this.onChipMove({ seat: i, amount: pay, kind: "bet" });
+        this.recordAction(i, "call", pay);
         this.log(p.name + " 跟注 " + pay);
       } else if (type === "raise") {
         let amount = Number(action.amount);
@@ -264,6 +280,7 @@
         this.lastAggressor = i;
         this.players.forEach((x, k) => { if (k !== i && !x.folded && !x.allIn) x.acted = false; });
         p.acted = true;
+        this.recordAction(i, "raise", amount);
         this.log(p.name + " " + (p.allIn ? "全下 " : "加注到 ") + amount);
       } else return false;
       this.update();
