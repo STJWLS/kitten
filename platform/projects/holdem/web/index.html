@@ -72,7 +72,11 @@
   .btn-poker.primary { background:#c7954b; border-color:#e2c080; color:#1d160d; font-weight:700; }
   .btn-poker.danger { background:#632f2b; border-color:#9c5148; }
   .log-panel { border-radius:16px; background:rgba(8,22,17,.82); border:1px solid rgba(231,210,168,.2); padding:12px; color:#c8d8cb; }
-  .log-panel h2 { margin:0 0 8px; font:600 13px "Songti SC", serif; letter-spacing:.12em; color:#e7c77d; }
+  .log-head { display:flex; align-items:center; justify-content:space-between; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
+  .log-panel h2 { margin:0; font:600 13px "Songti SC", serif; letter-spacing:.12em; color:#e7c77d; }
+  .log-panel .chip-legend { margin:0; gap:3px; flex-wrap:nowrap; }
+  .log-panel .chip-legend .lbl { display:none; }
+  .log-panel .chip-legend .chip { width:18px; height:18px; font-size:5px; border-width:1px; }
   #log { height:470px; overflow:auto; font-size:12px; line-height:1.75; }
   #log .hand { color:#e7c77d; border-top:1px dashed rgba(231,210,168,.16); padding-top:5px; margin-top:5px; }
   #log .win { color:#9fe1b8; }
@@ -167,6 +171,7 @@
   @media (max-width: 620px) {
     .chip-legend { gap:4px; }
     .chip-legend .chip { width:18px; height:18px; font-size:5px; }
+    .log-panel .chip-legend .chip { width:15px; height:15px; font-size:4.2px; }
     .seat-chips .chip { width:12px; height:12px; font-size:4.5px; }
   }
 
@@ -270,7 +275,6 @@
 <main class="page">
   <div class="holdem-head">
     <div>
-      <h2>德州扑克</h2>
       <div class="sub">无限注 · 6–10 人 · AI 只能看到自己的手牌与公共牌</div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -278,7 +282,6 @@
       <button class="ach-btn" id="ach-btn" type="button">🏆 <span id="ach-count">0 / 0</span></button>
     </div>
   </div>
-  <div class="chip-legend" id="chip-legend"></div>
 
   <section class="section hidden" id="setup-view">
     <div class="setup-card">
@@ -351,7 +354,10 @@
         </div>
       </div>
       <aside class="log-panel">
-        <h2>牌局记录</h2>
+        <div class="log-head">
+          <h2>牌局记录</h2>
+          <div class="chip-legend" id="chip-legend"></div>
+        </div>
         <div id="log"></div>
       </aside>
     </div>
@@ -359,7 +365,7 @@
 
   <div class="modal hidden" id="ach-modal">
     <div class="setup-card ach-modal-card">
-      <div class="ach-head"><h2>德州扑克 · 成就</h2><button class="btn btn-poker" id="ach-close" type="button">关闭</button></div>
+      <div class="ach-head"><h2>成就</h2><button class="btn btn-poker" id="ach-close" type="button">关闭</button></div>
       <div class="ach-list" id="ach-list"></div>
     </div>
   </div>
