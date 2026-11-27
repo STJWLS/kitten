@@ -20,7 +20,7 @@
   .board-center { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(660px,86%); display:flex; align-items:center; justify-content:center; gap:20px; text-align:center; z-index:4; }
   .pot-panel { display:flex; flex-direction:column; align-items:center; justify-content:center; width:240px; flex:none; }
   .pot-line { display:flex; align-items:flex-end; justify-content:center; gap:8px; color:#f0d597; font-size:13px; letter-spacing:.10em; margin-bottom:2px; flex-wrap:wrap; }
-  .pot-line b { font-size:27px; color:#ffe7a2; font-variant-numeric:tabular-nums; text-shadow:0 2px 10px rgba(0,0,0,.3); }
+  .pot-line b { font-size:27px; color:#ffe7a2; font-variant-numeric:tabular-nums; text-shadow:0 2px 10px rgba(0,0,0,.3); cursor:help; }
   .community { display:flex; justify-content:center; gap:9px; min-height:102px; align-items:center; flex:none; }
   .street { color:#cfe0d2; font-size:12px; letter-spacing:.16em; text-transform:uppercase; margin-top:10px; }
   .seat { position:absolute; width:190px; min-height:128px; padding:10px 11px; border-radius:16px;
@@ -901,7 +901,7 @@
   }
   function potTooltipHtml(amount) {
     const parts = chipBreakdown(amount);
-    return '<div class="chip-tip-title">底池筹码 ' + fmt(amount) + '<small>收拢后的面额分布</small></div>' +
+    return '<div class="chip-tip-title">当前底池 ' + fmt(amount) + '<small>底池筹码的面额分布</small></div>' +
       (parts.length ? parts.map((c) =>
         '<div class="chip-tip-row"><span class="chip v' + c.v + '">' + c.label + '</span><span class="cnt">×' + c.n + '</span><span class="val">' + fmt(c.v * c.n) + '</span></div>'
       ).join('') : '<div class="chip-tip-row"><span class="cnt">无筹码</span></div>');
@@ -922,8 +922,10 @@
     tip.style.top = top + 'px';
   }
   function showPotTooltip() {
-    if (!game || !game.pot) return;
-    positionTooltip(document.getElementById('pot-stack'), potTooltipHtml(game.pot));
+    if (!game) return;
+    const amount = game.pot + game.players.reduce((s, p) => s + p.bet, 0);
+    if (!amount) return;
+    positionTooltip(document.getElementById('pot'), potTooltipHtml(amount));
   }
   function chipTooltipHtml(player) {
     const parts = chipBreakdown(player.stack);
@@ -1107,8 +1109,8 @@
   $('#gameover-close').onclick = () => { $('#gameover-modal').classList.add('hidden'); $('#game-view').classList.add('hidden'); $('#setup-view').classList.remove('hidden'); refreshSetup(); };
   window.addEventListener('resize', () => { if (game) render(); });
   window.__holdem = { get game() { return game; }, startGame, loadAchievements };
-  document.getElementById('pot-stack').addEventListener('mouseenter', showPotTooltip);
-  document.getElementById('pot-stack').addEventListener('mouseleave', hideChipTooltip);
+  document.getElementById('pot').addEventListener('mouseenter', showPotTooltip);
+  document.getElementById('pot').addEventListener('mouseleave', hideChipTooltip);
   document.getElementById('ach-btn').onclick = () => { renderAch(); document.getElementById('ach-modal').classList.remove('hidden'); };
   document.getElementById('ach-close').onclick = () => document.getElementById('ach-modal').classList.add('hidden');
   renderChipLegend();
