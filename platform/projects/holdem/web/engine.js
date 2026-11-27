@@ -68,8 +68,9 @@
     constructor(opts) {
       this.playerCount = Math.max(6, Math.min(10, Number(opts.players) || 6));
       this.totalChips = Math.max(600, Number(opts.totalChips) || 6000);
-      this.startingStack = Math.max(100, Number(opts.startingStack) || Math.floor(this.totalChips / this.playerCount));
-    this._remainder = Math.max(0, this.totalChips - this.startingStack * this.playerCount);
+      this.startingStack = Math.max(100, Math.floor((Number(opts.startingStack) || Math.floor(this.totalChips / this.playerCount)) / 10) * 10);
+      // 初始筹码按每人完全相等分配；不再有“余数给 1 号位”。
+      this.totalChips = this.startingStack * this.playerCount;
       this.humanName = opts.humanName || "你";
       this.sb = Number(opts.sb) || 10;
       this.bb = Number(opts.bb) || 20;
@@ -92,7 +93,7 @@
         this.players.push({
           seat: i, name: i === 0 ? this.humanName : "AI " + i, isHuman: i === 0,
           difficulty: diff, difficultyLabel: i === 0 ? "YOU" : (DIFFICULTY_LABEL[diff] || "中等"),
-          stack: this.startingStack + (i === 0 ? this._remainder : 0), hole: [], bet: 0, contribution: 0,
+          stack: this.startingStack, hole: [], bet: 0, contribution: 0,
           folded: false, allIn: false, acted: false,
         });
       }
