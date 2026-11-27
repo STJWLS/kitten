@@ -22,17 +22,17 @@
   .pot-line b { font-size:27px; color:#ffe7a2; font-variant-numeric:tabular-nums; text-shadow:0 2px 10px rgba(0,0,0,.3); }
   .community { display:flex; justify-content:center; gap:9px; min-height:102px; align-items:center; }
   .street { color:#cfe0d2; font-size:12px; letter-spacing:.16em; text-transform:uppercase; margin-top:10px; }
-  .seat { position:absolute; width:146px; min-height:102px; padding:8px 10px; border-radius:15px;
+  .seat { position:absolute; width:170px; min-height:128px; padding:10px 11px; border-radius:16px;
     background:rgba(8,22,17,.78); border:1px solid rgba(231,210,168,.25); color:#e8f0e6;
     box-shadow:0 8px 20px rgba(0,0,0,.25); transform:translate(-50%,-50%); transition:border-color .2s, box-shadow .2s; }
   .seat.you { border-color:#e7b96a; box-shadow:0 0 0 1px rgba(231,185,106,.45), 0 8px 20px rgba(0,0,0,.3); }
   .seat.active { border-color:#8be0ae; box-shadow:0 0 0 1px rgba(139,224,174,.5), 0 0 24px rgba(83,210,143,.22); }
   .seat.folded { opacity:.45; filter:grayscale(.6); }
   .seat.allin { border-color:#e07a6a; }
-  .seat .nm { display:flex; justify-content:space-between; gap:5px; font-size:12.5px; color:#f2e8d3; }
-  .seat .stk { font-size:17px; font-weight:800; color:#ffe7a2; margin-top:2px; letter-spacing:.02em; }
+  .seat .nm { display:flex; justify-content:space-between; gap:5px; font-size:14px; color:#f2e8d3; }
+  .seat .stk { font-size:20px; font-weight:800; color:#ffe7a2; margin-top:2px; letter-spacing:.02em; }
   .seat .meta { font-size:10.5px; color:#a9c2b0; margin-top:2px; }
-  .seat .cards { display:flex; gap:3px; margin-top:6px; min-height:30px; }
+  .seat .cards { display:flex; gap:4px; margin-top:7px; min-height:48px; }
   .seat .bet { position:absolute; right:8px; bottom:-11px; font-size:10px; color:#17130d; background:#e7c77d;
     border-radius:999px; padding:1px 6px; white-space:nowrap; }
   .seat .dealer { position:absolute; left:-8px; top:-8px; width:21px; height:21px; border-radius:50%;
@@ -42,7 +42,7 @@
     box-shadow:0 2px 5px rgba(0,0,0,.18); }
   .card.red { color:#b02a26; }
   .card.back { background:repeating-linear-gradient(135deg,#9b3d38 0 4px,#b9554d 4px 8px); border-color:#6e2825; color:transparent; }
-  .card.small { width:31px; height:44px; font-size:11px; }
+  .card.small { width:34px; height:48px; font-size:11px; }
   .card.empty { background:rgba(255,255,255,.06); border:1px dashed rgba(255,255,255,.22); box-shadow:none; }
   .card .rank { display:block; font:800 15px/.95 Georgia, "Times New Roman", serif; letter-spacing:.02em; }
   .card .suit { display:block; font-size:12px; line-height:1; margin-top:2px; }
@@ -272,6 +272,28 @@
     .raise-presets button { font-size:8px; padding:1px 4px; }
     .tray-chip .cnt { font-size:7px; }
   }
+
+  .chip-tooltip { position:fixed; z-index:200; width:240px; max-width:calc(100vw - 16px); padding:10px 11px; border-radius:12px;
+    background:rgba(10,24,18,.96); color:#e9f0e5; border:1px solid rgba(231,190,110,.45);
+    box-shadow:0 12px 34px rgba(0,0,0,.4); pointer-events:none; backdrop-filter:blur(4px); }
+  .chip-tooltip.hidden { display:none; }
+  .chip-tip-title { font-size:12px; font-weight:800; color:#ffe7a2; margin-bottom:7px; }
+  .chip-tip-title small { display:block; font-weight:400; font-size:10px; color:#a9c2b0; margin-top:2px; }
+  .chip-tip-row { display:flex; align-items:center; gap:6px; padding:2px 0; font-size:11px; }
+  .chip-tip-row .chip { width:19px; height:19px; font-size:5.5px; flex:none; }
+  .chip-tip-row .cnt { width:34px; color:#e7d8b6; font-variant-numeric:tabular-nums; }
+  .chip-tip-row .val { color:#9eb8a7; font-size:10px; }
+  @media (max-width: 900px) {
+    .seat { width:170px; min-height:128px; }
+    .seat .cards .card { width:34px; height:48px; }
+  }
+  @media (max-width: 620px) {
+    .seat { width:170px; min-height:128px; padding:10px 11px; }
+    .seat .nm { font-size:14px; }
+    .seat .stk { font-size:20px; }
+    .seat .meta { display:block; font-size:11.5px; }
+    .seat .cards .card { width:34px; height:48px; }
+  }
 </style>
 </head>
 <body data-project="holdem">
@@ -370,6 +392,7 @@
     </div>
   </div>
   <div id="ach-toast"><b id="ach-toast-title"></b><span id="ach-toast-desc"></span></div>
+  <div class="chip-tooltip hidden" id="chip-tooltip"></div>
 
   <div class="modal hidden" id="gameover-modal">
     <div class="setup-card">
@@ -851,6 +874,32 @@
     $('#gameover-text').textContent = info.text;
     $('#gameover-modal').classList.remove('hidden');
   }
+  function chipTooltipHtml(player) {
+    const parts = chipBreakdown(player.stack);
+    return '<div class="chip-tip-title">' + player.name + ' · 筹码 ' + fmt(player.stack) + '<small>每种面额的实际分配</small></div>' +
+      (parts.length ? parts.map((c) =>
+        '<div class="chip-tip-row"><span class="chip v' + c.v + '">' + c.label + '</span><span class="cnt">×' + c.n + '</span><span class="val">' + fmt(c.v * c.n) + '</span></div>'
+      ).join('') : '<div class="chip-tip-row"><span class="cnt">无筹码</span></div>');
+  }
+  function showChipTooltip(seatIndex, seat) {
+    const tip = document.getElementById('chip-tooltip');
+    if (!tip || !game || !game.players[seatIndex]) return;
+    tip.innerHTML = chipTooltipHtml(game.players[seatIndex]);
+    tip.classList.remove('hidden');
+    const r = seat.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = r.right + 10;
+    if (left + tw > innerWidth - 8) left = r.left - tw - 10;
+    left = Math.max(8, Math.min(innerWidth - tw - 8, left));
+    let top = r.top;
+    top = Math.max(8, Math.min(innerHeight - th - 8, top));
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  }
+  function hideChipTooltip() {
+    const tip = document.getElementById('chip-tooltip');
+    if (tip) tip.classList.add('hidden');
+  }
   function render() {
     if (!game) return;
     const g = game;
@@ -873,10 +922,10 @@
     const marginX = 24, marginY = 24;
     const boardH = Math.max(160, document.querySelector('.board-center').getBoundingClientRect().height || 195);
     const rowMax = Math.max(3, Math.ceil(n / 2));
-    const widthScale = (W - marginX * 2 - (rowMax - 1) * 8) / (rowMax * 146);
-    const verticalScale = (H - boardH - marginY * 2 - 16) / (2 * 160);
-    const scale = Math.max(0.30, Math.min(0.78, widthScale, verticalScale));
-    const seatW = 146 * scale, seatH = 160 * scale;
+    const widthScale = (W - marginX * 2 - (rowMax - 1) * 8) / (rowMax * 170);
+    const verticalScale = (H - boardH - marginY * 2 - 16) / (2 * 150);
+    const scale = Math.max(0.30, Math.min(0.96, widthScale, verticalScale));
+    const seatW = 170 * scale, seatH = 150 * scale;
     const topCount = n - Math.ceil(n / 2);
     const topPlayers = g.players.slice(1, 1 + topCount);
     const bottomAIs = g.players.slice(1 + topCount);
@@ -902,8 +951,10 @@
         '<div class="stk">' + fmt(p.stack) + '</div>' +
         '<div class="meta">' + (p.folded ? '已弃牌' : p.allIn ? 'ALL-IN' : p.acted ? '已行动' : '') + (p.bet ? ' · 注 ' + fmt(p.bet) : '') + '</div>' +
         '<div class="cards">' + (p.isHuman || g.street === 'showdown' ? hole : backCard('small') + backCard('small')) + '</div>' +
-        '<div class="seat-chips">' + chipPileHtml(p.stack) + '</div>' +
         (i === g.dealer ? '<span class="dealer">D</span>' : '');
+      seat.dataset.seat = String(p.seat);
+      seat.addEventListener('mouseenter', () => showChipTooltip(p.seat, seat));
+      seat.addEventListener('mouseleave', hideChipTooltip);
       $('#seats').appendChild(seat);
     };
     const xsTop = rowXs(topPlayers.length);
