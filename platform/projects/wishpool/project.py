@@ -7,29 +7,21 @@
   - 追加业务动作：create_wish / approve / reject
 """
 
-from kernel.bases.coin import CoinProject
-from kernel.project import now_iso, merge_items_by_key, find_item_by_key
+from kernel.bases.keyed import KeyedCoinProject
+from kernel.project import now_iso
 from kernel.protocol import ProjectError
 from kernel.notifications import notify
 
 
-class Project(CoinProject):
-    base = "coin"
+class Project(KeyedCoinProject):
+    base = "keyed-coin"
 
     def default_state(self):
         return {"items": [], "coins": 0, "log": [],
                 "stats": {"pending": 0, "approved": 0, "rejected": 0}}
 
-    def item_key(self, item):
-        return str(item.get("id") or "")
-
-    def merge(self, old, incoming, payload):
-        merged = dict(incoming)
-        merged["items"] = merge_items_by_key(old.get("items"), incoming.get("items"), self.item_key)
-        return merged
-
     def _find(self, data, wid):
-        return find_item_by_key(data, wid, "items", self.item_key)
+        return self.find_item(data, wid)
 
     def _stat(self, data, status):
         stats = dict(data.get("stats") or {})

@@ -5,7 +5,7 @@
   "title": "猫猫许愿池",
   "icon": "🙏",
   "desc": "许愿池：投币许愿、审批与许愿币收支记录。",
-  "base": "coin",
+  "base": "keyed-coin",
   "capabilities": [
     "state",
     "action",

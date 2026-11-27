@@ -20,6 +20,7 @@ import json
 import os
 
 from .bases.coin import CoinProject
+from .bases.keyed import KeyedJsonDocProject, KeyedCoinProject
 from .module_api import ModuleAPI
 from .project import AbstractProject, JsonDocProject
 
@@ -27,6 +28,8 @@ BASES = {
     "abstract": AbstractProject,
     "json-doc": JsonDocProject,
     "coin": CoinProject,
+    "keyed": KeyedJsonDocProject,
+    "keyed-coin": KeyedCoinProject,
 }
 
 

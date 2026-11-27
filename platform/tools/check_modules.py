@@ -56,15 +56,20 @@ PROJECT_CLASS_HIERARCHY = {
     "AbstractProject": {"AbstractProject", "JsonDocProject", "CoinProject"},
     "JsonDocProject": {"JsonDocProject", "CoinProject"},
     "CoinProject": {"CoinProject"},
+    "KeyedJsonDocProject": {"KeyedJsonDocProject"},
+    "KeyedCoinProject": {"KeyedCoinProject"},
 }
 KNOWN_CLASS_MODULES = {
     "kernel.project": {"AbstractProject", "JsonDocProject"},
     "kernel.bases.coin": {"CoinProject"},
+    "kernel.bases.keyed": {"KeyedJsonDocProject", "KeyedCoinProject"},
 }
 FALLBACK_REGISTRY_BASES = {
     "abstract": "AbstractProject",
     "json-doc": "JsonDocProject",
     "coin": "CoinProject",
+    "keyed": "KeyedJsonDocProject",
+    "keyed-coin": "KeyedCoinProject",
 }
 
 # import 期副作用静态启发式：明显触碰文件/网络/通知的调用点。

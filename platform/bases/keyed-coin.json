@@ -1,0 +1,5 @@
+{
+  "base": "coin",
+  "desc": "按主键并集并带硬币账本的项目",
+  "capabilities": ["state", "action", "audit", "crud", "coins"]
+}

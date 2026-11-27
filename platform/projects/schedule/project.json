@@ -5,7 +5,7 @@
   "title": "日程管理",
   "icon": "📅",
   "desc": "课程与个人日程：按周查看、提到/参与可见、参与者时段冲突检查。",
-  "base": "json-doc",
+  "base": "keyed",
   "capabilities": [
     "state",
     "action",

@@ -28,7 +28,7 @@ python platform\tools\auth_check.py --base http://127.0.0.1:8774
 ```
 platform/
 ├─ kernel/        引擎（engine / project / registry / compat / auth / server / services）
-├─ bases/         manifest 继承链：abstract ← json-doc ← coin
+├─ bases/         manifest 继承链：abstract ← json-doc ← coin / keyed；coin ← keyed-coin
 ├─ projects/      schedule · map · wishpool · mock · scratchpad
 ├─ static/        根壳 index.html + sdk.js + project.css
 ├─ data/          <project>/doc.json + audit.jsonl（运行时数据，不进版本库）

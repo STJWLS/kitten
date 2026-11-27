@@ -1,0 +1,5 @@
+{
+  "base": "json-doc",
+  "desc": "按主键并集的 JSON 文档项目：适合列表 + 自定义动作",
+  "capabilities": ["state", "action", "audit", "crud"]
+}

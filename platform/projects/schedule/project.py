@@ -6,23 +6,18 @@
   2) 自定义动作 —— toggle_done 不在基类动作集里，只属于本项目
 """
 
-from kernel.project import JsonDocProject, merge_items_by_key
+from kernel.bases.keyed import KeyedJsonDocProject
 from kernel.protocol import ProjectError
 
 
-class Project(JsonDocProject):
-    base = "json-doc"
+class Project(KeyedJsonDocProject):
+    base = "keyed"
 
     def default_state(self):
         return {"items": [], "term": "Fall 2026", "note": "由平台内核托管"}
 
     def item_key(self, item):
         return str(item.get("key") or item.get("id") or "")
-
-    def merge(self, old, incoming, payload):
-        merged = dict(incoming)
-        merged["items"] = merge_items_by_key(old.get("items"), incoming.get("items"), self.item_key)
-        return merged
 
     def on_action(self, action, payload, data):
         if action == "toggle_done":

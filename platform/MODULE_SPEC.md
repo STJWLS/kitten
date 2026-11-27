@@ -5,7 +5,7 @@
 > 事实来源（本规范不是凭空写的，每条规则都能在这些文件里找到依据）：
 > - `platform/kernel/registry.py` —— manifest 继承链、默认值、类继承校验、扫描/错误处理；
 > - `platform/kernel/project.py`、`platform/kernel/bases/coin.py` —— `AbstractProject` / `JsonDocProject` / `CoinProject` 协议；
-> - `platform/bases/*.json` —— `abstract <- json-doc <- coin` 的 manifest 继承链与 capability 词表；
+> - `platform/bases/*.json` —— `abstract <- json-doc <- coin` / `json-doc <- keyed` / `coin <- keyed-coin` 的 manifest 继承链与 capability 词表；
 > - `platform/TEMPLATE.md` —— 页面模板 v1；
 > - `platform/kernel/server.py` —— `/p/<id>/`、`_serve_view`、`canonical_paths`、`/api/p/<id>`；
 > - `platform/static/index.html` —— 当前运行的树索引、首页卡片、`navigate()` 的 `?p=id` 回退（`static/check.js` 是未引用残留，不作为依据）；
@@ -47,7 +47,7 @@
 
 ```
 platform/
-├─ bases/                      abstract.json / json-doc.json / coin.json / root.json
+├─ bases/                      abstract.json / json-doc.json / coin.json / keyed.json / keyed-coin.json / root.json
 ├─ kernel/                     registry.py / project.py / server.py / bases/coin.py ...
 ├─ projects/
 │  └─ <dir>/                   module 目录，目录名即 module 身份
@@ -103,10 +103,12 @@ spec["base"] = key
 abstract.json   base=abstract            capabilities=[state, action, audit]
 json-doc.json   base=abstract            capabilities=[state, action, audit, crud]   （覆盖父列表）
 coin.json       base=json-doc            capabilities=[state, action, audit, crud, coins]（覆盖父列表）
+keyed.json      base=json-doc            capabilities=[state, action, audit, crud]
+keyed-coin.json base=coin                capabilities=[state, action, audit, crud, coins]
 bases/root.json 不是项目基类：只有根节点 id/title/icon/desc，不参与项目继承
 ```
 
-`kernel/registry.py` 的 `BASES` 注册：`abstract -> AbstractProject`、`json-doc -> JsonDocProject`、`coin -> CoinProject`。
+`kernel/registry.py` 的 `BASES` 注册：`abstract -> AbstractProject`、`json-doc -> JsonDocProject`、`coin -> CoinProject`、`keyed -> KeyedJsonDocProject`、`keyed-coin -> KeyedCoinProject`。
 **新增 base 必须同时**：建 `bases/<name>.json`、在 `registry.py` 的 `BASES` 注册、在本规范 §10 登记 capability。
 
 ### 2.3 base 出错的后果（为什么是 ERROR）
@@ -355,8 +357,8 @@ python D:\KittenPuppy4Ever\platform\tools\check_modules.py --root D:\KittenPuppy
   "platform_root": "D:\\KittenPuppy4Ever\\platform",
   "ok": true,
   "bases": {
-    "registered": {"abstract": "AbstractProject", "json-doc": "JsonDocProject", "coin": "CoinProject"},
-    "files": ["abstract", "coin", "json-doc", "root"],
+    "registered": {"abstract": "AbstractProject", "json-doc": "JsonDocProject", "coin": "CoinProject", "keyed": "KeyedJsonDocProject", "keyed-coin": "KeyedCoinProject"},
+    "files": ["abstract", "coin", "json-doc", "keyed", "keyed-coin", "root"],
     "chains": {"coin": ["coin", "json-doc", "abstract"]},
     "errors": [], "warnings": []
   },

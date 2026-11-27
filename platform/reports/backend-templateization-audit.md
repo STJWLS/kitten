@@ -384,3 +384,22 @@ smoke_test.py                新增：custom API 健康检查
 - 10 个 custom view 尚未统一 SDK；
 - `KeyedJsonDocProject` 只抽了 helper，尚未抽成 manifest base；
 - 地图/造院的数据边界还没统一。
+
+## 8. 第二批修复（2026-11-27）
+
+- 新增 manifest/Python base：
+  - `keyed` → `KeyedJsonDocProject`
+  - `keyed-coin` → `KeyedCoinProject`
+- `schedule`、`bottle` 改用 `keyed`；
+- `wishpool` 改用 `keyed-coin`；
+- `bottle` 保留 `bottles` 字段 + layouts 合并；
+- `schedule` / `bottle` / `wishpool` 的重复 `merge`、`_find` 已删除；
+- `MODULE_SPEC.md` / `README.md` 已登记新 base；
+- checker、契约测试均通过。
+
+仍未完成：
+
+- `ai`、`schedule` 的专用 GET/POST 路由仍在 `kernel/server.py`；
+- `wishpool` 前端仍调用 legacy `/api/state`；
+- 所有 custom view 尚未统一 SDK；
+- map / courtyard 的持久化边界未统一。
