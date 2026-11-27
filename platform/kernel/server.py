@@ -4021,6 +4021,8 @@ class Handler(BaseHTTPRequestHandler):
                 text = self._version_local_assets(text, os.path.dirname(full))
             body = text.encode("utf-8")
         mtime = int(os.path.getmtime(full))
+        if ext == ".html":
+            cache = "no-store, no-cache, must-revalidate, max-age=0"
         self._send(body, 200, MIME.get(ext, "application/octet-stream"), cache=cache,
                    etag=None if ext in (".html",) else 'W/"%d"' % mtime,
                    gzip_ok=gzip_ok or ext in (".html", ".js", ".css", ".json"))
@@ -4062,7 +4064,7 @@ class Handler(BaseHTTPRequestHandler):
         mtime = int(os.path.getmtime(full))
         is_asset = ext in (".js", ".css", ".png", ".svg", ".ico", ".json")
         self._send(body, 200, MIME.get(ext, "application/octet-stream"),
-                   cache=("public, max-age=31536000, immutable" if is_asset else "no-cache"),
+                   cache=("public, max-age=31536000, immutable" if is_asset else "no-store, no-cache, must-revalidate, max-age=0"),
                    etag=None if ext == ".html" else 'W/"%d"' % mtime,
                    gzip_ok=ext in (".html", ".js", ".css", ".json"))
 

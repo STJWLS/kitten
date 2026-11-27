@@ -912,3 +912,14 @@ smoke_test.py                新增：custom API 健康检查
 - 超过该宽度时整页居中，不再无限拉伸；
 - 座位仍在固定宽度牌桌内按原间距分布；
 - 初始大尺寸和悬停筹码窗口保持不变。
+
+## 46. 前端看不到更新的原因与修复
+
+- 代码本身已推送，`/p/holdem/` 服务端已包含新样式；
+- 但根工作台通过固定 `src` 的 iframe 复用旧页面；
+- 已在以下入口加 `?v=Date.now()`：
+  - 根工作台模块 iframe；
+  - GitHub Pages 11 个模块壳；
+  - 页面入口 wrapper；
+- HTML 响应改为 `Cache-Control: no-store, no-cache, must-revalidate`；
+- 需要完整刷新一次顶层工作台或直接打开带时间戳的模块 URL。
