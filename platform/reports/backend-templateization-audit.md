@@ -1097,3 +1097,20 @@ smoke_test.py                新增：custom API 健康检查
 - 提示文字 `#bet-hint` 桌面端强制单行；
 - 操作按钮行保持右对齐；
 - 窄屏仍允许换行，避免溢出。
+
+## 63. 加注规则集
+
+- 开局设置新增“加注规则”选择：
+  - 无限注 No-Limit（默认）；
+  - 底池限注 Pot-Limit；
+  - 固定限注 Limit（每轮 4 次加注封顶）。
+- 最低加注：
+  - 无限注/底池限注：`currentBet + max(lastRaise, BB)`；
+  - 固定限注：`currentBet + fixedBetUnit`。
+- 最高加注：
+  - 无限注：全部筹码；
+  - 底池限注：`currentBet + 当前底池 + toCall`；
+  - 固定限注：`min(全部筹码, currentBet + fixedBetUnit)`，且每轮最多 4 次加注。
+- 固定限注下注单位：
+  - preflop/flop = BB；
+  - turn/river = 2×BB。

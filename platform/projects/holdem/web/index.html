@@ -428,7 +428,7 @@
 <main class="page">
   <div class="holdem-head">
     <div>
-      <div class="sub">无限注 · 6–10 人 · AI 只能看到自己的手牌与公共牌</div>
+      <div class="sub">德州扑克 · 6–10 人 · AI 只能看到自己的手牌与公共牌</div>
     </div>
     <div class="sub" id="table-summary">选择一个牌桌开始</div>
   </div>
@@ -448,6 +448,13 @@
         </label>
         <label>小盲 / 大盲
           <span class="input" id="set-blinds" style="display:block;padding:7px 9px;color:#e7c77d">10 / 20（固定）</span>
+        </label>
+        <label>加注规则
+          <select id="set-bet-rule" class="select">
+            <option value="nolimit">无限注 No-Limit</option>
+            <option value="potlimit">底池限注 Pot-Limit</option>
+            <option value="fixedlimit">固定限注 Limit（每轮 4 次封顶）</option>
+          </select>
         </label>
         <label>每人起始筹码
           <span class="input" id="set-stack" style="display:block;padding:7px 9px;color:#e7c77d">—</span>
@@ -670,6 +677,7 @@
   }
   function backCard(cls) { return '<span class="card back ' + (cls || '') + '"></span>'; }
   function fmt(n) { return Number(n || 0).toLocaleString('zh-CN'); }
+  const BET_RULE_LABELS = { nolimit: '无限注', potlimit: '底池限注', fixedlimit: '固定限注' };
   const CHIP_SET = [
     { v: 1000, label: "1K", color: "#d8b44e", cap: 2 },
     { v: 500, label: "500", color: "#d8784c", cap: 1 },
@@ -828,7 +836,7 @@
   function presetTarget(kind) {
     if (!game) return 0;
     const g = game, hero = g.players[0];
-    const maxTo = hero.bet + hero.stack;
+    const maxTo = g.maxRaiseTo(0);
     const pot = g.pot + g.players.reduce((s, p) => s + p.bet, 0);
     let target;
     if (kind === "min") target = g.minRaiseTo();
@@ -870,7 +878,8 @@
     const g = game, hero = g.players[0];
     const canAct = g.actor === 0 && g.street !== "ended" && g.street !== "showdown" && !hero.folded && !hero.allIn;
     const toCall = Math.max(0, g.currentBet - hero.bet);
-    const maxTo = hero.bet + hero.stack;
+    const maxTo = g.maxRaiseTo(0);
+    const allInMax = hero.bet + hero.stack;
     const minTo = g.minRaiseTo();
     const total = selectedTotal();
     const parts = chipBreakdown(hero.stack);
@@ -919,14 +928,14 @@
     let mode = "none";
     if (total > 0 && toCall > 0 && total < toCall) mode = "short_call";
     else if (total === toCall && toCall > 0) mode = "call";
-    else if (total > 0 && target > g.currentBet && target >= minTo) mode = "raise";
+    else if (total > 0 && target > g.currentBet && target >= minTo && target <= maxTo) mode = "raise";
     else if (total > 0 && total > toCall) mode = "short_raise";
     else if (total === 0 && toCall === 0) mode = "check";
     const canBet = canAct && (mode === "call" || mode === "raise");
     const btn = document.getElementById("act-bet");
     const opening = g.currentBet === 0;
     btn.disabled = !canBet;
-    btn.textContent = mode === "call" ? "跟注" : mode === "raise" ? (target >= maxTo ? "全下" : (opening ? "下注" : "加注")) : "下注";
+    btn.textContent = mode === "call" ? "跟注" : mode === "raise" ? (target >= allInMax ? "全下" : (opening ? "下注" : "加注")) : "下注";
     const callOne = document.getElementById("act-call-one");
     const callChips = toCall > 0 ? pickChipsForNeed(Math.min(toCall, hero.stack)) : null;
     callOne.classList.toggle("hidden", toCall <= 0);
@@ -935,6 +944,7 @@
     else if (mode === "short_call") hint.innerHTML = '<span class="need">跟注还差 ' + fmt(toCall - total) + '</span>';
     else if (mode === "call") hint.innerHTML = '<span>自动识别：跟注 ' + fmt(toCall) + '</span>';
     else if (mode === "raise") hint.innerHTML = '<span>自动识别：' + (opening ? '下注到 ' : '加注到 ') + fmt(target) + '</span>';
+    else if (g.betRule === 'fixedlimit' && g.raiseCount >= g.maxRaisesPerStreet) hint.innerHTML = '<span class="need">本轮加注已达上限</span>';
     else if (mode === "short_raise") hint.innerHTML = '<span class="need">加注不足，至少选 ' + fmt(minTo - hero.bet) + ' 筹码</span>';
     else if (mode === "check") hint.innerHTML = '<span>未选筹码，可以过牌</span>';
     else if (toCall > 0) hint.innerHTML = '<span>请选筹码：跟注 ' + fmt(toCall) + ' 或更多</span>';
@@ -971,7 +981,7 @@
   function refreshSetup() {
     const { n, requested, total, stack, adjusted } = totalChips();
     $('#set-stack').textContent = fmt(stack) + (adjusted ? '（已按每人 10 取整，输入 ' + fmt(requested) + '）' : '');
-    $('#table-summary').textContent = n + ' 人桌 · 全桌 ' + fmt(total) + ' 筹码';
+    $('#table-summary').textContent = n + ' 人桌 · 全桌 ' + fmt(total) + ' 筹码 · ' + (BET_RULE_LABELS[document.getElementById('set-bet-rule').value] || '无限注');
     const list = $('#ai-difficulty-list');
     const current = {};
     list.querySelectorAll('select').forEach((s) => { current[s.dataset.seat] = s.value; });
@@ -1000,6 +1010,7 @@
     const { n, total, stack } = totalChips();
     if (stack < 100) { alert('每位玩家至少需要 100 筹码'); return; }
     trackerOff = document.getElementById('set-tracker-off').checked;
+    const betRule = document.getElementById('set-bet-rule').value;
     trackerCacheKey = "";
     trackerCache = null;
     const diffs = readDifficulties(n);
@@ -1011,6 +1022,7 @@
       humanName: '你',
       sb: 10,
       bb: 20,
+      betRule: betRule,
     });
     $('#setup-view').classList.add('hidden');
     $('#game-view').classList.remove('hidden');

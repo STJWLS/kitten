@@ -58,7 +58,9 @@
     for (let a = 0; a < n - 4; a++) for (let b = a + 1; b < n - 3; b++)
       for (let c = b + 1; c < n - 2; c++) for (let d = c + 1; d < n - 1; d++)
         for (let e = d + 1; e < n; e++) {
-          const h = rank5([cards[a], cards[b], cards[c], cards[d], cards[e]]);
+          const picked = [cards[a], cards[b], cards[c], cards[d], cards[e]];
+          const h = rank5(picked);
+          h.cards = picked;
           if (!best || compareRank(h, best) > 0) best = h;
         }
     return best;
@@ -74,6 +76,9 @@
       this.humanName = opts.humanName || "你";
       this.sb = Number(opts.sb) || 10;
       this.bb = Number(opts.bb) || 20;
+      this.betRule = ['nolimit', 'potlimit', 'fixedlimit'].includes(opts.betRule) ? opts.betRule : 'nolimit';
+      this.raiseCount = 0;
+      this.maxRaisesPerStreet = Number(opts.maxRaisesPerStreet) || 4;
       this.difficulties = opts.difficulties || {};
       this.players = [];
       this.deck = [];
@@ -120,6 +125,7 @@
       this.pot = 0;
       this.currentBet = 0;
       this.minRaise = this.bb;
+      this.raiseCount = 0;
       this.lastAggressor = -1;
       this.players.forEach((p) => {
         p.hole = []; p.bet = 0; p.contribution = 0;
@@ -172,8 +178,25 @@
       }
       return -1;
     }
+    totalPot() { return this.pot + this.players.reduce((s, p) => s + p.bet, 0); }
+    fixedBetUnit() { return (this.street === "preflop" || this.street === "flop") ? this.bb : this.bb * 2; }
     minRaiseTo() {
+      if (this.betRule === "fixedlimit") return this.currentBet + this.fixedBetUnit();
       return Math.max(this.bb, this.currentBet + Math.max(this.minRaise, this.bb));
+    }
+    maxRaiseTo(seat) {
+      const p = this.players[seat];
+      if (!p) return this.currentBet;
+      const allIn = p.bet + p.stack;
+      const toCall = Math.max(0, this.currentBet - p.bet);
+      if (this.betRule === "fixedlimit") {
+        if (this.raiseCount >= this.maxRaisesPerStreet) return this.currentBet;
+        return Math.min(allIn, this.currentBet + this.fixedBetUnit());
+      }
+      if (this.betRule === "potlimit") {
+        return Math.min(allIn, this.currentBet + this.totalPot() + toCall);
+      }
+      return allIn;
     }
     aiView(seat) {
       const p = this.players[seat];
@@ -187,8 +210,11 @@
         pot: this.pot + this.players.reduce((s, x) => s + x.bet, 0),
         currentBet: this.currentBet,
         minRaise: this.minRaise,
-        minRaiseTo: Math.min(this.minRaiseTo(), p.bet + p.stack),
-        maxRaiseTo: p.bet + p.stack,
+        minRaiseTo: Math.min(this.minRaiseTo(), this.maxRaiseTo(seat)),
+        maxRaiseTo: this.maxRaiseTo(seat),
+        betRule: this.betRule,
+        raiseCount: this.raiseCount,
+        maxRaisesPerStreet: this.maxRaisesPerStreet,
         toCall: Math.max(0, this.currentBet - p.bet),
         dealer: this.dealer,
         players: this.players.map((x) => ({
@@ -222,8 +248,8 @@
         this.log(p.name + " 跟注 " + pay);
       } else if (type === "raise") {
         let amount = Number(action.amount);
-        const maxTo = p.bet + p.stack;
-        if (!Number.isFinite(amount)) return false;
+        const maxTo = this.maxRaiseTo(i);
+        if (!Number.isFinite(amount) || maxTo <= this.currentBet) return false;
         amount = Math.min(maxTo, Math.max(this.minRaiseTo(), Math.floor(amount)));
         if (amount <= this.currentBet) return false;
         const pay = Math.min(p.stack, amount - p.bet);
@@ -234,6 +260,7 @@
         if (pay && this.onChipMove) this.onChipMove({ seat: i, amount: pay, kind: "bet" });
         this.currentBet = p.bet;
         this.minRaise = Math.max(this.minRaise, raiseSize);
+        this.raiseCount += 1;
         this.lastAggressor = i;
         this.players.forEach((x, k) => { if (k !== i && !x.folded && !x.allIn) x.acted = false; });
         p.acted = true;
@@ -262,6 +289,7 @@
       if (this.onRoundEnd) this.onRoundEnd({ pot: this.pot, street: endedStreet });
       this.currentBet = 0;
       this.minRaise = this.bb;
+      this.raiseCount = 0;
       if (this.street === "preflop") this.street = "flop";
       else if (this.street === "flop") this.street = "turn";
       else if (this.street === "turn") this.street = "river";
