@@ -379,9 +379,10 @@
 
   /* 手牌与筹码分列；操作条与筹码托盘同处一行 */
   .hero-panel { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:6px 14px; align-items:center; }
-  .hero-panel .hero-row { grid-column:1/-1; grid-row:1; display:flex; align-items:center; justify-content:space-between; gap:14px; margin:0; width:100%; }
-  .hero-hand, .hero-chips { display:flex; align-items:center; gap:8px; min-width:0; }
-  .hero-chips { margin-left:auto; justify-content:flex-end; text-align:right; }
+  .hero-panel .hero-row { grid-column:1/-1; grid-row:1; display:flex; align-items:center; justify-content:space-between; gap:14px; margin:0; width:100%; flex-wrap:nowrap; }
+  .hero-hand { display:flex; align-items:center; gap:8px; min-width:0; flex:1 1 auto; overflow:hidden; flex-wrap:nowrap; }
+  .hero-chips { display:flex; align-items:center; gap:8px; flex:0 0 auto; margin-left:auto; justify-content:flex-end; text-align:right; white-space:nowrap; flex-wrap:nowrap; min-height:54px; }
+  .hero-hand #hero-hole { flex:none; }
   .hero-panel .bet-tray-wrap { grid-column:1/-1; grid-row:2; display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:10px; margin-top:2px; padding-top:4px; }
   .hero-panel .bet-tray-head { grid-column:1; grid-row:1; justify-content:flex-start; margin:0; padding:0; border:0; }
   .hero-panel .bet-tray { grid-column:2; grid-row:1; justify-content:flex-end; min-height:0; margin:0; gap:5px; flex-wrap:nowrap; overflow:hidden; }
