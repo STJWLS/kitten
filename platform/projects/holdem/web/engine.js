@@ -85,7 +85,7 @@
       this.minRaise = this.bb;
       this.lastAggressor = -1;
       this.handNo = 0;
-      this.onUpdate = null; this.onLog = null; this.onHandLog = null; this.onGameOver = null; this.onAiAction = null; this.onHandResult = null; this.onHandStart = null; this.onChipMove = null; this._lastHandResult = null;
+      this.onUpdate = null; this.onLog = null; this.onHandLog = null; this.onGameOver = null; this.onAiAction = null; this.onHandResult = null; this.onHandStart = null; this.onChipMove = null; this.onRoundEnd = null; this._lastHandResult = null;
       this._over = false;
       for (let i = 0; i < this.playerCount; i++) {
         const diff = i === 0 ? "" : (this.difficulties[i] || "medium");
@@ -256,7 +256,9 @@
       this.endRound();
     }
     endRound() {
+      const endedStreet = this.street;
       this.players.forEach((p) => { this.pot += p.bet; p.bet = 0; p.acted = false; });
+      if (this.onRoundEnd) this.onRoundEnd({ pot: this.pot, street: endedStreet });
       this.currentBet = 0;
       this.minRaise = this.bb;
       if (this.street === "preflop") this.street = "flop";
