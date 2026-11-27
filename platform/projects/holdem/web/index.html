@@ -46,18 +46,15 @@
   .card.empty { background:rgba(255,255,255,.06); border:1px dashed rgba(255,255,255,.22); box-shadow:none; }
   .card .rank { display:block; font:800 15px/.95 Georgia, "Times New Roman", serif; letter-spacing:.02em; }
   .card .suit { display:block; font-size:12px; line-height:1; margin-top:2px; }
-  .card.ace, .card.king, .card.queen, .card.jack { border-color:#c7a45a; background:linear-gradient(150deg,#fffdf7,#f5e8c9); box-shadow:0 2px 6px rgba(0,0,0,.22), inset 0 0 0 1px rgba(199,164,90,.28); }
   .card.ace .rank { font-size:26px; letter-spacing:0; }
   .card.king .rank, .card.queen .rank, .card.jack .rank { font-size:21px; letter-spacing:-.02em; }
   .card.ace::before, .card.king::before, .card.queen::before, .card.jack::before {
-    position:absolute; right:3px; top:2px; font-size:8px; line-height:1; color:#b8862f; opacity:.95;
+    position:absolute; right:3px; top:2px; font-size:8px; line-height:1; color:currentColor; opacity:.42;
   }
   .card.ace::before { content:"✦"; }
   .card.king::before { content:"♚"; }
   .card.queen::before { content:"♛"; }
   .card.jack::before { content:"♞"; }
-  .card.ace { border-color:#d2a94e; box-shadow:0 0 0 1px rgba(210,169,78,.4), 0 3px 8px rgba(0,0,0,.24); }
-  .card.king, .card.queen, .card.jack { border-color:#c9a45c; }
   .card.king .suit, .card.queen .suit, .card.jack .suit { font-size:13px; }
   .card.small .rank { font-size:13px; }
   .card.small .suit { font-size:10px; margin-top:1px; }
