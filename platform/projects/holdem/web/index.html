@@ -851,92 +851,6 @@
     $('#gameover-text').textContent = info.text;
     $('#gameover-modal').classList.remove('hidden');
   }
-  function resolveSeatLayout() {
-    const table = document.getElementById('table-shell');
-    const board = document.querySelector('.board-center');
-    if (!table || !board) return;
-    const nodes = [...document.querySelectorAll('#seats .seat')];
-    if (!nodes.length) return;
-    const move = (el, dx, dy) => {
-      if (!dx && !dy) return;
-      el.style.left = ((parseFloat(el.style.left) || 0) + dx) + 'px';
-      el.style.top = ((parseFloat(el.style.top) || 0) + dy) + 'px';
-    };
-    const tableRect = table.getBoundingClientRect();
-    const boardRect = board.getBoundingClientRect();
-    const margin = 4, gap = 4;
-    for (let iter = 0; iter < 10; iter++) {
-      let changed = false;
-      // 1) 桌面边界
-      for (const el of nodes) {
-        const r = el.getBoundingClientRect();
-        let dx = 0, dy = 0;
-        if (r.left < tableRect.left + margin) dx = tableRect.left + margin - r.left;
-        if (r.right > tableRect.right - margin) dx = tableRect.right - margin - r.right;
-        if (r.top < tableRect.top + margin) dy = tableRect.top + margin - r.top;
-        if (r.bottom > tableRect.bottom - margin) dy = tableRect.bottom - margin - r.bottom;
-        if (dx || dy) { move(el, dx, dy); changed = true; }
-      }
-      // 2) 公共牌/底池安全区
-      for (const el of nodes) {
-        const r = el.getBoundingClientRect();
-        const ox = Math.min(r.right, boardRect.right) - Math.max(r.left, boardRect.left);
-        const oy = Math.min(r.bottom, boardRect.bottom) - Math.max(r.top, boardRect.top);
-        if (ox <= 0 || oy <= 0) continue;
-        const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
-        const bx = (boardRect.left + boardRect.right) / 2, by = (boardRect.top + boardRect.bottom) / 2;
-        if (ox < oy) move(el, cx < bx ? -(ox + gap) : (ox + gap), 0);
-        else move(el, 0, cy < by ? -(oy + gap) : (oy + gap));
-        changed = true;
-      }
-      // 3) 座位之间
-      for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
-        const a = nodes[i].getBoundingClientRect(), b = nodes[j].getBoundingClientRect();
-        const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
-        const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
-        if (ox <= 0 || oy <= 0) continue;
-        const acx = (a.left + a.right) / 2, bcx = (b.left + b.right) / 2;
-        const acy = (a.top + a.bottom) / 2, bcy = (b.top + b.bottom) / 2;
-        const horizontal = ox < oy;
-        const amount = (horizontal ? ox : oy) + gap;
-        if (i === 0) move(nodes[j], horizontal ? (bcx >= acx ? amount : -amount) : (bcy >= acy ? amount : -amount), horizontal ? 0 : 0);
-        else if (j === 0) move(nodes[i], horizontal ? (acx >= bcx ? amount : -amount) : (acy >= bcy ? amount : -amount), 0);
-        else {
-          const half = amount / 2;
-          move(nodes[i], horizontal ? (acx >= bcx ? half : -half) : 0, horizontal ? 0 : (acy >= bcy ? half : -half));
-          move(nodes[j], horizontal ? (bcx >= acx ? half : -half) : 0, horizontal ? 0 : (bcy >= acy ? half : -half));
-        }
-        changed = true;
-      }
-      if (!changed) break;
-    }
-    // 最后再保证所有座位都在桌面内（避免被最后一轮互推挤出边界）。
-    for (const el of nodes) {
-      const r = el.getBoundingClientRect();
-      let dx = 0, dy = 0;
-      if (r.left < tableRect.left + margin) dx = tableRect.left + margin - r.left;
-      if (r.right > tableRect.right - margin) dx = tableRect.right - margin - r.right;
-      if (r.top < tableRect.top + margin) dy = tableRect.top + margin - r.top;
-      if (r.bottom > tableRect.bottom - margin) dy = tableRect.bottom - margin - r.bottom;
-      move(el, dx, dy);
-    }
-  }
-  function clampSeatsToTable() {
-    const table = document.getElementById('table-shell');
-    if (!table) return;
-    const t = table.getBoundingClientRect();
-    const m = 2;
-    document.querySelectorAll('#seats .seat').forEach((el) => {
-      const r = el.getBoundingClientRect();
-      let dx = 0, dy = 0;
-      if (r.left < t.left + m) dx = t.left + m - r.left;
-      if (r.right > t.right - m) dx = t.right - m - r.right;
-      if (r.top < t.top + m) dy = t.top + m - r.top;
-      if (r.bottom > t.bottom - m) dy = t.bottom - m - r.bottom;
-      if (dx) el.style.left = ((parseFloat(el.style.left) || 0) + dx) + 'px';
-      if (dy) el.style.top = ((parseFloat(el.style.top) || 0) + dy) + 'px';
-    });
-  }
   function render() {
     if (!game) return;
     const g = game;
@@ -955,59 +869,54 @@
     $('#seats').innerHTML = '';
     const shell = $('#table-shell');
     const W = shell.clientWidth, H = shell.clientHeight;
-    const cx = W / 2, cy = H / 2 + 10;
-    const rx = Math.min(W * 0.40, 470), ry = Math.min(H * 0.40, 225);
-    g.players.forEach((p, i) => {
-      const a = Math.PI / 2 + (i / g.players.length) * Math.PI * 2;
-      let x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry;
-      // 把座位限制在桌内，避免底部座位压到操作区、顶部座位压到底池。
-      const halfW = 78, halfH = 78, pad = 6;
-      x = Math.max(halfW + pad, Math.min(W - halfW - pad, x));
-      y = Math.max(halfH + pad, Math.min(H - halfH - pad, y));
-      // 玩家座位固定在桌底内侧，避免公共牌/操作区与座位重叠。
-      if (i === 0) y = H - 70;
+    const n = g.players.length;
+    const marginX = 24, marginY = 24;
+    const boardH = Math.max(160, document.querySelector('.board-center').getBoundingClientRect().height || 195);
+    const rowMax = Math.max(3, Math.ceil(n / 2));
+    const widthScale = (W - marginX * 2 - (rowMax - 1) * 8) / (rowMax * 146);
+    const verticalScale = (H - boardH - marginY * 2 - 16) / (2 * 160);
+    const scale = Math.max(0.30, Math.min(0.78, widthScale, verticalScale));
+    const seatW = 146 * scale, seatH = 160 * scale;
+    const topCount = n - Math.ceil(n / 2);
+    const topPlayers = g.players.slice(1, 1 + topCount);
+    const bottomAIs = g.players.slice(1 + topCount);
+    const mid = Math.floor(bottomAIs.length / 2);
+    const bottomPlayers = bottomAIs.slice(0, mid).concat([g.players[0]], bottomAIs.slice(mid));
+    const rowXs = (count) => {
+      if (count <= 1) return [(marginX + W - marginX) / 2];
+      const left = marginX + seatW / 2;
+      const right = W - marginX - seatW / 2;
+      const step = (right - left) / (count - 1);
+      return Array.from({ length: count }, (_, i) => left + step * i);
+    };
+    const topY = marginY + seatH / 2;
+    const bottomY = H - marginY - seatH / 2 - 24;
+    const makeSeat = (p, i, x, y) => {
       const seat = document.createElement('div');
       seat.className = 'seat' + (i === 0 ? ' you' : '') + (i === g.actor && g.street !== 'ended' && g.street !== 'showdown' ? ' active' : '') + (p.folded ? ' folded' : '') + (p.allIn ? ' allin' : '');
-      seat.style.left = x + 'px'; seat.style.top = y + 'px';
+      seat.style.left = x + 'px';
+      seat.style.top = y + 'px';
+      seat.style.transform = 'translate(-50%,-50%) scale(' + scale + ')';
       const hole = p.hole && p.hole.length ? p.hole.map((c) => cardHtml(c, 'small')).join('') : backCard('small') + backCard('small');
       seat.innerHTML = '<div class="nm"><span>' + p.name + '</span><span>' + (p.isHuman ? 'YOU' : p.difficultyLabel) + '</span></div>' +
         '<div class="stk">' + fmt(p.stack) + '</div>' +
         '<div class="meta">' + (p.folded ? '已弃牌' : p.allIn ? 'ALL-IN' : p.acted ? '已行动' : '') + (p.bet ? ' · 注 ' + fmt(p.bet) : '') + '</div>' +
-        '<div class="cards">' + (i === 0 || g.street === 'showdown' ? hole : backCard('small') + backCard('small')) + '</div>' +
+        '<div class="cards">' + (p.isHuman || g.street === 'showdown' ? hole : backCard('small') + backCard('small')) + '</div>' +
         '<div class="seat-chips">' + chipPileHtml(p.stack) + '</div>' +
         (i === g.dealer ? '<span class="dealer">D</span>' : '');
       $('#seats').appendChild(seat);
-      if (g.players.length >= 8) {
-        const base = g.players.length >= 10 ? 0.80 : 0.88;
-        const mobileScale = W < 700 ? (g.players.length >= 10 ? 0.44 : 0.55) : base;
-        seat.style.transform = 'translate(-50%,-50%) scale(' + mobileScale + ')';
-      }
-    });
-    // 小屏时左右两侧座位可能压到公共牌；把它们顺到公共牌下方，避免重叠。
-    const communityRect = $('#community').getBoundingClientRect();
-    const tableRect0 = $('#table-shell').getBoundingClientRect();
-    document.querySelectorAll('#seats .seat').forEach((el, i) => {
-      if (i === 0) return;
+    };
+    const xsTop = rowXs(topPlayers.length);
+    topPlayers.forEach((p, k) => makeSeat(p, p.seat, xsTop[k], topY));
+    const xsBottom = rowXs(bottomPlayers.length);
+    bottomPlayers.forEach((p, k) => makeSeat(p, p.seat, xsBottom[k], bottomY));
+    // 不同浏览器对缩放后实际高度有 1~2px 差异，最后把底排收回桌内并保留边距。
+    const tableRect = shell.getBoundingClientRect();
+    document.querySelectorAll('#seats .seat').forEach((el) => {
       const r = el.getBoundingClientRect();
-      const overlapX = Math.min(r.right, communityRect.right) - Math.max(r.left, communityRect.left) > 0;
-      const overlapY = Math.min(r.bottom, communityRect.bottom) - Math.max(r.top, communityRect.top) > 0;
-      if (!overlapX || !overlapY) return;
-      const maxShift = tableRect0.bottom - 2 - r.bottom;
-      const shift = Math.min(communityRect.bottom + 4 - r.top, maxShift);
-      if (shift > 0) el.style.top = ((parseFloat(el.style.top) || 0) + shift) + 'px';
+      const over = r.bottom - (tableRect.bottom - 20);
+      if (over > 0) el.style.top = ((parseFloat(el.style.top) || 0) - over) + 'px';
     });
-    // 移动端/矮窗口下，英雄座位如果顶到公共牌，再往下让一点。
-    const seat0 = document.querySelector('#seats .seat');
-    const boardBottom = $('#community').getBoundingClientRect().bottom;
-    if (seat0 && seat0.getBoundingClientRect().top < boardBottom + 4) {
-      const tableRect = $('#table-shell').getBoundingClientRect();
-      const rect = seat0.getBoundingClientRect();
-      const currentTop = parseFloat(seat0.style.top) || 0;
-      const maxShift = tableRect.bottom - 2 - rect.bottom;
-      const shift = Math.min(boardBottom + 4 - rect.top, maxShift);
-      if (shift > 0) seat0.style.top = (currentTop + shift) + 'px';
-    }
-    resolveSeatLayout();
     const hero = g.players[0];
     $('#hero-name').textContent = hero.name;
     $('#hero-stack').textContent = '筹码 ' + fmt(hero.stack) + ' · 本轮下注 ' + fmt(hero.bet);
@@ -1019,7 +928,6 @@
     ['act-fold', 'act-check', 'act-bet'].forEach((id) => { $('#' + id).disabled = !canAct; });
     if (!canAct) selectedChips = [];
     renderTray();
-    clampSeatsToTable();
   }
   function scheduleAi() {
     if (!game || game.street === 'ended' || game.street === 'showdown') return;
