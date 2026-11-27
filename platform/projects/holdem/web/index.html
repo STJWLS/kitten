@@ -350,12 +350,12 @@
 
   .tracker-opt { display:flex; align-items:center; gap:7px; margin:8px 0 12px; font-size:12px; color:#d5e3d7; cursor:pointer; }
   .tracker-opt input { accent-color:#c7954b; width:14px; height:14px; }
-  .tracker-window { width:min(780px,94vw); max-height:calc(100dvh - 70px); overflow:auto; padding:16px 18px; border-radius:18px;
+  .tracker-window { width:min(900px,94vw); max-height:calc(100dvh - 70px); overflow:auto; padding:16px 18px; border-radius:18px;
     background:rgba(8,22,17,.97); border:1px solid rgba(231,210,168,.32); color:#e7f0e6; box-shadow:0 22px 70px rgba(0,0,0,.45); }
   .tracker-window-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
   .tracker-window-head h2 { margin:0; color:#ffe7a2; font:700 21px "Songti SC", serif; letter-spacing:.12em; }
   .tracker-summary { color:#a9c2b0; font-size:11px; margin-top:3px; }
-  .tracker-list { display:flex; flex-direction:column; gap:6px; }
+  .tracker-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(5,auto); grid-auto-flow:column; gap:6px 10px; }
   .tracker-set-row { display:grid; grid-template-columns:118px minmax(0,1fr); align-items:center; gap:12px; padding:5px 6px; border-radius:8px; border:1px solid rgba(231,210,168,.10); background:rgba(255,255,255,.025); }
   .tracker-set-row.current { border-color:rgba(231,199,125,.55); background:rgba(231,199,125,.09); }
   .tracker-set-name { font-size:12px; color:#f2e8d3; font-weight:700; }
@@ -367,6 +367,7 @@
     font-size:14px; font-variant-numeric:tabular-nums; }
   .tracker-prob small { font-size:8px; color:#a9c2b0; margin-top:1px; letter-spacing:.08em; }
   @media (max-width: 620px) {
+    .tracker-list { grid-template-columns:1fr; grid-template-rows:none; grid-auto-flow:row; }
     .tracker-set-row { grid-template-columns:78px minmax(0,1fr); gap:7px; }
     .tracker-slots { grid-template-columns:repeat(5,28px); gap:3px; min-height:44px; }
     .tracker-slot { width:28px; height:44px; }
