@@ -347,6 +347,35 @@
     .card .suit { font-size:11px; }
     .card.ace .rank, .card.king .rank, .card.queen .rank, .card.jack .rank { font-size:15px; }
   }
+
+  .tracker-opt { display:flex; align-items:center; gap:7px; margin:8px 0 12px; font-size:12px; color:#d5e3d7; cursor:pointer; }
+  .tracker-opt input { accent-color:#c7954b; width:14px; height:14px; }
+  .tracker { flex:0 0 auto; border-top:1px solid rgba(231,210,168,.16); padding:7px 0 0; margin-top:6px; }
+  .tracker.hidden { display:none; }
+  .tracker-head { font-size:11px; color:#ffe7a2; font-weight:700; margin-bottom:5px; display:flex; justify-content:space-between; gap:6px; }
+  .tracker-head span { color:#a9c2b0; font-weight:400; }
+  .tracker-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }
+  .tracker-cell { padding:3px 2px; border-radius:5px; background:rgba(255,255,255,.035); border:1px solid rgba(231,210,168,.12); text-align:center; font-size:8.5px; line-height:1.35; color:#c8d8cb; }
+  .tracker-cell b { display:block; color:#f2e8d3; font-size:9.5px; }
+  .tracker-cell i { display:block; font-style:normal; color:#a9c2b0; font-variant-numeric:tabular-nums; }
+  .tracker-cell.current { border-color:#e7c77d; background:rgba(231,199,125,.14); }
+  .tracker-cell.current b { color:#ffe7a2; }
+  /* 底部两栏 */
+  .hero-panel { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr); gap:8px 16px; align-items:center; }
+  .hero-panel .hero-row { grid-column:1; grid-row:1; margin:0; justify-content:flex-start; }
+  .hero-panel .bet-tray-wrap { display:contents; }
+  .hero-panel .bet-tray-head { grid-column:2; grid-row:1; justify-content:flex-end; margin:0; padding:0; border:0; }
+  .hero-panel .bet-tray { grid-column:1/-1; grid-row:2; margin:0; }
+  /* 牌面不是可点击控件 */
+  .card, .card * { cursor:default !important; pointer-events:none !important; user-select:none !important; }
+  .card:hover, .card:active { transform:none !important; }
+  @media (max-width: 900px) {
+    .hero-panel { display:flex; flex-direction:column; align-items:stretch; gap:6px; }
+    .hero-panel .hero-row { margin:0; }
+    .hero-panel .bet-tray-wrap { display:block; }
+    .hero-panel .bet-tray-head { justify-content:flex-start; }
+    .hero-panel .bet-tray { margin-top:4px; }
+  }
 </style>
 </head>
 <body data-project="holdem">
@@ -380,6 +409,7 @@
       </div>
       <div class="sm-label" style="color:#e7c77d">AI 难度</div>
       <div class="ai-list" id="ai-difficulty-list"></div>
+      <label class="tracker-opt"><input type="checkbox" id="set-tracker-off" checked> 禁用记牌器</label>
       <div class="toolbar" style="justify-content:flex-end">
         <button class="btn btn-poker primary" id="start-game" type="button">开始牌局</button>
       </div>
@@ -436,6 +466,10 @@
         </div>
         <div class="chip-legend" id="chip-legend"></div>
         <div id="log"></div>
+        <div class="tracker hidden" id="tracker">
+          <div class="tracker-head">记牌器 <span id="tracker-current">等待翻牌</span></div>
+          <div class="tracker-grid" id="tracker-grid"></div>
+        </div>
       </aside>
     </div>
   </section>
@@ -473,6 +507,9 @@
   let ACH_PENDING = [];
   let selectedChips = [];
   const LAYOUT_DEBUG = new URLSearchParams(location.search).get("layout") === "1";
+  let trackerOff = true;
+  let trackerCacheKey = "";
+  let trackerCache = null;
   let ACH_HELL_IN_HAND = false;
   let ACH_STREAK = 0;
   let ACH_HAND_START_STACK = 0;
@@ -905,6 +942,9 @@
   function startGame() {
     const { n, total, stack } = totalChips();
     if (stack < 100) { alert('每位玩家至少需要 100 筹码'); return; }
+    trackerOff = document.getElementById('set-tracker-off').checked;
+    trackerCacheKey = "";
+    trackerCache = null;
     const diffs = readDifficulties(n);
     game = new Holdem.Game({
       players: n,
@@ -981,6 +1021,62 @@
   function hideChipTooltip() {
     const tip = document.getElementById('chip-tooltip');
     if (tip) tip.classList.add('hidden');
+  }
+  const TRACKER_HANDS = [
+    { cat: 8, name: "同花顺" }, { cat: 7, name: "四条" }, { cat: 6, name: "葫芦" },
+    { cat: 5, name: "同花" }, { cat: 4, name: "顺子" }, { cat: 3, name: "三条" },
+    { cat: 2, name: "两对" }, { cat: 1, name: "一对" }, { cat: 0, name: "高牌" },
+  ];
+  function trackerCompute() {
+    if (!game) return null;
+    const hero = game.players[0];
+    const hole = hero.hole || [];
+    const board = game.board || [];
+    if (hole.length !== 2 || board.length < 3) return null;
+    const known = hole.concat(board);
+    const key = known.map((c) => c.r + c.s).sort().join("|");
+    if (key === trackerCacheKey && trackerCache) return trackerCache;
+    const knownSet = new Set(known.map((c) => c.r + c.s));
+    const deck = Holdem.makeDeck().filter((c) => !knownSet.has(c.r + c.s));
+    const need = Math.max(0, 5 - board.length);
+    const counts = new Array(9).fill(0);
+    let total = 0;
+    const evalFinal = (extra) => {
+      const h = Holdem.bestHand(hole.concat(board).concat(extra));
+      if (h) counts[h.cat] += 1;
+      total += 1;
+    };
+    if (need === 0) evalFinal([]);
+    else if (need === 1) deck.forEach((c) => evalFinal([c]));
+    else if (need === 2) {
+      for (let i = 0; i < deck.length - 1; i++) for (let j = i + 1; j < deck.length; j++) evalFinal([deck[i], deck[j]]);
+    }
+    const current = Holdem.bestHand(known);
+    const result = { counts, total, current };
+    trackerCacheKey = key;
+    trackerCache = result;
+    return result;
+  }
+  function renderTracker() {
+    const box = document.getElementById("tracker");
+    if (!box) return;
+    if (trackerOff || !game) { box.classList.add("hidden"); return; }
+    box.classList.remove("hidden");
+    const result = trackerCompute();
+    const currentEl = document.getElementById("tracker-current");
+    const grid = document.getElementById("tracker-grid");
+    if (!result) {
+      currentEl.textContent = "等待翻牌";
+      grid.innerHTML = TRACKER_HANDS.map((h) => '<div class="tracker-cell"><b>' + h.name + '</b><i>—</i></div>').join("");
+      return;
+    }
+    const currentCat = result.current ? result.current.cat : -1;
+    const currentName = result.current ? result.current.name : "—";
+    currentEl.textContent = "当前最大：" + currentName;
+    grid.innerHTML = TRACKER_HANDS.map((h) => {
+      const pct = result.total ? (result.counts[h.cat] / result.total * 100) : 0;
+      return '<div class="tracker-cell' + (h.cat === currentCat ? " current" : "") + '"><b>' + h.name + '</b><i>' + pct.toFixed(1) + '%</i></div>';
+    }).join("");
   }
   function render() {
     if (!game) return;
@@ -1099,6 +1195,7 @@
     ['act-fold', 'act-check', 'act-call-one', 'act-bet'].forEach((id) => { $('#' + id).disabled = !canAct; });
     if (!canAct) selectedChips = [];
     renderTray();
+    renderTracker();
   }
   function scheduleAi() {
     if (!game || game.street === 'ended' || game.street === 'showdown') return;
