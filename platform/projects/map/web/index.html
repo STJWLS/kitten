@@ -230,8 +230,7 @@ const EVT_KEY = "emf_schedule_events_v1";
 function getEvents(){ try { return JSON.parse(localStorage.getItem(EVT_KEY) || "[]"); } catch(e){ return []; } }
 
 async function init(){
-  const r = await fetch("/api/map/data");
-  DATA = await r.json();
+  DATA = await KpSdk.getJSON("/api/map/data");
   DATA.weeks = deriveSchedule(DATA);
   TDT_KEY = (DATA.meta && DATA.meta.tdtKey) || TDT_KEY;
   document.getElementById("term").textContent =
@@ -239,11 +238,8 @@ async function init(){
   document.getElementById("updated").textContent = DATA.meta.updated;
   // 本机瓦片代理（隧道）地址：由 tdt_tunnel.py 更新（大论文管线同款模式）
   try {
-    const pr = await fetch("tile-proxy.json?ts=" + Date.now(), {cache:"no-store"});
-    if (pr.ok){
-      const pj = await pr.json();
-      if (pj && pj.url) proxyBase = pj.url.replace(/\/+$/, "");
-    }
+    const pj = await KpSdk.getJSON("tile-proxy.json?ts=" + Date.now());
+    if (pj && pj.url) proxyBase = pj.url.replace(/\/+$/, "");
   } catch(e){ proxyBase = null; }
   // key 类型决定首选链路：浏览器端 key → 直连；服务端 key（浏览器 UA 会被 403）→ 优先本机代理
   const keyType = (DATA.meta && DATA.meta.tdtKeyType) || "server";

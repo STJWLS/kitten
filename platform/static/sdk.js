@@ -119,4 +119,24 @@
   }
 
   window.KittenProjectView = KittenProjectView;
+
+  // 轻量 HTTP helper：custom view 可逐步从各自的 fetch 包装迁移过来。
+  window.KpSdk = {
+    async request(url, opts) {
+      const r = await fetch(url, Object.assign({cache: "no-store"}, opts || {}));
+      let j = null;
+      try { j = await r.json(); } catch (e) { throw new Error("非 JSON 响应（HTTP " + r.status + "）"); }
+      if (!r.ok || (j && j.ok === false)) {
+        const err = (j && j.error) || {};
+        const e = new Error(err.message || ("HTTP " + r.status));
+        e.code = err.code; e.status = r.status;
+        throw e;
+      }
+      return j;
+    },
+    getJSON(url, opts) { return this.request(url, opts); },
+    postJSON(url, body, opts) {
+      return this.request(url, Object.assign({method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body || {})}, opts || {}));
+    }
+  };
 })();

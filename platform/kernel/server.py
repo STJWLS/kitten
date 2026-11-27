@@ -4103,7 +4103,7 @@ class Handler(BaseHTTPRequestHandler):
                 template = ((project.manifest().get("ui") or {}).get("template") if project else None) or "#module"
             except Exception:
                 template = "#module"
-            text = text.replace("<head>", "<head><script>window.__KP_TEMPLATE__=%s;</script><script src=\"/static/template-tree.js\"></script>" % json.dumps(template), 1)
+            text = text.replace("<head>", "<head><script>window.__KP_TEMPLATE__=%s;</script><script src=\"/static/template-tree.js\"></script><script src=\"/static/sdk.js\"></script>" % json.dumps(template), 1)
         return text.replace("<head>", "<head>" + PERF_PATCH + AUTH_PATCH, 1)
 
     def _serve_view(self, pid, rest):

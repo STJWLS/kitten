@@ -553,3 +553,20 @@ smoke_test.py                新增：custom API 健康检查
 
 - custom view SDK 统一；
 - courtyard 客户端状态仍为 localStorage（数据边界已声明）。
+
+## 18. 第十二批修复（2026-11-27）
+
+- `static/sdk.js` 新增轻量 `KpSdk`：
+  - `request`
+  - `getJSON`
+  - `postJSON`
+- 所有 module 页面由 `_inject_shell` 自动注入 `sdk.js`；
+- 自动视图继续使用 `KittenProjectView`；
+- map 页面改用 `KpSdk.getJSON` 读取 `/api/map/data` 与瓦片代理配置；
+- 去掉了 auto-view 中重复的 sdk.js 引用；
+- map / scratchpad 实测无 JS 错误，`window.KpSdk` 可用。
+
+剩余：
+
+- 其他 custom view 仍保留自己的 fetch 包装，可按页面逐步迁到 `KpSdk`；
+- courtyard 仍是 localStorage 客户端状态（边界已声明）。
