@@ -420,3 +420,20 @@ smoke_test.py                新增：custom API 健康检查
 - `wishpool` 前端仍走 `/api/state`；
 - custom view 的 SDK 统一；
 - map / courtyard 数据边界。
+
+## 10. 第四批修复（2026-11-27）
+
+- `/api/ai/skills`、`/api/ai/dsh/status`、`/api/ai/tools`、
+  `/api/ai/sessions*`、`/api/ai/dsh/stream`、`/api/ai/skills/toggle|import`、
+  `/api/ai/dsh/stop|chat`、`/api/ai/tools/execute`、`/api/ai/sessions/save|flags|delete|import`
+  已迁到 `projects/ai/api.py`；
+- `kernel/server.py` 中的 AI GET/POST 分支已删除；
+- AI 页面与主要接口实测 200：
+  - `/api/ai/skills`
+  - `/api/ai/dsh/status`
+  - `/api/ai/tools`
+  - `/api/ai/sessions`
+- 仍留在内核的 AI 相关接口：
+  - `/api/llm/*`（模型配置/测试/对话）
+  - `/api/files/*`（加密文件）
+  - `/api/bugreport*`、用户/主题等平台级接口
