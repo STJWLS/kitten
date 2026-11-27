@@ -3485,88 +3485,6 @@ class Handler(BaseHTTPRequestHandler):
                 raise ProjectError("not_found", "用户不存在", 404)
             return self._json(ok(user=name, theme=self._theme_for(name)))
 
-        if path == "/api/schedule/courses":
-            user = self._require_user()
-            if not self._can_access(user, "schedule"):
-                raise ProjectError("forbidden", "没有日程访问权限", 403)
-            store = self._sched_store()
-            def mine(x):
-                if not isinstance(x, dict): return False
-                if str(x.get("owner") or "") == user: return True
-                return user in (x.get("participants") or []) or user in (x.get("mentions") or [])
-            courses = [c for c in (store.get("courses") or []) if mine(c)]
-            specials = [sp for sp in (store.get("specials") or []) if mine(sp)]
-            exams = [e for e in (store.get("exams") or []) if mine(e)]
-            return self._json(ok(version=store.get("version") or 2, meta=store.get("meta") or {},
-                                 slots=store.get("slots") or [], courses=courses,
-                                 specials=specials, exams=exams,
-                                 holidays=store.get("holidays") or [], venues=store.get("venues") or []))
-
-        if path == "/api/schedule/venues":
-            user = self._require_user()
-            if not self._can_access(user, "schedule"):
-                raise ProjectError("forbidden", "没有日程访问权限", 403)
-            store = self._sched_store()
-            if self.command == "POST":
-                body = self._read_json()
-                incoming = body.get("venues")
-                if not isinstance(incoming, list):
-                    raise ProjectError("bad_request", "venues 必须是数组", 400)
-                merged = []
-                for v in incoming[:300]:
-                    if not isinstance(v, dict): continue
-                    code = str(v.get("code") or "").strip()[:60]
-                    name = str(v.get("name") or "").strip()[:120]
-                    if not code or not name: continue
-                    merged.append({"code": code, "name": name, "short": str(v.get("short") or name)[:120],
-                                   "address": str(v.get("address") or "")[:300], "note": str(v.get("note") or "")[:500],
-                                   "lat": v.get("lat"), "lng": v.get("lng"), "custom": bool(v.get("custom"))})
-                with SCHEDULE_COURSES_LOCK:
-                    store["venues"] = merged
-                    self._sched_store_save(store)
-                return self._json(ok(venues=merged))
-            return self._json(ok(venues=store.get("venues") or []))
-
-        if path == "/api/schedule/events":
-            user = self._require_user()
-            data = self._sched_load()
-            events = [e for e in (data.get("events") or []) if self._sched_visible(user, e)]
-            events.sort(key=lambda e: (e.get("date") or "", e.get("startMin") or 0))
-            return self._json(ok(events=events, users=self._sched_people(), me=user))
-
-        if path == "/api/schedule/participants":
-            user = self._require_user()
-            q = parse_qs(parsed.query or "")
-            date = (q.get("date") or [""])[0]
-            try:
-                start = int((q.get("startMin") or ["0"])[0])
-                end = int((q.get("endMin") or ["0"])[0])
-            except Exception:
-                raise ProjectError("bad_request", "时间格式不正确", 400)
-            if not date or end <= start:
-                raise ProjectError("bad_request", "时间段不正确", 400)
-            q0 = self._sched_dt(date, start)
-            q1 = self._sched_dt(date, end)
-            exclude = (q.get("exclude") or [""])[0]
-            data = self._sched_load()
-            out = []
-            for person in self._sched_people():
-                busy = None
-                for ev in data.get("events") or []:
-                    if exclude and str(ev.get("id")) == exclude:
-                        continue
-                    if person["user"] not in (ev.get("participants") or []):
-                        continue
-                    e0, e1 = self._sched_interval(ev)
-                    if q0 < e1 and e0 < q1:
-                        busy = ev
-                        break
-                out.append({"user": person["user"], "emoji": person["emoji"],
-                            "role": person["role"], "available": busy is None,
-                            "busy_title": (busy or {}).get("title", ""),
-                            "busy_id": (busy or {}).get("id", "")})
-            return self._json(ok(users=out, me=user))
-
         if path == "/api/ai/skills":
             user = self._require_user()
             return self._json(ok(skills=self._ai_skill_catalog(user), enabled=self._ai_skills_enabled(user),
@@ -4241,72 +4159,6 @@ class Handler(BaseHTTPRequestHandler):
             self._save_theme(user, "#ec9fbe", "pinkfdu")
             return self._json(ok(session=self.auth.profile(user)))
 
-        if path == "/api/schedule/events":
-            user = self._require_user()
-            body = self._read_json()
-            data = self._sched_load()
-            eid = str(body.get("id") or "")
-            old = next((e for e in data.get("events") or [] if str(e.get("id")) == eid), None) if eid else None
-            if old and not self._sched_event_can(user, old, "write"):
-                raise ProjectError("forbidden", "只有创建者或参与者可以修改日程", 403)
-            ev = self._sched_payload(body, old)
-            ev["creator"] = str(old.get("creator")) if old else user
-            if not ev.get("mentions"):
-                ev["mentions"] = [user]
-            now = time.time()
-            ev["updated_at"] = now
-            if old:
-                ev["created_at"] = old.get("created_at") or now
-            else:
-                ev["created_at"] = now
-            for participant in ev.get("participants") or []:
-                conflict = self._sched_conflict(data, ev, participant)
-                if conflict:
-                    raise ProjectError(
-                        "conflict",
-                        "%s 在该时段已有日程「%s」，同一时段只能参与一个日程" % (
-                            participant, conflict.get("title") or "未命名"),
-                        409)
-            try:
-                old_mentions = set(old.get("mentions") or []) if old else set()
-                old_parts = set(old.get("participants") or []) if old else set()
-                for u in [str(x) for x in (ev.get("mentions") or [])]:
-                    if u and u != user and u not in old_mentions:
-                        notification_store.notify(
-                            u, "schedule", "schedule_mention", "日程里提到了你",
-                            "%s 在日程「%s」中提到了你" % (user, ev.get("title") or ""),
-                            "/schedule/", actor=user, meta={"eventId": ev.get("id")})
-                for u in [str(x) for x in (ev.get("participants") or [])]:
-                    if u and u != user and u not in old_parts:
-                        notification_store.notify(
-                            u, "schedule", "schedule_participant", "你被加入了一个日程",
-                            "%s 邀请你参与日程「%s」" % (user, ev.get("title") or ""),
-                            "/schedule/", actor=user, meta={"eventId": ev.get("id")})
-            except Exception:
-                pass
-            if old:
-                data["events"] = [ev if str(e.get("id")) == eid else e for e in data.get("events") or []]
-            else:
-                data.setdefault("events", []).append(ev)
-            with SCHEDULE_LOCK:
-                self._sched_save(data)
-            return self._json(ok(event=ev))
-
-        if path == "/api/schedule/events/delete":
-            user = self._require_user()
-            body = self._read_json()
-            eid = str(body.get("id") or "")
-            data = self._sched_load()
-            old = next((e for e in data.get("events") or [] if str(e.get("id")) == eid), None)
-            if not old:
-                raise ProjectError("not_found", "日程不存在", 404)
-            if not self._sched_event_can(user, old, "delete"):
-                raise ProjectError("forbidden", "只有创建者可以删除日程", 403)
-            data["events"] = [e for e in data.get("events") or [] if str(e.get("id")) != eid]
-            with SCHEDULE_LOCK:
-                self._sched_save(data)
-            return self._json(ok(deleted=eid))
-
         if path == "/api/llm/admin/mineru":
             user = self._require_user()
             if not self.auth.is_admin(user):
@@ -4932,6 +4784,10 @@ class Handler(BaseHTTPRequestHandler):
     def _sched_save_locked(self, data):
         with SCHEDULE_LOCK:
             self._sched_save(data)
+
+    def _sched_courses_save_locked(self, store):
+        with SCHEDULE_COURSES_LOCK:
+            self._sched_store_save(store)
 
     def _serve_mock(self, method):
         try:

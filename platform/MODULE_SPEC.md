@@ -459,3 +459,44 @@ python tools/check_modules.py
 - **v1 · 2026-11-07**：首版。基于 registry/bases/TEMPLATE.md/现有 9 个 module 提炼；
   明确 ERROR/WARN 分级、缺省继承与兜底行为、`path`/`capabilities` 的定性依据；
   配套只读校验器 `tools/check_modules.py`。
+
+## 11. module-local API 与自动视图（v2.1）
+
+### 11.1 module-local API
+
+`projects/<id>/api.py` 可选，用于把专用 HTTP 入口收回 module：
+
+```python
+PREFIXES = ["/api/example/"]
+def handle(handler, method, path, parsed):
+    ...
+    handler._json(ok(...))
+    return True
+```
+
+- Registry 自动加载并注册；
+- server 在旧路由之前按 PREFIXES 匹配；
+- 已迁移：`mock`、`schedule`、`schedule-debug`；
+- 运行期错误会让该 module 进入 registry.errors，不影响其他 module。
+
+### 11.2 自动视图
+
+`view.kind=auto` 现在使用 `static/auto-view.html`，并通过 `static/sdk.js` 的 `KittenProjectView` 提供：
+
+- state / rev 读取；
+- append / remove CRUD；
+- 搜索与刷新。
+
+`scratchpad` 已切换到 auto。
+
+### 11.3 keyed base
+
+新增：
+
+```text
+abstract ← json-doc ← keyed
+                    ↖ coin ← keyed-coin
+```
+
+`KeyedJsonDocProject` / `KeyedCoinProject` 默认按 `items`（可覆盖 merge_field）主键并集合并。  
+`schedule`、`bottle` 使用 `keyed`，`wishpool` 使用 `keyed-coin`。

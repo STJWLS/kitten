@@ -403,3 +403,20 @@ smoke_test.py                新增：custom API 健康检查
 - `wishpool` 前端仍调用 legacy `/api/state`；
 - 所有 custom view 尚未统一 SDK；
 - map / courtyard 的持久化边界未统一。
+
+## 9. 第三批修复（2026-11-27）
+
+- `/api/schedule/courses`、`/api/schedule/venues`、`/api/schedule/events`、
+  `/api/schedule/participants` 已从 `kernel/server.py` 迁到
+  `projects/schedule/api.py`；
+- `/api/schedule/admin/*` 继续由 `projects/schedule-debug/api.py` 处理；
+- 新增 `_sched_save_locked` / `_sched_courses_save_locked`，module API 复用内核锁；
+- 日程页面和四个 API 实测 200；
+- `kernel/server.py` 中不再有 schedule 专用 GET/POST 分支。
+
+仍未完成：
+
+- `ai` 专用路由仍在 `kernel/server.py`；
+- `wishpool` 前端仍走 `/api/state`；
+- custom view 的 SDK 统一；
+- map / courtyard 数据边界。
