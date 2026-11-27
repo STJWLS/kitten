@@ -350,16 +350,29 @@
 
   .tracker-opt { display:flex; align-items:center; gap:7px; margin:8px 0 12px; font-size:12px; color:#d5e3d7; cursor:pointer; }
   .tracker-opt input { accent-color:#c7954b; width:14px; height:14px; }
-  .tracker { flex:0 0 auto; border-top:1px solid rgba(231,210,168,.16); padding:7px 0 0; margin-top:6px; }
-  .tracker.hidden { display:none; }
-  .tracker-head { font-size:11px; color:#ffe7a2; font-weight:700; margin-bottom:5px; display:flex; justify-content:space-between; gap:6px; }
-  .tracker-head span { color:#a9c2b0; font-weight:400; }
-  .tracker-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }
-  .tracker-cell { padding:3px 2px; border-radius:5px; background:rgba(255,255,255,.035); border:1px solid rgba(231,210,168,.12); text-align:center; font-size:8.5px; line-height:1.35; color:#c8d8cb; }
-  .tracker-cell b { display:block; color:#f2e8d3; font-size:9.5px; }
-  .tracker-cell i { display:block; font-style:normal; color:#a9c2b0; font-variant-numeric:tabular-nums; }
-  .tracker-cell.current { border-color:#e7c77d; background:rgba(231,199,125,.14); }
-  .tracker-cell.current b { color:#ffe7a2; }
+  .tracker-window { width:min(780px,94vw); max-height:calc(100dvh - 70px); overflow:auto; padding:16px 18px; border-radius:18px;
+    background:rgba(8,22,17,.97); border:1px solid rgba(231,210,168,.32); color:#e7f0e6; box-shadow:0 22px 70px rgba(0,0,0,.45); }
+  .tracker-window-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+  .tracker-window-head h2 { margin:0; color:#ffe7a2; font:700 21px "Songti SC", serif; letter-spacing:.12em; }
+  .tracker-summary { color:#a9c2b0; font-size:11px; margin-top:3px; }
+  .tracker-list { display:flex; flex-direction:column; gap:6px; }
+  .tracker-set-row { display:grid; grid-template-columns:118px minmax(0,1fr); align-items:center; gap:12px; padding:5px 6px; border-radius:8px; border:1px solid rgba(231,210,168,.10); background:rgba(255,255,255,.025); }
+  .tracker-set-row.current { border-color:rgba(231,199,125,.55); background:rgba(231,199,125,.09); }
+  .tracker-set-name { font-size:12px; color:#f2e8d3; font-weight:700; }
+  .tracker-slots { display:grid; grid-template-columns:repeat(5,38px); gap:5px; align-items:center; min-height:54px; }
+  .tracker-slot { width:38px; height:54px; }
+  .tracker-slot.card { pointer-events:none; }
+  .tracker-prob { height:54px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    border-radius:6px; border:1px dashed rgba(231,199,125,.40); background:rgba(231,199,125,.07); color:#ffe7a2;
+    font-size:14px; font-variant-numeric:tabular-nums; }
+  .tracker-prob small { font-size:8px; color:#a9c2b0; margin-top:1px; letter-spacing:.08em; }
+  @media (max-width: 620px) {
+    .tracker-set-row { grid-template-columns:78px minmax(0,1fr); gap:7px; }
+    .tracker-slots { grid-template-columns:repeat(5,28px); gap:3px; min-height:44px; }
+    .tracker-slot { width:28px; height:44px; }
+    .tracker-window { padding:10px; }
+    .tracker-prob { height:44px; font-size:12px; }
+  }
   /* 底部两栏 */
   .hero-panel { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr); gap:8px 16px; align-items:center; }
   .hero-panel .hero-row { grid-column:1; grid-row:1; margin:0; justify-content:flex-start; }
@@ -497,13 +510,10 @@
         <div class="log-head">
           <h2>牌局记录</h2>
           <button class="ach-btn" id="ach-btn" type="button">🏆 <span id="ach-count">0 / 0</span></button>
+          <button class="ach-btn hidden" id="tracker-btn" type="button">📋 记牌器</button>
         </div>
         <div class="chip-legend" id="chip-legend"></div>
         <div id="log"></div>
-        <div class="tracker hidden" id="tracker">
-          <div class="tracker-head">记牌器 <span id="tracker-current">等待翻牌</span></div>
-          <div class="tracker-grid" id="tracker-grid"></div>
-        </div>
       </aside>
     </div>
   </section>
@@ -516,6 +526,16 @@
   </div>
   <div id="ach-toast"><b id="ach-toast-title"></b><span id="ach-toast-desc"></span></div>
   <div class="chip-tooltip hidden" id="chip-tooltip"></div>
+
+  <div class="modal hidden" id="tracker-modal">
+    <div class="tracker-window">
+      <div class="tracker-window-head">
+        <div><h2>记牌器</h2><div class="tracker-summary" id="tracker-summary">等待翻牌</div></div>
+        <button class="btn btn-poker" id="tracker-close" type="button">关闭</button>
+      </div>
+      <div class="tracker-list" id="tracker-list"></div>
+    </div>
+  </div>
 
   <div class="modal hidden" id="gameover-modal">
     <div class="setup-card">
@@ -1061,55 +1081,128 @@
     { cat: 5, name: "同花" }, { cat: 4, name: "顺子" }, { cat: 3, name: "三条" },
     { cat: 2, name: "两对" }, { cat: 1, name: "一对" }, { cat: 0, name: "高牌" },
   ];
+  const cardKeyOf = (c) => c.r + c.s;
   function trackerCompute() {
     if (!game) return null;
     const hero = game.players[0];
     const hole = hero.hole || [];
     const board = game.board || [];
-    if (hole.length !== 2 || board.length < 3) return null;
+    if (hole.length !== 2) return null;
     const known = hole.concat(board);
-    const key = known.map((c) => c.r + c.s).sort().join("|");
+    const key = known.map(cardKeyOf).sort().join("|");
     if (key === trackerCacheKey && trackerCache) return trackerCache;
-    const knownSet = new Set(known.map((c) => c.r + c.s));
-    const deck = Holdem.makeDeck().filter((c) => !knownSet.has(c.r + c.s));
+    const knownSet = new Set(known.map(cardKeyOf));
+    const deck = Holdem.makeDeck().filter((c) => !knownSet.has(cardKeyOf(c)));
     const need = Math.max(0, 5 - board.length);
     const counts = new Array(9).fill(0);
-    let total = 0;
-    const evalFinal = (extra) => {
+    let total = 0, approx = false;
+    const tally = (extra) => {
       const h = Holdem.bestHand(hole.concat(board).concat(extra));
       if (h) counts[h.cat] += 1;
       total += 1;
     };
-    if (need === 0) evalFinal([]);
-    else if (need === 1) deck.forEach((c) => evalFinal([c]));
+    if (need === 0) tally([]);
+    else if (need === 1) deck.forEach((c) => tally([c]));
     else if (need === 2) {
-      for (let i = 0; i < deck.length - 1; i++) for (let j = i + 1; j < deck.length; j++) evalFinal([deck[i], deck[j]]);
+      for (let i = 0; i < deck.length - 1; i++) for (let j = i + 1; j < deck.length; j++) tally([deck[i], deck[j]]);
+    } else if (need === 3) {
+      for (let i = 0; i < deck.length - 2; i++) for (let j = i + 1; j < deck.length - 1; j++)
+        for (let k = j + 1; k < deck.length; k++) tally([deck[i], deck[j], deck[k]]);
+    } else {
+      // 翻牌前/只发了一张公共牌时用蒙特卡洛，避免 200 万种组合卡住界面。
+      approx = true;
+      const samples = 20000;
+      for (let s = 0; s < samples; s++) {
+        const pool = deck.slice();
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        tally(pool.slice(0, need));
+      }
     }
-    const current = Holdem.bestHand(known);
-    const result = { counts, total, current };
+    const current = known.length >= 5 ? Holdem.bestHand(known) : null;
+    const result = { counts, total, current, approx };
     trackerCacheKey = key;
     trackerCache = result;
     return result;
   }
+  function trackerGroups(cards) {
+    const map = new Map();
+    cards.forEach((c) => { const k = c.r; if (!map.has(k)) map.set(k, []); map.get(k).push(c); });
+    return [...map.values()].sort((a, b) => (b.length - a.length) || (b[0].v - a[0].v));
+  }
+  function trackerContribution(cat, known, current) {
+    if (current && current.cat === cat && current.cards) return current.cards.slice();
+    const groups = trackerGroups(known);
+    const bySuit = {};
+    known.forEach((c) => { (bySuit[c.s] = bySuit[c.s] || []).push(c); });
+    const suits = Object.values(bySuit).sort((a, b) => b.length - a.length);
+    if (cat === 5) return (suits[0] || []).slice(0, 5);
+    if (cat === 8) return (suits[0] || []).slice(0, 5);
+    if (cat === 7) return (groups[0] || []).slice(0, 4);
+    if (cat === 6) {
+      const trip = groups.find((g) => g.length >= 3);
+      const pair = groups.find((g) => g.length >= 2 && g !== trip);
+      return (trip ? trip.slice(0, 3) : []).concat(pair ? pair.slice(0, 2) : []);
+    }
+    if (cat === 3) return (groups[0] || []).slice(0, 3);
+    if (cat === 2) {
+      const pairs = groups.filter((g) => g.length >= 2).slice(0, 2);
+      return pairs.flatMap((g) => g.slice(0, 2));
+    }
+    if (cat === 1) return (groups[0] || []).slice(0, 2);
+    if (cat === 4) {
+      // 选择包含最多已知牌的 5 连张窗口。
+      const vals = [...new Set(known.map((c) => c.v))];
+      let best = [];
+      for (let low = 1; low <= 10; low++) {
+        const window = new Set(Array.from({ length: 5 }, (_, i) => low + i));
+        if (low === 1) window.add(14);
+        const hit = known.filter((c) => window.has(c.v));
+        if (hit.length > best.length) best = hit;
+      }
+      return best.slice(0, 5);
+    }
+    return groups.flatMap((g) => g.slice(0, 1)).slice(0, 5);
+  }
+  function trackerCardsHtml(cards) {
+    return cards.slice(0, 5).map((c) => '<span class="tracker-slot">' + cardHtml(c) + '</span>').join("");
+  }
   function renderTracker() {
-    const box = document.getElementById("tracker");
-    if (!box) return;
-    if (trackerOff || !game) { box.classList.add("hidden"); return; }
-    box.classList.remove("hidden");
+    const btn = document.getElementById("tracker-btn");
+    const modal = document.getElementById("tracker-modal");
+    if (!btn || !modal) return;
+    if (trackerOff || !game) {
+      btn.classList.add("hidden");
+      modal.classList.add("hidden");
+      return;
+    }
+    btn.classList.remove("hidden");
+    if (modal.classList.contains("hidden")) return;
     const result = trackerCompute();
-    const currentEl = document.getElementById("tracker-current");
-    const grid = document.getElementById("tracker-grid");
+    const summary = document.getElementById("tracker-summary");
+    const list = document.getElementById("tracker-list");
     if (!result) {
-      currentEl.textContent = "等待翻牌";
-      grid.innerHTML = TRACKER_HANDS.map((h) => '<div class="tracker-cell"><b>' + h.name + '</b><i>—</i></div>').join("");
+      summary.textContent = "等待发牌";
+      list.innerHTML = TRACKER_HANDS.map((h) => '<div class="tracker-set-row"><div class="tracker-set-name">' + h.name + '</div><div class="tracker-slots"><div class="tracker-prob" style="grid-column:span 5">—</div></div></div>').join("");
       return;
     }
     const currentCat = result.current ? result.current.cat : -1;
-    const currentName = result.current ? result.current.name : "—";
-    currentEl.textContent = "当前最大：" + currentName;
-    grid.innerHTML = TRACKER_HANDS.map((h) => {
+    summary.textContent = (result.current ? "当前最大：" + result.current.name : "等待翻牌") +
+      " · " + (result.approx ? "模拟概率" : "精确概率");
+    list.innerHTML = TRACKER_HANDS.map((h) => {
       const pct = result.total ? (result.counts[h.cat] / result.total * 100) : 0;
-      return '<div class="tracker-cell' + (h.cat === currentCat ? " current" : "") + '"><b>' + h.name + '</b><i>' + pct.toFixed(1) + '%</i></div>';
+      const cards = trackerContribution(h.cat, game.players[0].hole.concat(game.board), result.current);
+      const shown = cards.slice(0, 5);
+      const slotHtml = trackerCardsHtml(shown);
+      const remain = 5 - shown.length;
+      const probHtml = remain > 0
+        ? '<div class="tracker-prob" style="grid-column:span ' + remain + '">' + pct.toFixed(1) + '%<small>概率</small></div>'
+        : "";
+      return '<div class="tracker-set-row' + (h.cat === currentCat ? " current" : "") + '">' +
+        '<div class="tracker-set-name">' + h.name + '</div>' +
+        '<div class="tracker-slots">' + slotHtml + probHtml + '</div></div>';
     }).join("");
   }
   function render() {
@@ -1297,6 +1390,13 @@
   window.__holdem = { get game() { return game; }, startGame, loadAchievements };
   document.getElementById('pot').addEventListener('mouseenter', showPotTooltip);
   document.getElementById('pot').addEventListener('mouseleave', hideChipTooltip);
+  document.getElementById('tracker-btn').addEventListener('click', () => {
+    document.getElementById('tracker-modal').classList.remove('hidden');
+    renderTracker();
+  });
+  document.getElementById('tracker-close').addEventListener('click', () => {
+    document.getElementById('tracker-modal').classList.add('hidden');
+  });
   document.getElementById('ach-btn').onclick = () => { renderAch(); document.getElementById('ach-modal').classList.remove('hidden'); };
   document.getElementById('ach-close').onclick = () => document.getElementById('ach-modal').classList.add('hidden');
   renderChipLegend();
