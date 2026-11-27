@@ -636,11 +636,11 @@
     const avail = (parts.find((p) => p.v === v) || { n: 0 }).n;
     if (selectedCount(v) >= avail) return;
     selectedChips.push(v);
-    render();
+    renderTray();
   }
   function removeChip(v) {
     const i = selectedChips.indexOf(v);
-    if (i >= 0) { selectedChips.splice(i, 1); render(); }
+    if (i >= 0) { selectedChips.splice(i, 1); renderTray(); }
   }
   function clearSelected() { selectedChips = []; }
   function presetTarget(kind) {
@@ -680,7 +680,7 @@
     const chips = pickChipsForNeed(need);
     if (!chips || target <= game.currentBet) return;
     selectedChips = chips.slice();
-    render();
+    renderTray();
   }
   function renderTray() {
     const tray = document.getElementById("bet-tray");
@@ -712,7 +712,7 @@
         b.oncontextmenu = (e) => { e.preventDefault(); removeChip(Number(b.dataset.v)); };
       });
       const clr = document.getElementById("clear-chips");
-      if (clr) clr.onclick = () => { clearSelected(); render(); };
+      if (clr) clr.onclick = () => { clearSelected(); renderTray(); };
       document.querySelectorAll("#raise-presets button").forEach((b) => {
         const target = presetTarget(b.dataset.target);
         const chips = canAct ? pickChipsForNeed(target - hero.bet) : null;
@@ -905,8 +905,8 @@
     const g = game, hero = g.players[0];
     const toCall = Math.max(0, g.currentBet - hero.bet);
     const total = selectedTotal();
-    if (action === 'fold') { clearSelected(); g.act({ type: 'fold' }); render(); return; }
-    if (action === 'check') { clearSelected(); g.act({ type: 'check' }); render(); return; }
+    if (action === 'fold') { clearSelected(); g.act({ type: 'fold' }); return; }
+    if (action === 'check') { clearSelected(); g.act({ type: 'check' }); return; }
     if (action !== 'bet' || total <= 0) return;
     if (toCall > 0) {
       if (total < toCall) return;
@@ -914,7 +914,6 @@
         unlockAch('first_call');
         clearSelected();
         g.act({ type: 'call' });
-        render();
         return;
       }
       const target = hero.bet + total;
@@ -922,7 +921,6 @@
       unlockAch('first_raise');
       clearSelected();
       g.act({ type: 'raise', amount: target });
-      render();
       return;
     }
     const target = hero.bet + total;
@@ -930,7 +928,6 @@
     unlockAch('first_raise');
     clearSelected();
     g.act({ type: 'raise', amount: target });
-    render();
   }
   $('#act-fold').onclick = () => doAct('fold');
   $('#act-check').onclick = () => doAct('check');
