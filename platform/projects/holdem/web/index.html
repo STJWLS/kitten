@@ -417,6 +417,7 @@
   let ACH_STATE = {};
   let ACH_PENDING = [];
   let selectedChips = [];
+  const LAYOUT_DEBUG = new URLSearchParams(location.search).get("layout") === "1";
   let ACH_HELL_IN_HAND = false;
   let ACH_STREAK = 0;
   let ACH_HAND_START_STACK = 0;
@@ -929,8 +930,19 @@
     const seatGap = 18;
     const widthScale = (W - marginX * 2 - (rowMax - 1) * seatGap) / (rowMax * 190);
     const verticalScale = (H - boardH - marginY * 2 - 16) / (2 * 140);
-    const scale = Math.max(0.30, Math.min(0.96, widthScale, verticalScale));
+    let scale = Math.max(0.30, Math.min(0.96, widthScale, verticalScale));
+    // 6-7 人桌在桌面宽度足够时保证一个可读的最小座位尺寸，
+    // 避免因为窗口高度稍矮就被压到很小。
+    if (n <= 7) scale = Math.max(scale, Math.min(0.86, widthScale));
     const seatW = 190 * scale, seatH = 140 * scale;
+    if (LAYOUT_DEBUG) {
+      let dbg = document.getElementById("layout-debug");
+      if (!dbg) { dbg = document.createElement("div"); dbg.id = "layout-debug"; document.body.appendChild(dbg); }
+      dbg.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:999;background:#111;color:#0f0;font:11px/1.55 monospace;padding:6px 8px;border-radius:6px;pointer-events:none";
+      dbg.textContent = "viewport " + innerWidth + "×" + innerHeight + " dpr " + devicePixelRatio + "\n" +
+        "table " + Math.round(W) + "×" + Math.round(H) + " boardH " + Math.round(boardH) + "\n" +
+        "scale " + scale.toFixed(3) + " seat " + seatW.toFixed(1) + "×" + (seatH * 1.0).toFixed(1);
+    }
     const topCount = n - Math.ceil(n / 2);
     const topPlayers = g.players.slice(1, 1 + topCount);
     const bottomAIs = g.players.slice(1 + topCount);
