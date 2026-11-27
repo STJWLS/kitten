@@ -1135,7 +1135,13 @@
     const n = g.players.length;
     const marginX = 18, marginY = 18;
     const boardH = Math.max(160, document.querySelector('.board-center').getBoundingClientRect().height || 195);
-    const rowMax = Math.max(3, Math.ceil(n / 2), Math.ceil((n - (n >= 8 && W > 900 ? 2 : 0)) / 2));
+    // 端座不参与上下排宽度约束：先决定两排人数，再用真实最大排数算座位宽度。
+    const useEnds = n >= 8 && W > 900;
+    const endCount = useEnds ? 2 : 0;
+    const rowTotal = n - endCount;
+    const topCount = Math.ceil(rowTotal / 2);
+    const bottomCount = rowTotal - topCount;
+    const rowMax = Math.max(3, topCount, bottomCount);
     const seatGap = 18;
     // 跑道形桌面两端是圆弧，座位不能按矩形边界贴到左右端角。
     const racetrack = W > 900;
@@ -1162,11 +1168,6 @@
         "scale " + scale.toFixed(3) + " seat " + seatW.toFixed(1) + "×" + (seatH * 1.0).toFixed(1);
     }
     // 8 人以上时把两个人的位置分配到牌桌左右两端。
-    const useEnds = n >= 8 && W > 900;
-    const endCount = useEnds ? 2 : 0;
-    const rowTotal = n - endCount;
-    const topCount = Math.ceil(rowTotal / 2);
-    const bottomCount = rowTotal - topCount;
     const topPlayers = g.players.slice(1, 1 + topCount);
     const remaining = g.players.slice(1 + topCount);
     const bottomAIs = remaining.slice(0, Math.max(0, bottomCount - 1));
