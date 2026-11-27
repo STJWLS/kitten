@@ -152,6 +152,8 @@
   .pile-n { font-size:8px; line-height:1; color:#f0dfbb; margin-top:1px; text-shadow:0 1px 2px #000; }
   .bet-tray-wrap { margin-top:7px; padding-top:6px; border-top:1px solid rgba(231,210,168,.16); }
   .bet-tray-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; color:#b9cbbb; }
+  .tray-actions { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .tray-actions .btn { font-size:11px; padding:5px 9px; }
   .bet-tray-head b { color:#ffe7a2; font-size:14px; font-variant-numeric:tabular-nums; }
   .bet-tray-head .change { color:#9fe1b8; }
   .bet-tray-head .need { color:#e7a19a; }
@@ -407,14 +409,14 @@
             <span id="hero-hole" style="display:flex;gap:4px"></span>
             <span class="hint" id="hero-hint">等待开局</span>
           </div>
-          <div class="controls" id="controls">
-            <button class="btn btn-poker" id="act-fold" type="button">弃牌</button>
-            <button class="btn btn-poker" id="act-check" type="button">过牌</button>
-            <button class="btn btn-poker primary" id="act-bet" type="button">下注</button>
-          </div>
           <div class="bet-tray-wrap" id="bet-tray-wrap">
             <div class="bet-tray-head">
-              <span>选筹码下注</span>
+              <span class="tray-actions" id="controls">
+                <button class="btn btn-poker" id="act-fold" type="button">弃牌</button>
+                <button class="btn btn-poker" id="act-check" type="button">过牌</button>
+                <button class="btn btn-poker" id="act-call-one" type="button">一键跟注</button>
+                <button class="btn btn-poker primary" id="act-bet" type="button">下注</button>
+              </span>
               <span>已选 <b id="selected-total">0</b></span>
               <span id="bet-hint"></span>
               <span class="raise-presets" id="raise-presets">
@@ -831,6 +833,10 @@
     const opening = g.currentBet === 0;
     btn.disabled = !canBet;
     btn.textContent = mode === "call" ? "跟注" : mode === "raise" ? (target >= maxTo ? "全下" : (opening ? "下注" : "加注")) : "下注";
+    const callOne = document.getElementById("act-call-one");
+    const callChips = toCall > 0 ? pickChipsForNeed(Math.min(toCall, hero.stack)) : null;
+    callOne.classList.toggle("hidden", toCall <= 0);
+    callOne.disabled = !canAct || !callChips;
     if (!canAct) hint.innerHTML = '<span class="need">等待行动</span>';
     else if (mode === "short_call") hint.innerHTML = '<span class="need">跟注还差 ' + fmt(toCall - total) + '</span>';
     else if (mode === "call") hint.innerHTML = '<span>自动识别：跟注 ' + fmt(toCall) + '</span>';
@@ -1090,7 +1096,7 @@
     const toCall = Math.max(0, g.currentBet - hero.bet);
     $('#act-check').classList.toggle('hidden', toCall > 0);
     const canAct = g.actor === 0 && g.street !== 'ended' && g.street !== 'showdown' && !hero.folded && !hero.allIn;
-    ['act-fold', 'act-check', 'act-bet'].forEach((id) => { $('#' + id).disabled = !canAct; });
+    ['act-fold', 'act-check', 'act-call-one', 'act-bet'].forEach((id) => { $('#' + id).disabled = !canAct; });
     if (!canAct) selectedChips = [];
     renderTray();
   }
@@ -1103,6 +1109,19 @@
       const action = HoldemAI.decide(game.aiView(p.seat));
       game.act(action);
     }, AI_DELAY + Math.random() * 250);
+  }
+  function oneClickCall() {
+    if (!game || game.actor !== 0) return;
+    const g = game, hero = g.players[0];
+    const toCall = Math.max(0, g.currentBet - hero.bet);
+    if (toCall <= 0) return;
+    const need = Math.min(toCall, hero.stack);
+    const chips = pickChipsForNeed(need);
+    if (!chips) return;
+    unlockAch('first_call');
+    clearSelected();
+    g.act({ type: 'call' });
+    return;
   }
   function doAct(action) {
     if (!game || game.actor !== 0) return;
@@ -1135,6 +1154,7 @@
   }
   $('#act-fold').onclick = () => doAct('fold');
   $('#act-check').onclick = () => doAct('check');
+  $('#act-call-one').onclick = oneClickCall;
   $('#act-bet').onclick = () => doAct('bet');
   $('#set-players').onchange = refreshSetup;
   $('#set-chips').oninput = refreshSetup;
