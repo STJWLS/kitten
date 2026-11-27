@@ -194,7 +194,7 @@
   /* viewport-fit: no page scrolling; only internal log / achievement list scrolls */
   html, body { height: 100%; overflow: hidden; }
   body { margin: 0; }
-  .page { max-width: none; width: 100%; height: 100dvh; min-height: 0; padding: 8px 14px 10px; display: flex; flex-direction: column; overflow: hidden; }
+  .page { max-width: 1666px; margin: 0 auto; width: 100%; height: 100dvh; min-height: 0; padding: 8px 14px 10px; display: flex; flex-direction: column; overflow: hidden; }
   .holdem-head { flex: 0 0 auto; margin-bottom: 6px; }
   #setup-view.section, #game-view.section { flex: 1; min-height: 0; padding: 0; border: 0; box-shadow: none; background: transparent; overflow: hidden; }
   #setup-view { display: flex; align-items: center; justify-content: center; overflow: auto; }
@@ -926,7 +926,8 @@
     const marginX = 18, marginY = 18;
     const boardH = Math.max(160, document.querySelector('.board-center').getBoundingClientRect().height || 195);
     const rowMax = Math.max(3, Math.ceil(n / 2));
-    const widthScale = (W - marginX * 2 - (rowMax - 1) * 8) / (rowMax * 190);
+    const seatGap = 18;
+    const widthScale = (W - marginX * 2 - (rowMax - 1) * seatGap) / (rowMax * 190);
     const verticalScale = (H - boardH - marginY * 2 - 16) / (2 * 140);
     const scale = Math.max(0.30, Math.min(0.96, widthScale, verticalScale));
     const seatW = 190 * scale, seatH = 140 * scale;
@@ -936,7 +937,7 @@
     const mid = Math.floor(bottomAIs.length / 2);
     const bottomPlayers = bottomAIs.slice(0, mid).concat([g.players[0]], bottomAIs.slice(mid));
     const rowXs = (count) => {
-      if (count <= 1) return [(marginX + W - marginX) / 2];
+      if (count <= 1) return [W / 2];
       const left = marginX + seatW / 2;
       const right = W - marginX - seatW / 2;
       const step = (right - left) / (count - 1);
