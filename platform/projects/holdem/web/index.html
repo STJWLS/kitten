@@ -300,6 +300,19 @@
     .seat .meta { display:block; font-size:11.5px; }
     .seat .cards .card { width:34px; height:48px; }
   }
+
+  /* 玩家手牌取消 small 固定缩放：与公共牌使用同一套牌面尺寸 */
+  .seat .cards { gap:5px; min-height:54px; }
+  .seat .cards .card { width:38px; height:54px; font-size:15px; }
+  .seat .cards .card .rank { font-size:15px; }
+  .seat .cards .card .suit { font-size:12px; }
+  .seat .cards .card.ace .rank { font-size:24px; }
+  .seat .cards .card.king .rank,
+  .seat .cards .card.queen .rank,
+  .seat .cards .card.jack .rank { font-size:19px; }
+  @media (max-width: 620px) {
+    .seat .cards .card { width:38px; height:54px; font-size:15px; }
+  }
 </style>
 </head>
 <body data-project="holdem">
@@ -947,7 +960,7 @@
     const safeW = Math.max(200, W - 2 * (marginX + racetrackInset));
     const widthScale = (safeW - (rowMax - 1) * seatGap) / (rowMax * 190);
     const verticalScale = (H - boardH - marginY * 2 - 16) / (2 * 140);
-    let scale = Math.max(0.30, Math.min(0.96, widthScale, verticalScale));
+    let scale = Math.max(0.30, Math.min(1.0, widthScale, verticalScale));
     // 6-7 人桌在桌面宽度足够时保证一个可读的最小座位尺寸，
     // 避免因为窗口高度稍矮就被压到很小。
     if (n <= 7) scale = Math.max(scale, Math.min(0.86, widthScale));
@@ -981,11 +994,11 @@
       seat.style.left = x + 'px';
       seat.style.top = y + 'px';
       seat.style.transform = 'translate(-50%,-50%) scale(' + scale + ')';
-      const hole = p.hole && p.hole.length ? p.hole.map((c) => cardHtml(c, 'small')).join('') : backCard('small') + backCard('small');
+      const hole = p.hole && p.hole.length ? p.hole.map((c) => cardHtml(c)).join('') : backCard() + backCard();
       seat.innerHTML = '<div class="nm"><span>' + p.name + '</span><span>' + (p.isHuman ? 'YOU' : p.difficultyLabel) + '</span></div>' +
         '<div class="stk">' + fmt(p.stack) + '</div>' +
         '<div class="meta">' + (p.folded ? '已弃牌' : p.allIn ? 'ALL-IN' : p.acted ? '已行动' : '') + (p.bet ? ' · 注 ' + fmt(p.bet) : '') + '</div>' +
-        '<div class="cards">' + (p.isHuman || g.street === 'showdown' ? hole : backCard('small') + backCard('small')) + '</div>' +
+        '<div class="cards">' + (p.isHuman || g.street === 'showdown' ? hole : backCard() + backCard()) + '</div>' +
         (i === g.dealer ? '<span class="dealer">D</span>' : '');
       seat.dataset.seat = String(p.seat);
       seat.addEventListener('mouseenter', () => showChipTooltip(p.seat, seat));
