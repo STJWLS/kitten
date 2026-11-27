@@ -923,13 +923,13 @@
     // 用稳定外框尺寸计算，避免第一次渲染时如果布局尚未完成导致座位先大后小。
     const W = tableBox.width - 20, H = tableBox.height - 20;
     const n = g.players.length;
-    const marginX = 24, marginY = 24;
+    const marginX = 18, marginY = 18;
     const boardH = Math.max(160, document.querySelector('.board-center').getBoundingClientRect().height || 195);
     const rowMax = Math.max(3, Math.ceil(n / 2));
     const widthScale = (W - marginX * 2 - (rowMax - 1) * 8) / (rowMax * 190);
-    const verticalScale = (H - boardH - marginY * 2 - 16) / (2 * 150);
+    const verticalScale = (H - boardH - marginY * 2 - 16) / (2 * 140);
     const scale = Math.max(0.30, Math.min(0.96, widthScale, verticalScale));
-    const seatW = 190 * scale, seatH = 150 * scale;
+    const seatW = 190 * scale, seatH = 140 * scale;
     const topCount = n - Math.ceil(n / 2);
     const topPlayers = g.players.slice(1, 1 + topCount);
     const bottomAIs = g.players.slice(1 + topCount);
@@ -943,7 +943,7 @@
       return Array.from({ length: count }, (_, i) => left + step * i);
     };
     const topY = marginY + seatH / 2;
-    const bottomY = H - marginY - seatH / 2 - 24;
+    const bottomY = H - marginY - seatH / 2;
     const makeSeat = (p, i, x, y) => {
       const seat = document.createElement('div');
       seat.className = 'seat' + (i === 0 ? ' you' : '') + (i === g.actor && g.street !== 'ended' && g.street !== 'showdown' ? ' active' : '') + (p.folded ? ' folded' : '') + (p.allIn ? ' allin' : '');
