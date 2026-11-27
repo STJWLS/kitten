@@ -313,6 +313,38 @@
   @media (max-width: 620px) {
     .seat .cards .card { width:38px; height:54px; font-size:15px; }
   }
+
+  /* 统一牌面：同字号、同边框、同背景；A/J/Q/K 只保留花色装饰，不放大字号 */
+  .card { position:relative; width:38px; height:54px; border-radius:6px; overflow:hidden;
+    background:
+      radial-gradient(circle at 28% 20%, rgba(255,255,255,.96), rgba(255,255,255,0) 42%),
+      repeating-linear-gradient(135deg, rgba(168,145,105,.055) 0 2px, rgba(168,145,105,0) 2px 5px),
+      linear-gradient(150deg, #fffdf8 0%, #f6ecd9 100%);
+    color:#211d18; border:1px solid #cdbb9b;
+    box-shadow:0 2px 5px rgba(0,0,0,.20), inset 0 0 0 1px rgba(255,255,255,.55);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font:700 15px/1.05 "Times New Roman", Georgia, serif; }
+  .card::before { content:""; position:absolute; inset:3px; border:1px solid currentColor; opacity:.16; border-radius:3px; pointer-events:none; }
+  .card::after { content:""; position:absolute; inset:5px; border:1px dotted currentColor; opacity:.10; border-radius:2px; pointer-events:none; }
+  .card.back { background:repeating-linear-gradient(135deg,#9b3d38 0 4px,#b9554d 4px 8px); border-color:#6e2825; color:transparent; }
+  .card.back::before, .card.back::after, .card.empty::before, .card.empty::after { display:none; }
+  .card.empty { background:rgba(255,255,255,.06); border:1px dashed rgba(255,255,255,.22); box-shadow:none; }
+  .card .rank { display:block; font:800 18px/.95 Georgia, "Times New Roman", serif; letter-spacing:0; color:inherit; }
+  .card .suit { display:block; font-size:13px; line-height:1; margin-top:2px; color:inherit; }
+  .card .ornament { position:absolute; top:2px; right:3px; font-size:8px; line-height:1; color:currentColor; opacity:.48; }
+  .card.ace .rank, .card.king .rank, .card.queen .rank, .card.jack .rank,
+  .card.small .rank, .card.small.ace .rank, .card.small.king .rank, .card.small.queen .rank, .card.small.jack .rank { font-size:18px; letter-spacing:0; }
+  .card.ace .suit, .card.king .suit, .card.queen .suit, .card.jack .suit,
+  .card.small .suit, .card.small.ace .suit, .card.small.king .suit, .card.small.queen .suit, .card.small.jack .suit { font-size:13px; margin-top:2px; }
+  .card.ace::before, .card.king::before, .card.queen::before, .card.jack::before { content:""; position:absolute; inset:3px; border:1px solid currentColor; opacity:.16; border-radius:3px; }
+  .card.small { width:38px; height:54px; }
+  .community .card, .seat .cards .card { width:38px; height:54px; }
+  @media (max-width: 620px) {
+    .card, .community .card, .seat .cards .card { width:32px; height:46px; }
+    .card .rank { font-size:15px; }
+    .card .suit { font-size:11px; }
+    .card.ace .rank, .card.king .rank, .card.queen .rank, .card.jack .rank { font-size:15px; }
+  }
 </style>
 </head>
 <body data-project="holdem">
@@ -535,7 +567,9 @@
     if (!card) return '<span class="card empty ' + (cls || '') + '"></span>';
     const red = card.s === 'h' || card.s === 'd';
     const honor = ({A:'ace', K:'king', Q:'queen', J:'jack'})[card.r] || '';
+    const ornament = ({A:'✦', K:'♚', Q:'♛', J:'♞'})[card.r] || '';
     return '<span class="card ' + (red ? 'red ' : '') + honor + (honor ? ' ' : '') + (cls || '') + '">' +
+      '<span class="ornament">' + ornament + '</span>' +
       '<span class="rank">' + card.r + '</span><span class="suit">' + (Holdem.SUIT_NAME[card.s] || card.s) + '</span></span>';
   }
   function backCard(cls) { return '<span class="card back ' + (cls || '') + '"></span>'; }
