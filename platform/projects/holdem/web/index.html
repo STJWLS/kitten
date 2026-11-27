@@ -70,7 +70,7 @@
   .ai-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin:10px 0; }
   .ai-item { display:flex; align-items:center; gap:7px; font-size:11px; color:#d5e3d7; background:rgba(255,255,255,.04); border:1px solid rgba(231,210,168,.14); border-radius:9px; padding:6px 8px; }
   .ai-item span { flex:1; }
-  .ai-item select { width:96px; }
+  .ai-item select { width:130px; }
   .modal .setup-card { margin: 5vh auto; }
   .gameover { color:#ffe7a2; }
   .hidden { display:none !important; }
@@ -106,7 +106,7 @@
   <section class="section hidden" id="setup-view">
     <div class="setup-card">
       <h2>开局设置</h2>
-      <p>牌桌人数 6–10 人。每位 AI 只能读取自己的手牌、公共牌和公开下注信息，不会看到其他玩家的手牌或牌堆。</p>
+      <p>牌桌人数 6–10 人。每位 AI 只能读取自己的手牌、公共牌和公开下注信息，不会看到其他玩家的手牌或牌堆。AI 难度越高，胜率模拟次数越多。</p>
       <div class="setup-grid">
         <label>牌桌人数
           <select id="set-players" class="select">
@@ -228,7 +228,8 @@
       item.innerHTML = '<span>AI ' + i + '</span><select class="select" data-seat="' + i + '">' +
         ['easy:简单', 'medium:中等', 'hard:困难', 'hell:地狱'].map((x) => {
           const [v, label] = x.split(':');
-          return '<option value="' + v + '"' + ((current[i] || 'medium') === v ? ' selected' : '') + '>' + label + '</option>';
+          const iters = (window.HoldemAI && HoldemAI.ITERATIONS[v]) || 0;
+          return '<option value="' + v + '"' + ((current[i] || 'medium') === v ? ' selected' : '') + '>' + label + ' · ' + iters + ' 次</option>';
         }).join('') + '</select>';
       list.appendChild(item);
     }

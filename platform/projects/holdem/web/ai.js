@@ -20,13 +20,31 @@
     }
     return a;
   }
+  // 难度越高，胜率模拟次数越多；河牌单挑时可以直接精确枚举对手两张牌。
+  const ITERATIONS = { easy: 16, medium: 120, hard: 480, hell: 1600 };
+  function exactRiverEquity(view) {
+    const known = new Set(view.hole.concat(view.board).map(key));
+    const deck = makeDeck().filter((c) => !known.has(key(c)));
+    const mine = Holdem.bestHand(view.hole.concat(view.board));
+    let score = 0, total = 0;
+    for (let i = 0; i < deck.length - 1; i++) for (let j = i + 1; j < deck.length; j++) {
+      const other = Holdem.bestHand([deck[i], deck[j]].concat(view.board));
+      const cmp = Holdem.compareRank(mine, other);
+      total++;
+      if (cmp > 0) score += 1;
+      else if (cmp === 0) score += 0.5;
+    }
+    return total ? score / total : 0.5;
+  }
   function equity(view, iterations) {
     const known = new Set(view.hole.concat(view.board).map(key));
     const base = makeDeck().filter((c) => !known.has(key(c)));
     const opponents = view.players.filter((p) => p.seat !== view.seat && !p.folded);
     if (!opponents.length) return 1;
+    const exact = view.board.length === 5 && opponents.length === 1 && iterations >= 400;
+    const sims = exact ? 0 : Math.max(1, iterations);
     let score = 0;
-    for (let it = 0; it < iterations; it++) {
+    for (let it = 0; it < sims; it++) {
       const deck = base.slice();
       shuffle(deck);
       let cursor = 0;
@@ -44,7 +62,7 @@
       if (best === mine && !tie) score += 1;
       else if (tie && Holdem.compareRank(mine, best) === 0) score += 0.5;
     }
-    return score / iterations;
+    return exact ? exactRiverEquity(view) : score / sims;
   }
   function canRaise(view) {
     return view.maxRaiseTo > view.currentBet && view.maxRaiseTo >= view.minRaiseTo;
@@ -62,7 +80,7 @@
     const toCall = view.toCall || 0;
     const pot = Math.max(view.pot, view.bb);
     const potOdds = toCall > 0 ? toCall / (pot + toCall) : 0;
-    const iters = diff === "hell" ? 260 : diff === "hard" ? 180 : diff === "medium" ? 110 : 55;
+    const iters = ITERATIONS[diff] || ITERATIONS.medium;
     const eq = equity(view, iters);
     const canBet = canRaise(view);
     const canCheck = toCall === 0;
@@ -95,5 +113,5 @@
     }
     return { type: "check" };
   }
-  window.HoldemAI = { decide, equity };
+  window.HoldemAI = { decide, equity, ITERATIONS };
 })();

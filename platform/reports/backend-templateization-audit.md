@@ -619,3 +619,13 @@ smoke_test.py                新增：custom API 健康检查
 - 游戏结束条件：任意玩家在一手结束后筹码为 0。
 - 生成 `KittenPuppy4Ever/games/holdem/index.html` 路径壳，但模块隐藏，不显示在游戏中心。
 - `check_modules`：11 PASS / 0 FAIL / 0 WARN。
+
+## 22. 德州扑克 AI 难度算力分层
+
+- easy：16 次胜率模拟
+- medium：120 次
+- hard：480 次
+- hell：1600 次
+- 河牌单挑且模拟次数足够时，使用精确枚举（C(45,2)=990 种对手手牌）
+- 模拟只使用自己的手牌、公共牌和公开信息；不读取牌堆或其他玩家手牌
+- setup 中直接显示每个难度的模拟次数
