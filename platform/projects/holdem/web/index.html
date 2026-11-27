@@ -114,8 +114,8 @@
   /* chips */
   .chip-legend { display:flex; gap:7px; align-items:center; flex-wrap:wrap; margin:4px 0 0; }
   .chip-legend .lbl { font-size:9px; color:#8fa99a; letter-spacing:.08em; margin-right:2px; }
-  .chip { width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
-    font-size:7.5px; font-weight:800; color:#1c1710; border:2px solid rgba(255,255,255,.35);
+  .chip { width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+    font-size:8.5px; font-weight:800; color:#1c1710; border:2px solid rgba(255,255,255,.35);
     box-shadow:inset 0 0 0 1px rgba(0,0,0,.28), 0 1px 2px rgba(0,0,0,.25); flex:none; }
   .chip.v10 { background:#e9e1d2; }
   .chip.v20 { background:#5e9bd8; color:#fff; }
@@ -124,34 +124,36 @@
   .chip.v200 { background:#a276c2; color:#fff; }
   .chip.v500 { background:#d8784c; color:#fff; }
   .chip.v1000 { background:#d8b44e; }
-  .chip-legend .chip { width:23px; height:23px; font-size:6.5px; }
+  .chip-legend .chip { width:27px; height:27px; font-size:7px; }
   .chip-stack { display:flex; align-items:center; gap:3px; flex-wrap:wrap; margin-top:3px; }
-  .chip-stack .chip { width:15px; height:15px; font-size:6px; border-width:1px; }
+  .chip-stack .chip { width:17px; height:17px; font-size:6.5px; border-width:1px; }
   .chip-stack .cnt { font-size:9px; color:#f0dfbb; margin-right:1px; }
   .seat-chips { display:flex; gap:2px; margin-top:3px; min-height:14px; align-items:center; }
-  .seat-chips .chip { width:15px; height:15px; font-size:5.5px; border-width:1px; }
+  .seat-chips .chip { width:17px; height:17px; font-size:6px; border-width:1px; }
   .seat .bet-chips { position:absolute; right:6px; bottom:10px; display:flex; gap:1px; }
-  .seat .bet-chips .chip { width:12px; height:12px; font-size:4.5px; border-width:1px; }
-  .pot-chips { position:relative; width:min(260px,70%); height:36px; margin:0 auto 4px; }
-  .pot-chips .chip { position:absolute; width:17px; height:17px; font-size:5.5px; border-width:1px; }
+  .seat .bet-chips .chip { width:14px; height:14px; font-size:5px; border-width:1px; }
+  .pot-chips { position:relative; width:min(300px,72%); height:44px; margin:0 auto 4px; }
+  .pot-chips .chip { position:absolute; width:21px; height:21px; font-size:6px; border-width:1px; }
   .pot-more { position:absolute; right:0; bottom:-2px; font-size:8px; color:#e7c77d; }
-  .seat-chips { display:flex; gap:2px; align-items:flex-end; min-height:28px; margin-top:3px; }
-  .chip-pile { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; width:16px; min-height:24px; }
+  .seat-chips { display:flex; gap:1px; align-items:flex-end; min-height:34px; margin-top:3px; overflow:hidden; max-width:100%; }
+  .chip-pile { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; width:18px; min-height:28px; }
   .pile-discs { display:flex; flex-direction:column-reverse; align-items:center; justify-content:flex-start; }
-  .pile-disc { display:block; width:15px; height:4px; border-radius:50%; margin-top:-1px; border:1px solid rgba(255,255,255,.28); box-shadow:0 1px 0 rgba(0,0,0,.28); }
-  .pile-n { font-size:7px; line-height:1; color:#f0dfbb; margin-top:1px; text-shadow:0 1px 2px #000; }
+  .pile-disc { display:block; width:17px; height:5px; border-radius:50%; margin-top:-1px; border:1px solid rgba(255,255,255,.28); box-shadow:0 1px 0 rgba(0,0,0,.28); }
+  .pile-n { font-size:8px; line-height:1; color:#f0dfbb; margin-top:1px; text-shadow:0 1px 2px #000; }
   .bet-tray-wrap { margin-top:7px; padding-top:6px; border-top:1px solid rgba(231,210,168,.16); }
   .bet-tray-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; color:#b9cbbb; }
   .bet-tray-head b { color:#ffe7a2; font-size:14px; font-variant-numeric:tabular-nums; }
   .bet-tray-head .change { color:#9fe1b8; }
   .bet-tray-head .need { color:#e7a19a; }
-  .bet-tray { display:flex; align-items:center; gap:7px; flex-wrap:wrap; min-height:44px; margin-top:4px; }
+  .bet-tray { display:flex; align-items:center; gap:7px; flex-wrap:wrap; min-height:52px; margin-top:4px; }
   .tray-chip { position:relative; display:flex; flex-direction:column; align-items:center; gap:1px; padding:2px 4px 1px; border-radius:9px;
     border:1px solid rgba(231,210,168,.18); background:rgba(255,255,255,.035); cursor:pointer; user-select:none; }
   .tray-chip:hover { border-color:rgba(231,185,106,.55); background:rgba(255,255,255,.07); }
   .tray-chip.selected { border-color:#e7c77d; background:rgba(231,199,125,.16); }
-  .tray-chip .chip { width:28px; height:28px; font-size:8px; }
-  .tray-chip .cnt { font-size:8px; color:#d5e3d7; }
+  .tray-chip:disabled { opacity:.28; filter:grayscale(1); cursor:not-allowed; }
+  .tray-chip.empty { opacity:.22; filter:grayscale(1); }
+  .tray-chip .chip { width:36px; height:36px; font-size:9.5px; }
+  .tray-chip .cnt { font-size:9px; color:#d5e3d7; }
   .tray-chip .sel { position:absolute; right:-4px; top:-5px; min-width:14px; height:14px; padding:0 3px; border-radius:999px;
     background:#c7954b; color:#1d160d; font-size:8px; font-weight:800; display:flex; align-items:center; justify-content:center; }
   .raise-presets { display:flex; gap:4px; margin-left:auto; }
@@ -160,7 +162,7 @@
   .raise-presets button:hover { border-color:#e7c77d; color:#ffe7a2; }
   .chip-layer { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:30; }
   .chip-fly { position:absolute; display:flex; flex-wrap:wrap; width:54px; gap:2px; will-change:transform; transition:transform .48s cubic-bezier(.22,.7,.3,1), opacity .48s ease; }
-  .chip-fly .chip { width:18px; height:18px; font-size:6px; }
+  .chip-fly .chip { width:22px; height:22px; font-size:7px; }
   @media (max-width: 620px) {
     .chip-legend { gap:4px; }
     .chip-legend .chip { width:18px; height:18px; font-size:5px; }
@@ -234,15 +236,15 @@
   }
 
   @media (max-width: 620px) {
-    .seat-chips { gap:0; max-width:100%; overflow:hidden; min-height:22px; }
-    .chip-pile { width:12px; min-height:20px; }
+    .seat-chips { gap:0; max-width:100%; overflow:hidden; min-height:26px; }
+    .chip-pile { width:13px; min-height:22px; }
     .chip-pile:nth-child(n+5) { display:none; }
-    .pile-disc { width:11px; height:3px; margin-top:-1px; }
+    .pile-disc { width:12px; height:4px; margin-top:-1px; }
     .pile-n { font-size:6px; }
-    .pot-chips { height:32px; }
-    .pot-chips .chip { width:14px; height:14px; font-size:4.5px; }
-    .bet-tray { gap:4px; min-height:38px; }
-    .tray-chip .chip { width:24px; height:24px; font-size:7px; }
+    .pot-chips { height:36px; }
+    .pot-chips .chip { width:16px; height:16px; font-size:4.5px; }
+    .bet-tray { gap:4px; min-height:44px; }
+    .tray-chip .chip { width:30px; height:30px; font-size:8px; }
     .tray-chip { padding:1px 2px; }
     .tray-chip .cnt { font-size:7px; }
     .raise-presets button { font-size:8px; padding:1px 4px; }
@@ -609,13 +611,20 @@
     const minTo = g.minRaiseTo();
     const total = selectedTotal();
     const parts = chipBreakdown(hero.stack);
-    if (!canAct) { tray.innerHTML = '<span class="need">等待你的回合</span>'; presets.querySelectorAll("button").forEach((b) => b.disabled = true); }
-    else {
-      tray.innerHTML = parts.map((c) => {
+    const counts = {};
+    parts.forEach((c) => { counts[c.v] = (counts[c.v] || 0) + c.n; });
+    if (!canAct) {
+      tray.innerHTML = '<span class="need">等待你的回合</span>';
+      presets.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+    } else {
+      // 缺门的面额也保留按钮，只变灰，不消失。
+      tray.innerHTML = CHIP_SET.slice().reverse().map((c) => {
+        const have = counts[c.v] || 0;
         const used = selectedCount(c.v);
-        const avail = c.n - used;
-        return '<button type="button" class="tray-chip' + (used ? " selected" : "") + '" data-v="' + c.v + '"' + (avail <= 0 ? " disabled" : "") + '>' +
-          '<span class="chip v' + c.v + '">' + c.label + '</span><span class="cnt">剩 ' + avail + '</span>' +
+        const avail = have - used;
+        const cls = "tray-chip" + (used ? " selected" : "") + (have === 0 ? " empty" : "");
+        return '<button type="button" class="' + cls + '" data-v="' + c.v + '"' + (avail <= 0 ? " disabled" : "") + '>' +
+          '<span class="chip v' + c.v + '">' + c.label + '</span><span class="cnt">剩 ' + Math.max(0, avail) + '</span>' +
           (used ? '<span class="sel">' + used + '</span>' : '') + '</button>';
       }).join("") + (selectedChips.length ? '<button type="button" class="tray-chip" id="clear-chips"><span class="cnt">清空</span></button>' : "");
       tray.querySelectorAll(".tray-chip[data-v]").forEach((b) => {
@@ -632,24 +641,31 @@
     }
     document.getElementById("selected-total").textContent = fmt(total);
     const hint = document.getElementById("bet-hint");
-    const callChange = toCall > 0 ? total - toCall : 0;
     let target = raiseTarget || (hero.bet + total);
     target = Math.min(maxTo, Math.max(0, target));
-    let needRaise = Math.max(0, target - hero.bet);
-    if (raiseTarget) target = raiseTarget;
-    const canCall = canAct && toCall > 0 && total >= toCall;
-    const canRaise = canAct && total > 0 && (raiseTarget ? total >= needRaise : (total >= minTo - hero.bet)) && target > g.currentBet;
+    const needRaise = Math.max(0, target - hero.bet);
+    const canCall = canAct && toCall > 0 && total === toCall;
+    const canRaise = canAct && total > 0 && (raiseTarget ? total === needRaise : (target > g.currentBet && target >= minTo));
     document.getElementById("act-call").disabled = !canCall;
     document.getElementById("act-raise").disabled = !canRaise;
     document.getElementById("act-raise").textContent = target >= maxTo ? "全下" : "加注";
     if (!canAct) hint.innerHTML = '<span class="need">等待行动</span>';
     else if (raiseTarget) {
-      if (total >= needRaise) hint.innerHTML = '<span class="change">加注到 ' + fmt(raiseTarget) + '，从底池找零 ' + fmt(Math.max(0, total - needRaise)) + '</span>';
-      else hint.innerHTML = '<span class="need">加注还差 ' + fmt(needRaise - total) + '</span>';
+      if (total < needRaise) hint.innerHTML = '<span class="need">加注还差 ' + fmt(needRaise - total) + '</span>';
+      else if (total > needRaise) hint.innerHTML = '<span class="need">多出 ' + fmt(total - needRaise) + '，不支持找零</span>';
+      else hint.innerHTML = '<span>加注到 ' + fmt(raiseTarget) + '</span>';
+    } else if (toCall > 0) {
+      if (total < toCall) hint.innerHTML = '<span class="need">跟注还差 ' + fmt(toCall - total) + '</span>';
+      else if (total > toCall) hint.innerHTML = '<span class="need">多出 ' + fmt(total - toCall) + '，不支持找零</span>';
+      else hint.innerHTML = '<span>跟注 ' + fmt(toCall) + '</span>';
+    } else if (total <= 0) {
+      hint.innerHTML = '<span>请选筹码</span>';
+    } else {
+      const noPresetTarget = hero.bet + total;
+      if (noPresetTarget < minTo) hint.innerHTML = '<span class="need">至少加注到 ' + fmt(minTo) + '</span>';
+      else if (noPresetTarget <= g.currentBet) hint.innerHTML = '<span class="need">请选更高的加注</span>';
+      else hint.innerHTML = '<span>加注到 ' + fmt(noPresetTarget) + '</span>';
     }
-    else if (toCall > 0 && total < toCall) hint.innerHTML = '<span class="need">跟注还差 ' + fmt(toCall - total) + '</span>';
-    else if (toCall > 0 && total >= toCall) hint.innerHTML = '<span class="change">跟注，从底池找零 ' + fmt(Math.max(0, callChange)) + '</span>';
-    else hint.innerHTML = '<span>加注到 ' + fmt(target) + '</span>';
   }
   function renderChipLegend() {
     const el = document.getElementById("chip-legend");
@@ -801,31 +817,24 @@
     const g = game, hero = g.players[0];
     const toCall = Math.max(0, g.currentBet - hero.bet);
     const total = selectedTotal();
-    let change = 0;
     if (action === 'fold') unlockAch('first_fold');
     if (action === 'check') unlockAch('first_check');
     if (action === 'call') {
-      if (total < toCall) return;
-      change = total - toCall;
+      if (total !== toCall) return;
       unlockAch('first_call');
+      clearSelected();
+      g.act({ type: 'call' });
+      render();
+      return;
     }
     if (action === 'raise') {
       const target = raiseTarget || (hero.bet + total);
       if (target <= g.currentBet || target < g.minRaiseTo()) return;
       const need = target - hero.bet;
-      if (total < need) return;
-      change = total - need;
+      if (total !== need) return;
       unlockAch('first_raise');
       clearSelected();
       g.act({ type: 'raise', amount: target });
-      if (change > 0) animateChips({ seat: 0, amount: change, kind: 'change' });
-      render();
-      return;
-    }
-    if (action === 'call') {
-      clearSelected();
-      g.act({ type: 'call' });
-      if (change > 0) animateChips({ seat: 0, amount: change, kind: 'change' });
       render();
       return;
     }
