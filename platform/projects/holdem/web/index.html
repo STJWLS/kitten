@@ -391,6 +391,21 @@
     .hero-panel .bet-tray { justify-content:flex-start; flex-wrap:wrap; margin-top:4px; }
     .hero-chips { margin-left:auto; }
   }
+
+  /* 手牌与筹码托盘同一行；筹码信息与操作按钮在下一行 */
+  .hero-panel { grid-template-columns:minmax(0,1fr) minmax(0,1.35fr); grid-template-rows:auto auto; align-items:center; }
+  .hero-panel .hero-row { grid-column:1; grid-row:1; justify-content:flex-start; }
+  .hero-panel .bet-tray-wrap { grid-column:2; grid-row:1; display:contents; }
+  .hero-panel .bet-tray { grid-column:2; grid-row:1; justify-content:flex-end; align-items:center; flex-wrap:nowrap; overflow:hidden; margin:0; padding:0; min-height:0; }
+  .hero-panel .bet-tray-head { grid-column:2; grid-row:2; justify-content:flex-end; margin:0; padding:0; border:0; }
+  .hero-panel .hero-chips { grid-column:1; grid-row:2; justify-self:start; text-align:left; margin:0; min-height:0; }
+  @media (max-width: 900px) {
+    .hero-panel { display:flex; flex-direction:column; align-items:stretch; }
+    .hero-panel .bet-tray-wrap { display:block; }
+    .hero-panel .bet-tray { justify-content:flex-start; flex-wrap:wrap; margin-top:4px; }
+    .hero-panel .bet-tray-head { margin-top:4px; justify-content:flex-start; }
+    .hero-panel .hero-chips { margin-top:2px; }
+  }
 </style>
 </head>
 <body data-project="holdem">
@@ -453,10 +468,6 @@
               <span class="hint" id="hero-hole-label">手牌</span>
               <span id="hero-hole" style="display:flex;gap:4px"></span>
             </span>
-            <span class="hero-chips">
-              <span class="hint" id="hero-stack">筹码 —</span>
-              <span class="hint" id="hero-hint">等待开局</span>
-            </span>
           </div>
           <div class="bet-tray-wrap" id="bet-tray-wrap">
             <div class="bet-tray-head">
@@ -475,6 +486,10 @@
               </span>
             </div>
             <div class="bet-tray" id="bet-tray"></div>
+          </div>
+          <div class="hero-chips">
+            <span class="hint" id="hero-stack">筹码 —</span>
+            <span class="hint" id="hero-hint">等待开局</span>
           </div>
         </div>
       </div>
