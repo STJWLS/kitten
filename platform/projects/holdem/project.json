@@ -1,0 +1,27 @@
+{
+  "id": "holdem",
+  "parent": "games",
+  "order": 2,
+  "title": "德州扑克",
+  "icon": "♠️",
+  "desc": "无限注德州扑克：6-10 人牌桌，四种 AI 难度，AI 只能看到自己的手牌和公共牌。",
+  "base": "json-doc",
+  "capabilities": ["state"],
+  "acl": {
+    "read": ["kitten", "puppy"],
+    "write": ["kitten", "puppy"]
+  },
+  "hidden": true,
+  "view": {"kind": "custom", "dir": "web"},
+  "path": "/games/holdem/",
+  "ui": {
+    "template": "#module.game",
+    "theme": {"accent": "#1f6b4f"}
+  },
+  "tags": ["游戏", "扑克", "桌面"],
+  "data": {
+    "kind": "client",
+    "storage": "memory",
+    "note": "牌局状态在页面内存中维护，暂不接入服务端持久化"
+  }
+}

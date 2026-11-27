@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/template.css">
+<title>德州扑克 · KittenPuppy4Ever</title>
+<style>
+  body { background: radial-gradient(circle at 50% 20%, #153b2e, #071b14 70%); }
+  .page { max-width: 1180px; }
+  .holdem-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+  .holdem-head h2 { margin:0; color:#f7edd8; font-size:24px; letter-spacing:.12em; }
+  .holdem-head .sub { color:#b9cbbb; font-size:12px; line-height:1.7; }
+  .holdem-layout { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:14px; align-items:start; }
+  .table-shell { position:relative; min-height:610px; padding:22px; border-radius:26px;
+    background:radial-gradient(ellipse at center, #1f6b4f 0%, #124534 55%, #0a2b21 100%);
+    border:10px solid #5b3a22; box-shadow:inset 0 0 60px rgba(0,0,0,.5), 0 18px 40px rgba(0,0,0,.35); }
+  .felt-ring { position:absolute; inset:32px; border:2px solid rgba(238,218,170,.25); border-radius:50%; pointer-events:none; }
+  .board-center { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(560px,78%); text-align:center; }
+  .pot-line { color:#f0d597; font-size:12px; letter-spacing:.08em; margin-bottom:8px; }
+  .pot-line b { font-size:22px; color:#ffe7a2; }
+  .community { display:flex; justify-content:center; gap:7px; min-height:88px; align-items:center; }
+  .street { color:#bdd6c2; font-size:11px; letter-spacing:.16em; text-transform:uppercase; margin-top:9px; }
+  .seat { position:absolute; width:132px; min-height:92px; padding:7px 8px; border-radius:13px;
+    background:rgba(8,22,17,.78); border:1px solid rgba(231,210,168,.25); color:#e8f0e6;
+    box-shadow:0 8px 20px rgba(0,0,0,.25); transform:translate(-50%,-50%); transition:border-color .2s, box-shadow .2s; }
+  .seat.you { border-color:#e7b96a; box-shadow:0 0 0 1px rgba(231,185,106,.45), 0 8px 20px rgba(0,0,0,.3); }
+  .seat.active { border-color:#8be0ae; box-shadow:0 0 0 1px rgba(139,224,174,.5), 0 0 24px rgba(83,210,143,.22); }
+  .seat.folded { opacity:.45; filter:grayscale(.6); }
+  .seat.allin { border-color:#e07a6a; }
+  .seat .nm { display:flex; justify-content:space-between; gap:4px; font-size:11px; color:#f2e8d3; }
+  .seat .stk { font-size:14px; font-weight:700; color:#ffe7a2; margin-top:2px; }
+  .seat .meta { font-size:9.5px; color:#9eb8a7; margin-top:2px; }
+  .seat .cards { display:flex; gap:2px; margin-top:5px; min-height:25px; }
+  .seat .bet { position:absolute; right:7px; bottom:-10px; font-size:9px; color:#17130d; background:#e7c77d;
+    border-radius:999px; padding:1px 6px; white-space:nowrap; }
+  .seat .dealer { position:absolute; left:-7px; top:-7px; width:18px; height:18px; border-radius:50%;
+    background:#f4eee2; color:#173f30; font-size:9px; display:flex; align-items:center; justify-content:center; font-weight:800; }
+  .card { width:32px; height:46px; border-radius:5px; background:#fffdf8; color:#1b1b1b; border:1px solid #d9cdb8;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; font:700 13px/1.05 "Times New Roman", serif;
+    box-shadow:0 2px 5px rgba(0,0,0,.18); }
+  .card.red { color:#b02a26; }
+  .card.back { background:repeating-linear-gradient(135deg,#9b3d38 0 4px,#b9554d 4px 8px); border-color:#6e2825; color:transparent; }
+  .card.small { width:24px; height:35px; font-size:10px; }
+  .card.empty { background:rgba(255,255,255,.06); border:1px dashed rgba(255,255,255,.22); box-shadow:none; }
+  .hero-panel { margin-top:14px; padding:12px 14px; border-radius:16px; background:rgba(8,22,17,.82); border:1px solid rgba(231,210,168,.22); color:#e8f0e6; }
+  .hero-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .hero-row .who { font-size:13px; font-weight:700; color:#ffe7a2; }
+  .hero-row .hint { font-size:11px; color:#9eb8a7; }
+  .controls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .controls .range { flex:1; min-width:130px; accent-color:#d7b367; }
+  .controls .amount { width:76px; text-align:center; font-variant-numeric:tabular-nums; }
+  .btn-poker { border:1px solid rgba(231,210,168,.4); background:#214d3c; color:#f6ebd4; }
+  .btn-poker.primary { background:#c7954b; border-color:#e2c080; color:#1d160d; font-weight:700; }
+  .btn-poker.danger { background:#632f2b; border-color:#9c5148; }
+  .log-panel { border-radius:16px; background:rgba(8,22,17,.82); border:1px solid rgba(231,210,168,.2); padding:12px; color:#c8d8cb; }
+  .log-panel h2 { margin:0 0 8px; font:600 12px "Songti SC", serif; letter-spacing:.12em; color:#e7c77d; }
+  #log { height:470px; overflow:auto; font-size:11px; line-height:1.7; }
+  #log .hand { color:#e7c77d; border-top:1px dashed rgba(231,210,168,.16); padding-top:5px; margin-top:5px; }
+  #log .win { color:#9fe1b8; }
+  #log .lose { color:#e7a19a; }
+  .setup-card { max-width:700px; margin:0 auto; border-radius:20px; padding:20px; background:rgba(8,22,17,.92);
+    border:1px solid rgba(231,210,168,.28); color:#f3ead9; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+  .setup-card h2 { margin:0 0 4px; font:700 26px "Songti SC", serif; letter-spacing:.14em; color:#ffe7a2; }
+  .setup-card p { color:#9eb8a7; font-size:11.5px; line-height:1.8; }
+  .setup-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:14px 0; }
+  .setup-grid label { font-size:11px; color:#c8d8cb; }
+  .setup-grid input, .setup-grid select { display:block; width:100%; margin-top:4px; }
+  .ai-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin:10px 0; }
+  .ai-item { display:flex; align-items:center; gap:7px; font-size:11px; color:#d5e3d7; background:rgba(255,255,255,.04); border:1px solid rgba(231,210,168,.14); border-radius:9px; padding:6px 8px; }
+  .ai-item span { flex:1; }
+  .ai-item select { width:96px; }
+  .modal .setup-card { margin: 5vh auto; }
+  .gameover { color:#ffe7a2; }
+  .hidden { display:none !important; }
+  @media (max-width: 900px) {
+    .holdem-layout { grid-template-columns:1fr; }
+    .table-shell { min-height:520px; padding:12px; border-width:7px; }
+    .seat { width:110px; min-height:82px; }
+    .seat .cards .card { width:27px; height:39px; }
+    .log-panel { order:2; }
+    #log { height:180px; }
+  }
+  @media (max-width: 620px) {
+    .table-shell { min-height:470px; }
+    .seat { width:94px; min-height:76px; padding:5px; }
+    .seat .stk { font-size:12px; }
+    .seat .cards .card { width:22px; height:32px; font-size:9px; }
+    .board-center { width:90%; }
+    .community .card { width:27px; height:39px; font-size:11px; }
+    .setup-grid, .ai-list { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body data-project="holdem">
+<main class="page">
+  <div class="holdem-head">
+    <div>
+      <h2>德州扑克</h2>
+      <div class="sub">无限注 · 6–10 人 · AI 只能看到自己的手牌与公共牌</div>
+    </div>
+    <div class="sub" id="table-summary">选择一个牌桌开始</div>
+  </div>
+
+  <section class="section hidden" id="setup-view">
+    <div class="setup-card">
+      <h2>开局设置</h2>
+      <p>牌桌人数 6–10 人。每位 AI 只能读取自己的手牌、公共牌和公开下注信息，不会看到其他玩家的手牌或牌堆。</p>
+      <div class="setup-grid">
+        <label>牌桌人数
+          <select id="set-players" class="select">
+            <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+          </select>
+        </label>
+        <label>全桌总筹码
+          <input id="set-chips" class="input" type="number" min="600" step="100" value="6000">
+        </label>
+        <label>小盲 / 大盲
+          <span class="input" id="set-blinds" style="display:block;padding:7px 9px;color:#e7c77d">10 / 20（固定）</span>
+        </label>
+        <label>每人起始筹码
+          <span class="input" id="set-stack" style="display:block;padding:7px 9px;color:#e7c77d">—</span>
+        </label>
+      </div>
+      <div class="sm-label" style="color:#e7c77d">AI 难度</div>
+      <div class="ai-list" id="ai-difficulty-list"></div>
+      <div class="toolbar" style="justify-content:flex-end">
+        <button class="btn btn-poker primary" id="start-game" type="button">开始牌局</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section hidden" id="game-view">
+    <div class="holdem-layout">
+      <div>
+        <div class="table-shell" id="table-shell">
+          <div class="felt-ring"></div>
+          <div class="board-center">
+            <div class="pot-line">底池 <b id="pot">0</b></div>
+            <div class="community" id="community"></div>
+            <div class="street" id="street">PRE-FLOP</div>
+          </div>
+          <div id="seats"></div>
+        </div>
+        <div class="hero-panel">
+          <div class="hero-row">
+            <span class="who" id="hero-name">你</span>
+            <span class="hint" id="hero-stack">筹码 —</span>
+            <span class="hint" id="hero-hole-label">手牌</span>
+            <span id="hero-hole" style="display:flex;gap:4px"></span>
+            <span class="hint" id="hero-hint">等待开局</span>
+          </div>
+          <div class="controls" id="controls">
+            <button class="btn btn-poker" id="act-fold" type="button">弃牌</button>
+            <button class="btn btn-poker" id="act-check" type="button">过牌</button>
+            <button class="btn btn-poker" id="act-call" type="button">跟注</button>
+            <input class="range" id="raise-slider" type="range" min="0" max="0" value="0">
+            <span class="amount" id="raise-amount">0</span>
+            <button class="btn btn-poker primary" id="act-raise" type="button">加注</button>
+          </div>
+        </div>
+      </div>
+      <aside class="log-panel">
+        <h2>牌局记录</h2>
+        <div id="log"></div>
+      </aside>
+    </div>
+  </section>
+
+  <div class="modal hidden" id="gameover-modal">
+    <div class="setup-card">
+      <h2 class="gameover" id="gameover-title">牌局结束</h2>
+      <p id="gameover-text"></p>
+      <div class="toolbar" style="justify-content:flex-end">
+        <button class="btn btn-poker primary" id="gameover-again" type="button">再来一局</button>
+        <button class="btn btn-poker" id="gameover-close" type="button">回到设置</button>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="engine.js"></script>
+<script src="ai.js"></script>
+<script>
+/* UI controller is kept separate from the rules engine and AI policy. */
+(() => {
+  const $ = (s) => document.querySelector(s);
+  let game = null;
+  let AI_DELAY = 650;
+  function cardHtml(card, cls) {
+    if (!card) return '<span class="card empty ' + (cls || '') + '"></span>';
+    const red = card.s === 'h' || card.s === 'd';
+    return '<span class="card ' + (red ? 'red ' : '') + (cls || '') + '"><span>' + card.r + '</span><span>' + (Holdem.SUIT_NAME[card.s] || card.s) + '</span></span>';
+  }
+  function backCard(cls) { return '<span class="card back ' + (cls || '') + '"></span>'; }
+  function fmt(n) { return Number(n || 0).toLocaleString('zh-CN'); }
+  function log(text, cls) {
+    const box = $('#log');
+    const div = document.createElement('div');
+    if (cls) div.className = cls;
+    div.textContent = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+  function logHand(text) {
+    const div = document.createElement('div');
+    div.className = 'hand';
+    div.textContent = text;
+    $('#log').appendChild(div);
+    $('#log').scrollTop = $('#log').scrollHeight;
+  }
+  function totalChips() {
+    const n = Number($('#set-players').value);
+    const total = Math.max(600, Number($('#set-chips').value) || 6000);
+    return { n, total, stack: Math.floor(total / n), remainder: total - Math.floor(total / n) * n };
+  }
+  function refreshSetup() {
+    const { n, total, stack, remainder } = totalChips();
+    $('#set-stack').textContent = fmt(stack) + (remainder ? '（余 ' + remainder + ' 给 1 号位）' : '');
+    $('#table-summary').textContent = n + ' 人桌 · 全桌 ' + fmt(total) + ' 筹码';
+    const list = $('#ai-difficulty-list');
+    const current = {};
+    list.querySelectorAll('select').forEach((s) => { current[s.dataset.seat] = s.value; });
+    list.innerHTML = '';
+    for (let i = 1; i < n; i++) {
+      const item = document.createElement('label');
+      item.className = 'ai-item';
+      item.innerHTML = '<span>AI ' + i + '</span><select class="select" data-seat="' + i + '">' +
+        ['easy:简单', 'medium:中等', 'hard:困难', 'hell:地狱'].map((x) => {
+          const [v, label] = x.split(':');
+          return '<option value="' + v + '"' + ((current[i] || 'medium') === v ? ' selected' : '') + '>' + label + '</option>';
+        }).join('') + '</select>';
+      list.appendChild(item);
+    }
+  }
+  function readDifficulties(n) {
+    const out = {};
+    for (let i = 1; i < n; i++) {
+      const sel = document.querySelector('#ai-difficulty-list select[data-seat="' + i + '"]');
+      out[i] = sel ? sel.value : 'medium';
+    }
+    return out;
+  }
+  function startGame() {
+    const { n, total, stack } = totalChips();
+    if (stack < 100) { alert('每位玩家至少需要 100 筹码'); return; }
+    const diffs = readDifficulties(n);
+    game = new Holdem.Game({
+      players: n,
+      totalChips: total,
+      startingStack: stack,
+      difficulties: diffs,
+      humanName: '你',
+      sb: 10,
+      bb: 20,
+    });
+    $('#setup-view').classList.add('hidden');
+    $('#game-view').classList.remove('hidden');
+    $('#gameover-modal').classList.add('hidden');
+    $('#log').innerHTML = '';
+    game.onUpdate = render;
+    game.onLog = (text, cls) => log(text, cls);
+    game.onHandLog = (text) => logHand(text);
+    game.onGameOver = (info) => showGameOver(info);
+    game.onAiAction = scheduleAi;
+    game.start();
+  }
+  function showGameOver(info) {
+    $('#gameover-title').textContent = info.winner === '你' ? '你赢了' : '牌局结束';
+    $('#gameover-text').textContent = info.text;
+    $('#gameover-modal').classList.remove('hidden');
+  }
+  function render() {
+    if (!game) return;
+    const g = game;
+    $('#pot').textContent = fmt(g.pot + g.players.reduce((s, p) => s + p.bet, 0));
+    $('#street').textContent = g.street.toUpperCase();
+    $('#community').innerHTML = '';
+    for (let i = 0; i < 5; i++) {
+      const box = document.createElement('span');
+      box.innerHTML = cardHtml(g.board[i], '');
+      $('#community').appendChild(box.firstElementChild);
+    }
+    $('#seats').innerHTML = '';
+    const shell = $('#table-shell');
+    const W = shell.clientWidth, H = shell.clientHeight;
+    const cx = W / 2, cy = H / 2 + 10;
+    const rx = Math.min(W * 0.41, 430), ry = Math.min(H * 0.39, 225);
+    g.players.forEach((p, i) => {
+      const a = Math.PI / 2 + (i / g.players.length) * Math.PI * 2;
+      const x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry;
+      const seat = document.createElement('div');
+      seat.className = 'seat' + (i === 0 ? ' you' : '') + (i === g.actor && g.street !== 'ended' && g.street !== 'showdown' ? ' active' : '') + (p.folded ? ' folded' : '') + (p.allIn ? ' allin' : '');
+      seat.style.left = x + 'px'; seat.style.top = y + 'px';
+      const hole = p.hole && p.hole.length ? p.hole.map((c) => cardHtml(c, 'small')).join('') : backCard('small') + backCard('small');
+      seat.innerHTML = '<div class="nm"><span>' + p.name + '</span><span>' + (p.isHuman ? 'YOU' : p.difficultyLabel) + '</span></div>' +
+        '<div class="stk">' + fmt(p.stack) + '</div>' +
+        '<div class="meta">' + (p.folded ? '已弃牌' : p.allIn ? 'ALL-IN' : p.acted ? '已行动' : '') + '</div>' +
+        '<div class="cards">' + (i === 0 || g.street === 'showdown' ? hole : backCard('small') + backCard('small')) + '</div>' +
+        (p.bet ? '<span class="bet">' + fmt(p.bet) + '</span>' : '') +
+        (i === g.dealer ? '<span class="dealer">D</span>' : '');
+      $('#seats').appendChild(seat);
+    });
+    const hero = g.players[0];
+    $('#hero-name').textContent = hero.name;
+    $('#hero-stack').textContent = '筹码 ' + fmt(hero.stack) + ' · 本轮下注 ' + fmt(hero.bet);
+    $('#hero-hole').innerHTML = (hero.hole || []).map((c) => cardHtml(c, '')).join('');
+    $('#hero-hint').textContent = g.street === 'ended' ? '牌局结束' : g.actor === 0 ? '轮到你行动' : '等待其他玩家…';
+    const toCall = Math.max(0, g.currentBet - hero.bet);
+    $('#act-check').classList.toggle('hidden', toCall > 0);
+    $('#act-call').classList.toggle('hidden', toCall <= 0);
+    $('#act-call').textContent = toCall > 0 ? '跟注 ' + fmt(Math.min(toCall, hero.stack)) : '跟注';
+    const canAct = g.actor === 0 && g.street !== 'ended' && g.street !== 'showdown' && !hero.folded && !hero.allIn;
+    ['act-fold', 'act-check', 'act-call', 'act-raise'].forEach((id) => { $('#' + id).disabled = !canAct; });
+    $('#raise-slider').disabled = !canAct;
+    const minTo = g.minRaiseTo();
+    const maxTo = hero.bet + hero.stack;
+    $('#raise-slider').min = minTo;
+    $('#raise-slider').max = Math.max(minTo, maxTo);
+    if (Number($('#raise-slider').value) < minTo || Number($('#raise-slider').value) > maxTo) $('#raise-slider').value = minTo;
+    $('#raise-amount').textContent = fmt(Number($('#raise-slider').value));
+    $('#act-raise').textContent = minTo >= maxTo ? '全下' : '加注';
+  }
+  function scheduleAi() {
+    if (!game || game.street === 'ended' || game.street === 'showdown') return;
+    const p = game.players[game.actor];
+    if (!p || p.isHuman) return;
+    setTimeout(() => {
+      if (!game || game.actor !== p.seat || game.street === 'ended') return;
+      const action = HoldemAI.decide(game.aiView(p.seat));
+      game.act(action);
+    }, AI_DELAY + Math.random() * 250);
+  }
+  function doAct(action) {
+    if (!game || game.actor !== 0) return;
+    if (action === 'raise') {
+      const amount = Number($('#raise-slider').value);
+      game.act({ type: 'raise', amount });
+    } else {
+      game.act({ type: action });
+    }
+  }
+  $('#act-fold').onclick = () => doAct('fold');
+  $('#act-check').onclick = () => doAct('check');
+  $('#act-call').onclick = () => doAct('call');
+  $('#act-raise').onclick = () => doAct('raise');
+  $('#raise-slider').oninput = () => { $('#raise-amount').textContent = fmt($('#raise-slider').value); };
+  $('#set-players').onchange = refreshSetup;
+  $('#set-chips').oninput = refreshSetup;
+  $('#start-game').onclick = startGame;
+  $('#gameover-again').onclick = startGame;
+  $('#gameover-close').onclick = () => { $('#gameover-modal').classList.add('hidden'); $('#game-view').classList.add('hidden'); $('#setup-view').classList.remove('hidden'); refreshSetup(); };
+  window.addEventListener('resize', () => { if (game) render(); });
+  window.__holdem = { get game() { return game; }, startGame };
+  refreshSetup();
+  $('#setup-view').classList.remove('hidden');
+})();
+</script>
+</body>
+</html>

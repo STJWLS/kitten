@@ -606,3 +606,16 @@ smoke_test.py                新增：custom API 健康检查
   - 校验 `SYSTEM.md` 存在。
 - 全模块补齐 `data` 声明，`check_modules` 保持 0 WARN；
 - `/api/system` 实测：10 modules、6 个 API owner、0 errors。
+
+## 21. 新游戏：德州扑克（隐藏模块，未上线）
+
+- 新增 `projects/holdem/`：
+  - `hidden: true`，不进入游戏中心目录；
+  - 6–10 人牌桌；
+  - 总筹码池输入，按人数分配；
+  - 四个 AI 难度：easy / medium / hard / hell；
+  - AI 只通过 `Game.aiView(seat)` 取得自己的手牌、公共牌和公开下注。
+- 规则引擎：`web/engine.js`；AI：`web/ai.js`；UI：`web/index.html`。
+- 游戏结束条件：任意玩家在一手结束后筹码为 0。
+- 生成 `KittenPuppy4Ever/games/holdem/index.html` 路径壳，但模块隐藏，不显示在游戏中心。
+- `check_modules`：11 PASS / 0 FAIL / 0 WARN。

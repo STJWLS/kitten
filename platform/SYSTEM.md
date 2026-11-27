@@ -22,7 +22,7 @@
 platform/
 ├─ kernel/          registry / project / module_api / server / engine / auth
 ├─ bases/           abstract / json-doc / coin / keyed / keyed-coin
-├─ projects/        10 个 module
+├─ projects/        11 个 module（含隐藏 holdem）
 │  └─ <id>/
 │     ├─ project.json
 │     ├─ project.py       可选：Project 子类
@@ -148,7 +148,7 @@ python tools/check_contracts.py
 - 已迁移路由不再出现在 `kernel/server.py`；
 - data.kind 合法；
 - `SYSTEM.md` 存在；
-- 10 个 module 契约可实例化。
+- 11 个 module 契约可实例化。
 
 ## 9. 系统自描述
 
@@ -169,12 +169,12 @@ GET /api/system
 ## 10. 当前状态
 
 ```text
-10 modules
+11 modules
 5 bases
 2 page templates
 6 module-local API owners
-check_modules       10 PASS / 0 FAIL / 0 WARN
-check_contracts     10/10
+check_modules       11 PASS / 0 FAIL / 0 WARN
+check_contracts     11/11
 ```
 
 ## 11. 新增 module 清单
