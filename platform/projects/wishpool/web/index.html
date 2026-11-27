@@ -1179,7 +1179,7 @@ async function init(){
    若本地还有服务端缺失的愿望，则把它推回去。 */
 async function syncNow(){
   try {
-    const r = await fetch("/api/state", {cache:"no-store"});
+    const r = await fetch("/api/wishpool/state", {cache:"no-store"});
     const d = await r.json();
     const localT = (typeof VenueStore !== "undefined") ? VenueStore.metaT() : 0;
     if ((d.t || 0) > localT){

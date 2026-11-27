@@ -560,7 +560,7 @@ var LocalBackend = (function(){
       coins: readCoins(),
       t: VenueStore.metaT ? VenueStore.metaT() : 0
     };
-    fetch(apiUrl("/api/save"), {
+    fetch(apiUrl("/api/wishpool/save"), {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify(payload)
@@ -633,7 +633,7 @@ var LocalBackend = (function(){
     return probe().then(function(ok){
       online = ok;
       if (!ok) return false;
-      return fetch(apiUrl("/api/state"), {cache:"no-store"})
+      return fetch(apiUrl("/api/wishpool/state"), {cache:"no-store"})
         .then(function(r){ return r.json(); })
         .then(function(d){ return adopt(d); })
         .catch(function(){ return false; });

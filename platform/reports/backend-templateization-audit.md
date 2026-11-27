@@ -480,3 +480,18 @@ smoke_test.py                新增：custom API 健康检查
 - `wishpool` 前端 legacy `/api/state`
 - custom view SDK 统一
 - map / courtyard 数据边界
+
+## 13. 第七批修复（2026-11-27）
+
+- 新增 `projects/wishpool/api.py`：
+  - `GET /api/wishpool/state`
+  - `POST /api/wishpool/save`
+- wishpool 页面与 `assets/venues.js` 已不再调用全局 `/api/state`、`/api/save`；
+- 当前许愿池仍使用旧 store 语义，但数据入口已限定到 wishpool module，不再污染全局兼容层；
+- `/api/wishpool/state` 实测 200，页面无 JS 错误。
+
+剩余：
+
+- wishpool 数据形状正式迁移到 kp/1 `wishes/coins` project state；
+- custom view SDK 统一；
+- map / courtyard 数据边界。
