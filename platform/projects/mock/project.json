@@ -26,5 +26,9 @@
     "面试",
     "AI",
     "练习"
-  ]
+  ],
+  "data": {
+    "kind": "proxy",
+    "note": "Mock ASGI 反代，不写项目 doc"
+  }
 }

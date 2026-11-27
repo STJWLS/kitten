@@ -18,5 +18,9 @@
     "kind": "custom",
     "dir": "web"
   },
-  "path": "/ai/"
+  "path": "/ai/",
+  "data": {
+    "kind": "service",
+    "note": "AI 技能、会话、LLM 与文件服务"
+  }
 }

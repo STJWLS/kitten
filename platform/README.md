@@ -63,10 +63,15 @@ platform/
 4. 新增/修改页面模板 → 改 `static/template-tree.json`，运行 `python tools/check_templates.py`；
 5. 专用 HTTP API → 写 `projects/<id>/api.py`（PREFIXES + handle），不要继续往 kernel/server.py 堆路由；
 6. 生成 GitHub Pages 路径壳：`python tools/sync_pages_shells.py`；
-7. 格式门禁：`python tools/check_modules.py` + `python tools/check_contracts.py`，ERROR 必须为 0；
+7. 系统门禁：`python tools/check_system.py`（内含 format/template/contracts + API 归属 + data 边界）；
 8. 部署后做刷新 E2E：GitHub Pages 子页面 200，刷新后 URL 不变且内容仍在。
 
 纯 CRUD 标签页也必须有 `path` 与 Pages 壳；内核自动给 `/p/<id>/` 通用视图与 set/append/remove/reset 动作。
+
+## 系统文档
+
+- `SYSTEM.md`：分层、API 归属、数据边界、门禁与新增 module 清单
+- `GET /api/system`：运行期系统目录（认证后）
 
 ## 设计文档
 

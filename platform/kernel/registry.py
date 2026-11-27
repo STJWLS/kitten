@@ -134,6 +134,14 @@ class Registry:
                 return api
         return None
 
+    def api_catalog(self):
+        """Return module-local API ownership in a stable, machine-readable form."""
+        out = []
+        for api in self.apis:
+            out.append({"project": api.pid, "prefixes": list(api.prefixes)})
+        out.sort(key=lambda x: (x["project"], x["prefixes"]))
+        return out
+
     # ---------------- 树 ----------------
     def get(self, pid: str):
         return self.projects.get(pid)

@@ -3358,6 +3358,39 @@ class Handler(BaseHTTPRequestHandler):
                                                      and self.server.reminder_thread.is_alive()),
                                  engine="kp-engine/1.1"))
 
+        if path == "/api/system":
+            user = self._require_user()
+            modules = []
+            for pid in self.registry.order:
+                spec = self.registry.get(pid).manifest()
+                modules.append({
+                    "id": pid,
+                    "title": spec.get("title") or pid,
+                    "parent": spec.get("parent") or "root",
+                    "path": spec.get("path") or "",
+                    "base": spec.get("base"),
+                    "view": (spec.get("view") or {}).get("kind") or "auto",
+                    "template": (spec.get("ui") or {}).get("template") or "#module",
+                    "data": spec.get("data") or {},
+                    "capabilities": list(spec.get("capabilities") or []),
+                })
+            templates = {}
+            try:
+                with open(os.path.join(self.server.static_dir, "template-tree.json"), encoding="utf-8") as f:
+                    templates = json.load(f)
+            except Exception:
+                templates = {"error": "template-tree.json unavailable"}
+            return self._json(ok(
+                protocol=PROTOCOL,
+                engine="kp-engine/1.1",
+                modules=modules,
+                api=self.registry.api_catalog(),
+                templates=templates,
+                bases=sorted({m.get("base") for m in modules if m.get("base")}),
+                errors=list(self.registry.errors),
+                user=user,
+            ))
+
         if path == "/api/metrics":
             user = self._require_user()
             if self.auth.profile(user).get("role") != "主要维护者" and user != "puppy":

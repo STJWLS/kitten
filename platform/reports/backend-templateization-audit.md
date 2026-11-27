@@ -593,3 +593,16 @@ smoke_test.py                新增：custom API 健康检查
 - `courtyard` 是纯客户端游戏状态（manifest 已声明 `data.kind=client`）。
 
 至此模板化报告中可落地的部分已完成；剩余是这几个特殊视图的深度重构，不再是模板基础设施问题。
+
+## 20. 系统级增强（2026-11-27）
+
+- 新增 `SYSTEM.md`：分层、继承、API 归属、数据边界、门禁、新增 module 清单；
+- 新增 `GET /api/system`：认证后返回模块目录、base/template/data、module API 归属、registry errors；
+- 新增 `tools/check_system.py`：
+  - 运行 format/template/contracts 三个门禁；
+  - 校验 module API 前缀不冲突；
+  - 扫描已迁移路由不再出现在 `kernel/server.py`；
+  - 校验 `data.kind`；
+  - 校验 `SYSTEM.md` 存在。
+- 全模块补齐 `data` 声明，`check_modules` 保持 0 WARN；
+- `/api/system` 实测：10 modules、6 个 API owner、0 errors。

@@ -22,5 +22,9 @@
     "dir": "web"
   },
   "path": "/schedule-debug/",
-  "hidden": true
+  "hidden": true,
+  "data": {
+    "kind": "service",
+    "note": "superadmin 日程调试 API"
+  }
 }
