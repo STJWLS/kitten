@@ -156,10 +156,6 @@
   .tray-chip .cnt { font-size:9px; color:#d5e3d7; }
   .tray-chip .sel { position:absolute; right:-4px; top:-5px; min-width:14px; height:14px; padding:0 3px; border-radius:999px;
     background:#c7954b; color:#1d160d; font-size:8px; font-weight:800; display:flex; align-items:center; justify-content:center; }
-  .raise-presets { display:flex; gap:4px; margin-left:auto; }
-  .raise-presets button { font-size:9px; padding:2px 6px; border-radius:7px; border:1px solid rgba(231,210,168,.25);
-    background:rgba(255,255,255,.04); color:#d5e3d7; cursor:pointer; }
-  .raise-presets button:hover { border-color:#e7c77d; color:#ffe7a2; }
   .chip-layer { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:30; }
   .chip-fly { position:absolute; display:flex; flex-wrap:wrap; width:54px; gap:2px; will-change:transform; transition:transform .48s cubic-bezier(.22,.7,.3,1), opacity .48s ease; }
   .chip-fly .chip { width:22px; height:22px; font-size:7px; }
@@ -261,7 +257,6 @@
     .tray-chip .chip { width:30px; height:30px; font-size:8px; }
     .tray-chip { padding:1px 2px; }
     .tray-chip .cnt { font-size:7px; }
-    .raise-presets button { font-size:8px; padding:1px 4px; }
   }
 </style>
 </head>
@@ -332,19 +327,13 @@
           <div class="controls" id="controls">
             <button class="btn btn-poker" id="act-fold" type="button">弃牌</button>
             <button class="btn btn-poker" id="act-check" type="button">过牌</button>
-            <button class="btn btn-poker" id="act-call" type="button">跟注</button>
-            <button class="btn btn-poker primary" id="act-raise" type="button">加注</button>
+            <button class="btn btn-poker primary" id="act-bet" type="button">下注</button>
           </div>
           <div class="bet-tray-wrap" id="bet-tray-wrap">
             <div class="bet-tray-head">
               <span>选筹码下注</span>
               <span>已选 <b id="selected-total">0</b></span>
               <span id="bet-hint"></span>
-              <span class="raise-presets" id="raise-presets">
-                <button type="button" data-target="min">最小</button>
-                <button type="button" data-target="half">半池</button>
-                <button type="button" data-target="pot">一池</button>
-              </span>
             </div>
             <div class="bet-tray" id="bet-tray"></div>
           </div>
@@ -388,7 +377,6 @@
   let ACH_STATE = {};
   let ACH_PENDING = [];
   let selectedChips = [];
-  let raiseTarget = null;
   let ACH_HELL_IN_HAND = false;
   let ACH_STREAK = 0;
   let ACH_HAND_START_STACK = 0;
@@ -636,21 +624,9 @@
     const i = selectedChips.indexOf(v);
     if (i >= 0) { selectedChips.splice(i, 1); render(); }
   }
-  function clearSelected() { selectedChips = []; raiseTarget = null; }
-  function presetTarget(kind) {
-    if (!game) return 0;
-    const g = game, hero = g.players[0];
-    const maxTo = hero.bet + hero.stack;
-    const pot = g.pot + g.players.reduce((s, p) => s + p.bet, 0);
-    let target;
-    if (kind === "min") target = g.minRaiseTo();
-    else if (kind === "half") target = g.currentBet + Math.max(g.minRaise, Math.round(pot * 0.5 / 10) * 10);
-    else target = g.currentBet + Math.max(g.minRaise, Math.round(pot / 10) * 10);
-    return Math.min(maxTo, Math.max(g.minRaiseTo(), Math.round(target / 10) * 10));
-  }
+  function clearSelected() { selectedChips = []; }
   function renderTray() {
     const tray = document.getElementById("bet-tray");
-    const presets = document.getElementById("raise-presets");
     if (!tray || !game) return;
     const g = game, hero = g.players[0];
     const canAct = g.actor === 0 && g.street !== "ended" && g.street !== "showdown" && !hero.folded && !hero.allIn;
@@ -663,7 +639,6 @@
     parts.forEach((c) => { counts[c.v] = (counts[c.v] || 0) + c.n; });
     if (!canAct) {
       tray.innerHTML = '<span class="need">等待你的回合</span>';
-      presets.querySelectorAll("button").forEach((b) => { b.disabled = true; });
     } else {
       // 缺门的面额也保留按钮，只变灰，不消失。
       tray.innerHTML = CHIP_SET.slice().reverse().map((c) => {
@@ -681,39 +656,29 @@
       });
       const clr = document.getElementById("clear-chips");
       if (clr) clr.onclick = () => { clearSelected(); render(); };
-      presets.querySelectorAll("button").forEach((b) => {
-        b.disabled = false;
-        b.classList.toggle("active", raiseTarget === presetTarget(b.dataset.target));
-        b.onclick = () => { raiseTarget = presetTarget(b.dataset.target); render(); };
-      });
     }
     document.getElementById("selected-total").textContent = fmt(total);
     const hint = document.getElementById("bet-hint");
-    let target = raiseTarget || (hero.bet + total);
-    target = Math.min(maxTo, Math.max(0, target));
-    const needRaise = Math.max(0, target - hero.bet);
-    const canCall = canAct && toCall > 0 && total === toCall;
-    const canRaise = canAct && total > 0 && (raiseTarget ? total === needRaise : (target > g.currentBet && target >= minTo));
-    document.getElementById("act-call").disabled = !canCall;
-    document.getElementById("act-raise").disabled = !canRaise;
-    document.getElementById("act-raise").textContent = target >= maxTo ? "全下" : "加注";
+    const target = hero.bet + total;
+    let mode = "none";
+    if (total > 0 && toCall > 0 && total < toCall) mode = "short_call";
+    else if (total === toCall && toCall > 0) mode = "call";
+    else if (total > 0 && target > g.currentBet && target >= minTo) mode = "raise";
+    else if (total > 0 && total > toCall) mode = "short_raise";
+    else if (total === 0 && toCall === 0) mode = "check";
+    const canBet = canAct && (mode === "call" || mode === "raise");
+    const btn = document.getElementById("act-bet");
+    const opening = g.currentBet === 0;
+    btn.disabled = !canBet;
+    btn.textContent = mode === "call" ? "跟注" : mode === "raise" ? (target >= maxTo ? "全下" : (opening ? "下注" : "加注")) : "下注";
     if (!canAct) hint.innerHTML = '<span class="need">等待行动</span>';
-    else if (raiseTarget) {
-      if (total < needRaise) hint.innerHTML = '<span class="need">加注还差 ' + fmt(needRaise - total) + '</span>';
-      else if (total > needRaise) hint.innerHTML = '<span class="need">多出 ' + fmt(total - needRaise) + '，不支持找零</span>';
-      else hint.innerHTML = '<span>加注到 ' + fmt(raiseTarget) + '</span>';
-    } else if (toCall > 0) {
-      if (total < toCall) hint.innerHTML = '<span class="need">跟注还差 ' + fmt(toCall - total) + '</span>';
-      else if (total > toCall) hint.innerHTML = '<span class="need">多出 ' + fmt(total - toCall) + '，不支持找零</span>';
-      else hint.innerHTML = '<span>跟注 ' + fmt(toCall) + '</span>';
-    } else if (total <= 0) {
-      hint.innerHTML = '<span>请选筹码</span>';
-    } else {
-      const noPresetTarget = hero.bet + total;
-      if (noPresetTarget < minTo) hint.innerHTML = '<span class="need">至少加注到 ' + fmt(minTo) + '</span>';
-      else if (noPresetTarget <= g.currentBet) hint.innerHTML = '<span class="need">请选更高的加注</span>';
-      else hint.innerHTML = '<span>加注到 ' + fmt(noPresetTarget) + '</span>';
-    }
+    else if (mode === "short_call") hint.innerHTML = '<span class="need">跟注还差 ' + fmt(toCall - total) + '</span>';
+    else if (mode === "call") hint.innerHTML = '<span>自动识别：跟注 ' + fmt(toCall) + '</span>';
+    else if (mode === "raise") hint.innerHTML = '<span>自动识别：' + (opening ? '下注到 ' : '加注到 ') + fmt(target) + '</span>';
+    else if (mode === "short_raise") hint.innerHTML = '<span class="need">加注不足，至少选 ' + fmt(minTo - hero.bet) + ' 筹码</span>';
+    else if (mode === "check") hint.innerHTML = '<span>未选筹码，可以过牌</span>';
+    else if (toCall > 0) hint.innerHTML = '<span>请选筹码：跟注 ' + fmt(toCall) + ' 或更多</span>';
+    else hint.innerHTML = '<span>请选筹码下注</span>';
   }
   function renderChipLegend() {
     const el = document.getElementById("chip-legend");
@@ -846,11 +811,9 @@
     $('#hero-hint').textContent = g.street === 'ended' ? '牌局结束' : g.actor === 0 ? '轮到你行动' : '等待其他玩家…';
     const toCall = Math.max(0, g.currentBet - hero.bet);
     $('#act-check').classList.toggle('hidden', toCall > 0);
-    $('#act-call').classList.toggle('hidden', toCall <= 0);
-    $('#act-call').textContent = toCall > 0 ? '跟注' : '跟注';
     const canAct = g.actor === 0 && g.street !== 'ended' && g.street !== 'showdown' && !hero.folded && !hero.allIn;
-    ['act-fold', 'act-check', 'act-call', 'act-raise'].forEach((id) => { $('#' + id).disabled = !canAct; });
-    if (!canAct) { selectedChips = []; raiseTarget = null; }
+    ['act-fold', 'act-check', 'act-bet'].forEach((id) => { $('#' + id).disabled = !canAct; });
+    if (!canAct) selectedChips = [];
     renderTray();
   }
   function scheduleAi() {
@@ -868,35 +831,36 @@
     const g = game, hero = g.players[0];
     const toCall = Math.max(0, g.currentBet - hero.bet);
     const total = selectedTotal();
-    if (action === 'fold') unlockAch('first_fold');
-    if (action === 'check') unlockAch('first_check');
-    if (action === 'call') {
-      if (total !== toCall) return;
-      unlockAch('first_call');
-      clearSelected();
-      g.act({ type: 'call' });
-      render();
-      return;
-    }
-    if (action === 'raise') {
-      const target = raiseTarget || (hero.bet + total);
+    if (action === 'fold') { clearSelected(); g.act({ type: 'fold' }); render(); return; }
+    if (action === 'check') { clearSelected(); g.act({ type: 'check' }); render(); return; }
+    if (action !== 'bet' || total <= 0) return;
+    if (toCall > 0) {
+      if (total < toCall) return;
+      if (total === toCall) {
+        unlockAch('first_call');
+        clearSelected();
+        g.act({ type: 'call' });
+        render();
+        return;
+      }
+      const target = hero.bet + total;
       if (target <= g.currentBet || target < g.minRaiseTo()) return;
-      const need = target - hero.bet;
-      if (total !== need) return;
       unlockAch('first_raise');
       clearSelected();
       g.act({ type: 'raise', amount: target });
       render();
       return;
     }
+    const target = hero.bet + total;
+    if (target <= g.currentBet || target < g.minRaiseTo()) return;
+    unlockAch('first_raise');
     clearSelected();
-    g.act({ type: action });
+    g.act({ type: 'raise', amount: target });
     render();
   }
   $('#act-fold').onclick = () => doAct('fold');
   $('#act-check').onclick = () => doAct('check');
-  $('#act-call').onclick = () => doAct('call');
-  $('#act-raise').onclick = () => doAct('raise');
+  $('#act-bet').onclick = () => doAct('bet');
   $('#set-players').onchange = refreshSetup;
   $('#set-chips').oninput = refreshSetup;
   $('#start-game').onclick = startGame;
