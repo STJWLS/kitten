@@ -85,7 +85,7 @@
       this.minRaise = this.bb;
       this.lastAggressor = -1;
       this.handNo = 0;
-      this.onUpdate = null; this.onLog = null; this.onHandLog = null; this.onGameOver = null; this.onAiAction = null; this.onHandResult = null; this.onHandStart = null; this._lastHandResult = null;
+      this.onUpdate = null; this.onLog = null; this.onHandLog = null; this.onGameOver = null; this.onAiAction = null; this.onHandResult = null; this.onHandStart = null; this.onChipMove = null; this._lastHandResult = null;
       this._over = false;
       for (let i = 0; i < this.playerCount; i++) {
         const diff = i === 0 ? "" : (this.difficulties[i] || "medium");
@@ -151,6 +151,7 @@
       const pay = Math.min(p.stack, amount);
       p.stack -= pay; p.bet += pay; p.contribution += pay;
       if (p.stack === 0) p.allIn = true;
+      if (pay && this.onChipMove) this.onChipMove({ seat, amount: pay, kind: "bet" });
       this.log(p.name + " 下" + label + " " + pay);
     }
     nextSeat(from) {
@@ -216,6 +217,7 @@
         p.stack -= pay; p.bet += pay; p.contribution += pay;
         if (p.stack === 0) p.allIn = true;
         p.acted = true;
+        if (pay && this.onChipMove) this.onChipMove({ seat: i, amount: pay, kind: "bet" });
         this.log(p.name + " 跟注 " + pay);
       } else if (type === "raise") {
         let amount = Number(action.amount);
@@ -228,6 +230,7 @@
         const raiseSize = amount - this.currentBet;
         p.stack -= pay; p.bet += pay; p.contribution += pay;
         if (p.stack === 0) p.allIn = true;
+        if (pay && this.onChipMove) this.onChipMove({ seat: i, amount: pay, kind: "bet" });
         this.currentBet = p.bet;
         this.minRaise = Math.max(this.minRaise, raiseSize);
         this.lastAggressor = i;

@@ -132,8 +132,35 @@
   .seat-chips .chip { width:15px; height:15px; font-size:5.5px; border-width:1px; }
   .seat .bet-chips { position:absolute; right:6px; bottom:10px; display:flex; gap:1px; }
   .seat .bet-chips .chip { width:12px; height:12px; font-size:4.5px; border-width:1px; }
-  .pot-chips { display:flex; justify-content:center; gap:3px; min-height:18px; margin-bottom:2px; }
-  .pot-chips .chip { width:17px; height:17px; font-size:5.5px; border-width:1px; }
+  .pot-chips { position:relative; width:min(260px,70%); height:36px; margin:0 auto 4px; }
+  .pot-chips .chip { position:absolute; width:17px; height:17px; font-size:5.5px; border-width:1px; }
+  .pot-more { position:absolute; right:0; bottom:-2px; font-size:8px; color:#e7c77d; }
+  .seat-chips { display:flex; gap:2px; align-items:flex-end; min-height:28px; margin-top:3px; }
+  .chip-pile { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; width:16px; min-height:24px; }
+  .pile-discs { display:flex; flex-direction:column-reverse; align-items:center; justify-content:flex-start; }
+  .pile-disc { display:block; width:15px; height:4px; border-radius:50%; margin-top:-1px; border:1px solid rgba(255,255,255,.28); box-shadow:0 1px 0 rgba(0,0,0,.28); }
+  .pile-n { font-size:7px; line-height:1; color:#f0dfbb; margin-top:1px; text-shadow:0 1px 2px #000; }
+  .bet-tray-wrap { margin-top:7px; padding-top:6px; border-top:1px solid rgba(231,210,168,.16); }
+  .bet-tray-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; color:#b9cbbb; }
+  .bet-tray-head b { color:#ffe7a2; font-size:14px; font-variant-numeric:tabular-nums; }
+  .bet-tray-head .change { color:#9fe1b8; }
+  .bet-tray-head .need { color:#e7a19a; }
+  .bet-tray { display:flex; align-items:center; gap:7px; flex-wrap:wrap; min-height:44px; margin-top:4px; }
+  .tray-chip { position:relative; display:flex; flex-direction:column; align-items:center; gap:1px; padding:2px 4px 1px; border-radius:9px;
+    border:1px solid rgba(231,210,168,.18); background:rgba(255,255,255,.035); cursor:pointer; user-select:none; }
+  .tray-chip:hover { border-color:rgba(231,185,106,.55); background:rgba(255,255,255,.07); }
+  .tray-chip.selected { border-color:#e7c77d; background:rgba(231,199,125,.16); }
+  .tray-chip .chip { width:28px; height:28px; font-size:8px; }
+  .tray-chip .cnt { font-size:8px; color:#d5e3d7; }
+  .tray-chip .sel { position:absolute; right:-4px; top:-5px; min-width:14px; height:14px; padding:0 3px; border-radius:999px;
+    background:#c7954b; color:#1d160d; font-size:8px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .raise-presets { display:flex; gap:4px; margin-left:auto; }
+  .raise-presets button { font-size:9px; padding:2px 6px; border-radius:7px; border:1px solid rgba(231,210,168,.25);
+    background:rgba(255,255,255,.04); color:#d5e3d7; cursor:pointer; }
+  .raise-presets button:hover { border-color:#e7c77d; color:#ffe7a2; }
+  .chip-layer { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:30; }
+  .chip-fly { position:absolute; display:flex; flex-wrap:wrap; width:54px; gap:2px; will-change:transform; transition:transform .48s cubic-bezier(.22,.7,.3,1), opacity .48s ease; }
+  .chip-fly .chip { width:18px; height:18px; font-size:6px; }
   @media (max-width: 620px) {
     .chip-legend { gap:4px; }
     .chip-legend .chip { width:18px; height:18px; font-size:5px; }
@@ -205,6 +232,21 @@
     .log-panel { height: 92px; flex-basis:92px; }
     .setup-card { padding:12px; }
   }
+
+  @media (max-width: 620px) {
+    .seat-chips { gap:0; max-width:100%; overflow:hidden; min-height:22px; }
+    .chip-pile { width:12px; min-height:20px; }
+    .chip-pile:nth-child(n+5) { display:none; }
+    .pile-disc { width:11px; height:3px; margin-top:-1px; }
+    .pile-n { font-size:6px; }
+    .pot-chips { height:32px; }
+    .pot-chips .chip { width:14px; height:14px; font-size:4.5px; }
+    .bet-tray { gap:4px; min-height:38px; }
+    .tray-chip .chip { width:24px; height:24px; font-size:7px; }
+    .tray-chip { padding:1px 2px; }
+    .tray-chip .cnt { font-size:7px; }
+    .raise-presets button { font-size:8px; padding:1px 4px; }
+  }
 </style>
 </head>
 <body data-project="holdem">
@@ -254,6 +296,7 @@
       <div>
         <div class="table-shell" id="table-shell">
           <div class="felt-ring"></div>
+          <div class="chip-layer" id="chip-layer"></div>
           <div class="board-center">
             <div class="pot-line">底池 <b id="pot">0</b></div>
             <div class="pot-chips" id="pot-chips"></div>
@@ -274,9 +317,20 @@
             <button class="btn btn-poker" id="act-fold" type="button">弃牌</button>
             <button class="btn btn-poker" id="act-check" type="button">过牌</button>
             <button class="btn btn-poker" id="act-call" type="button">跟注</button>
-            <input class="range" id="raise-slider" type="range" min="0" max="0" value="0" step="10">
-            <span class="amount" id="raise-amount">0</span>
             <button class="btn btn-poker primary" id="act-raise" type="button">加注</button>
+          </div>
+          <div class="bet-tray-wrap" id="bet-tray-wrap">
+            <div class="bet-tray-head">
+              <span>选筹码下注</span>
+              <span>已选 <b id="selected-total">0</b></span>
+              <span id="bet-hint"></span>
+              <span class="raise-presets" id="raise-presets">
+                <button type="button" data-target="min">最小</button>
+                <button type="button" data-target="half">半池</button>
+                <button type="button" data-target="pot">一池</button>
+              </span>
+            </div>
+            <div class="bet-tray" id="bet-tray"></div>
           </div>
         </div>
       </div>
@@ -317,6 +371,8 @@
   let ACHIEVEMENTS = [];
   let ACH_STATE = {};
   let ACH_PENDING = [];
+  let selectedChips = [];
+  let raiseTarget = null;
   let ACH_HELL_IN_HAND = false;
   let ACH_STREAK = 0;
   let ACH_HAND_START_STACK = 0;
@@ -381,6 +437,7 @@
   }
   const ACH_CATEGORY = { "一对": "pair", "两对": "two_pair", "三条": "trips", "顺子": "straight", "同花": "flush", "葫芦": "full_house", "四条": "quads", "同花顺": "straight_flush" };
   function onHandStart(info) {
+    clearSelected();
     ACH_HAND_START_STACK = Number(info.humanStartStack) || 0;
     ACH_HELL_IN_HAND = !!(game && game.players.some((p) => p.difficulty === "hell"));
     unlockAch("first_hand");
@@ -420,8 +477,8 @@
   const CHIP_SET = [
     { v: 1000, label: "1K", color: "#d8b44e", cap: 2 },
     { v: 500, label: "500", color: "#d8784c", cap: 1 },
-    { v: 200, label: "200", color: "#a276c2", cap: 2 },
-    { v: 100, label: "100", color: "#34343a", cap: 2 },
+    { v: 200, label: "200", color: "#a276c2", cap: 1 },
+    { v: 100, label: "100", color: "#34343a", cap: 1 },
     { v: 50, label: "50", color: "#5ca66f", cap: 2 },
     { v: 20, label: "20", color: "#5e9bd8", cap: 2 },
     { v: 10, label: "10", color: "#e9e1d2", cap: 5 },
@@ -436,8 +493,12 @@
       if (n > cap) n = cap;
       if (n > 0) { out.push({ ...c, n }); rem -= n * c.v; }
     }
-    // 低面额被 cap 截断后，剩余仍按 10 的整数处理
-    if (rem >= 10) out.push({ v: 10, label: "10", color: "#e9e1d2", n: Math.floor(rem / 10) });
+    // 低面额被 cap 截断后，剩余并入已有的 10 筹码堆
+    if (rem >= 10) {
+      const ten = out.find((c) => c.v === 10);
+      if (ten) ten.n += Math.floor(rem / 10);
+      else out.push({ v: 10, label: "10", color: "#e9e1d2", n: Math.floor(rem / 10) });
+    }
     return out;
   }
   function chipHtml(amount, opts = {}) {
@@ -449,6 +510,146 @@
       '<span class="chip v' + c.v + small + '" title="' + c.v + ' × ' + c.n + '">' + c.label + '</span>' +
       (c.n > 1 ? '<span class="cnt">×' + c.n + '</span>' : '')
     ).join("") + (parts.length > max ? '<span class="cnt">+</span>' : "");
+  }
+  function chipPileHtml(amount) {
+    const parts = chipBreakdown(amount);
+    if (!parts.length) return "";
+    return parts.map((c) => {
+      const shown = Math.min(c.n, 4);
+      const discs = Array.from({ length: shown }, () => '<span class="pile-disc" style="background:' + c.color + '"></span>').join("");
+      return '<span class="chip-pile" title="' + c.v + ' × ' + c.n + '"><span class="pile-discs">' + discs + '</span><span class="pile-n">' + (c.n > 4 ? "4+" : c.n) + '</span></span>';
+    }).join("");
+  }
+  function potScatterHtml(amount) {
+    // 底池要把筹码“散开”而不是只画一个大面额：优先拆成 10/20/50 的小堆。
+    let rem = Math.max(0, Math.floor(Number(amount || 0) / 10) * 10);
+    const vals = [];
+    const mix = [10, 10, 20, 10, 50, 10, 20, 100, 10, 20];
+    let k = 0;
+    while (rem >= 10 && vals.length < 36) {
+      const v = mix[k++ % mix.length];
+      if (rem >= v) { vals.push(v); rem -= v; }
+      else if (rem >= 10) { vals.push(10); rem -= 10; }
+    }
+    const spots = [[-78,-10],[ -52,8],[-28,-13],[-8,11],[14,-9],[36,9],[58,-6],[78,7],[-64,18],[-40,-2],[-14,15],[10,-2],[34,15],[58,17],[76,-12],[-80,20],[-58,-18],[-30,20],[-2,-18],[26,-19],[50,-15],[72,15],[82,-2],[-84,4],[-44,22],[44,22],[0,0],[-20,5],[20,6],[-70,2],[70,-18],[-10,24],[14,24],[-46,-22],[46,-24],[0,-22]];
+    return vals.map((v, i) => {
+      const q = spots[i % spots.length];
+      return '<span class="chip v' + v + ' pot-chip" style="left:calc(50% + ' + q[0] + 'px);top:calc(50% + ' + q[1] + 'px);transform:translate(-50%,-50%) rotate(' + ((i * 37) % 40 - 20) + 'deg)"></span>';
+    }).join("") + (rem >= 10 ? '<span class="pot-more">+' + fmt(rem) + '</span>' : "");
+  }
+  function animateChips(info) {
+    if (!info || !info.amount) return;
+    const layer = document.getElementById("chip-layer");
+    const seats = document.querySelectorAll("#seats .seat");
+    const seat = seats[info.seat];
+    if (!layer || !seat) return;
+    const shellRect = document.getElementById("table-shell").getBoundingClientRect();
+    const seatRect = seat.getBoundingClientRect();
+    const potRect = document.getElementById("pot").getBoundingClientRect();
+    const seatX = seatRect.left + seatRect.width / 2 - shellRect.left;
+    const seatY = seatRect.top + seatRect.height / 2 - shellRect.top;
+    const potX = potRect.left + potRect.width / 2 - shellRect.left;
+    const potY = potRect.top + potRect.height / 2 - shellRect.top;
+    const change = info.kind === "change";
+    const startX = change ? potX : seatX;
+    const startY = change ? potY : seatY;
+    const tx = change ? seatX : potX;
+    const ty = change ? seatY : potY;
+    const fly = document.createElement("div");
+    fly.className = "chip-fly";
+    const parts = chipBreakdown(info.amount);
+    let html = "";
+    let n = 0;
+    parts.forEach((c) => { for (let i = 0; i < Math.min(c.n, info.kind === "change" ? 5 : 4) && n < 10; i++) { html += '<span class="chip v' + c.v + '"></span>'; n++; } });
+    fly.innerHTML = html || '<span class="chip v10"></span>';
+    fly.style.left = startX + "px";
+    fly.style.top = startY + "px";
+    layer.appendChild(fly);
+    requestAnimationFrame(() => {
+      fly.style.transform = "translate(" + (tx - startX) + "px," + (ty - startY) + "px) scale(.72)";
+      fly.style.opacity = "0.2";
+    });
+    setTimeout(() => fly.remove(), 560);
+  }
+  function selectedTotal() { return selectedChips.reduce((s, v) => s + v, 0); }
+  function selectedCount(v) { return selectedChips.filter((x) => x === v).length; }
+  function addChip(v) {
+    if (!game || game.actor !== 0) return;
+    const hero = game.players[0];
+    const parts = chipBreakdown(hero.stack);
+    const avail = (parts.find((p) => p.v === v) || { n: 0 }).n;
+    if (selectedCount(v) >= avail) return;
+    selectedChips.push(v);
+    render();
+  }
+  function removeChip(v) {
+    const i = selectedChips.indexOf(v);
+    if (i >= 0) { selectedChips.splice(i, 1); render(); }
+  }
+  function clearSelected() { selectedChips = []; raiseTarget = null; }
+  function presetTarget(kind) {
+    if (!game) return 0;
+    const g = game, hero = g.players[0];
+    const maxTo = hero.bet + hero.stack;
+    const pot = g.pot + g.players.reduce((s, p) => s + p.bet, 0);
+    let target;
+    if (kind === "min") target = g.minRaiseTo();
+    else if (kind === "half") target = g.currentBet + Math.max(g.minRaise, Math.round(pot * 0.5 / 10) * 10);
+    else target = g.currentBet + Math.max(g.minRaise, Math.round(pot / 10) * 10);
+    return Math.min(maxTo, Math.max(g.minRaiseTo(), Math.round(target / 10) * 10));
+  }
+  function renderTray() {
+    const tray = document.getElementById("bet-tray");
+    const presets = document.getElementById("raise-presets");
+    if (!tray || !game) return;
+    const g = game, hero = g.players[0];
+    const canAct = g.actor === 0 && g.street !== "ended" && g.street !== "showdown" && !hero.folded && !hero.allIn;
+    const toCall = Math.max(0, g.currentBet - hero.bet);
+    const maxTo = hero.bet + hero.stack;
+    const minTo = g.minRaiseTo();
+    const total = selectedTotal();
+    const parts = chipBreakdown(hero.stack);
+    if (!canAct) { tray.innerHTML = '<span class="need">等待你的回合</span>'; presets.querySelectorAll("button").forEach((b) => b.disabled = true); }
+    else {
+      tray.innerHTML = parts.map((c) => {
+        const used = selectedCount(c.v);
+        const avail = c.n - used;
+        return '<button type="button" class="tray-chip' + (used ? " selected" : "") + '" data-v="' + c.v + '"' + (avail <= 0 ? " disabled" : "") + '>' +
+          '<span class="chip v' + c.v + '">' + c.label + '</span><span class="cnt">剩 ' + avail + '</span>' +
+          (used ? '<span class="sel">' + used + '</span>' : '') + '</button>';
+      }).join("") + (selectedChips.length ? '<button type="button" class="tray-chip" id="clear-chips"><span class="cnt">清空</span></button>' : "");
+      tray.querySelectorAll(".tray-chip[data-v]").forEach((b) => {
+        b.onclick = (e) => { e.preventDefault(); addChip(Number(b.dataset.v)); };
+        b.oncontextmenu = (e) => { e.preventDefault(); removeChip(Number(b.dataset.v)); };
+      });
+      const clr = document.getElementById("clear-chips");
+      if (clr) clr.onclick = () => { clearSelected(); render(); };
+      presets.querySelectorAll("button").forEach((b) => {
+        b.disabled = false;
+        b.classList.toggle("active", raiseTarget === presetTarget(b.dataset.target));
+        b.onclick = () => { raiseTarget = presetTarget(b.dataset.target); render(); };
+      });
+    }
+    document.getElementById("selected-total").textContent = fmt(total);
+    const hint = document.getElementById("bet-hint");
+    const callChange = toCall > 0 ? total - toCall : 0;
+    let target = raiseTarget || (hero.bet + total);
+    target = Math.min(maxTo, Math.max(0, target));
+    let needRaise = Math.max(0, target - hero.bet);
+    if (raiseTarget) target = raiseTarget;
+    const canCall = canAct && toCall > 0 && total >= toCall;
+    const canRaise = canAct && total > 0 && (raiseTarget ? total >= needRaise : (total >= minTo - hero.bet)) && target > g.currentBet;
+    document.getElementById("act-call").disabled = !canCall;
+    document.getElementById("act-raise").disabled = !canRaise;
+    document.getElementById("act-raise").textContent = target >= maxTo ? "全下" : "加注";
+    if (!canAct) hint.innerHTML = '<span class="need">等待行动</span>';
+    else if (raiseTarget) {
+      if (total >= needRaise) hint.innerHTML = '<span class="change">加注到 ' + fmt(raiseTarget) + '，从底池找零 ' + fmt(Math.max(0, total - needRaise)) + '</span>';
+      else hint.innerHTML = '<span class="need">加注还差 ' + fmt(needRaise - total) + '</span>';
+    }
+    else if (toCall > 0 && total < toCall) hint.innerHTML = '<span class="need">跟注还差 ' + fmt(toCall - total) + '</span>';
+    else if (toCall > 0 && total >= toCall) hint.innerHTML = '<span class="change">跟注，从底池找零 ' + fmt(Math.max(0, callChange)) + '</span>';
+    else hint.innerHTML = '<span>加注到 ' + fmt(target) + '</span>';
   }
   function renderChipLegend() {
     const el = document.getElementById("chip-legend");
@@ -525,6 +726,7 @@
     game.onHandLog = (text) => logHand(text);
     game.onHandStart = onHandStart;
     game.onHandResult = onHandResult;
+    game.onChipMove = animateChips;
     game.onGameOver = (info) => showGameOver(info);
     game.onAiAction = scheduleAi;
     ACH_STREAK = 0;
@@ -541,7 +743,7 @@
     const g = game;
     const shownPot = g.pot + g.players.reduce((s, p) => s + p.bet, 0);
     $('#pot').textContent = fmt(shownPot);
-    $('#pot-chips').innerHTML = chipHtml(shownPot, {max: 7});
+    $('#pot-chips').innerHTML = potScatterHtml(shownPot);
     $('#street').textContent = g.street.toUpperCase();
     $('#community').innerHTML = '';
     for (let i = 0; i < 5; i++) {
@@ -565,7 +767,7 @@
         '<div class="stk">' + fmt(p.stack) + '</div>' +
         '<div class="meta">' + (p.folded ? '已弃牌' : p.allIn ? 'ALL-IN' : p.acted ? '已行动' : '') + '</div>' +
         '<div class="cards">' + (i === 0 || g.street === 'showdown' ? hole : backCard('small') + backCard('small')) + '</div>' +
-        '<div class="seat-chips">' + chipHtml(p.stack, {max: 3, small: true}) + '</div>' +
+        '<div class="seat-chips">' + chipPileHtml(p.stack) + '</div>' +
         (p.bet ? '<span class="bet">' + fmt(p.bet) + '</span><span class="bet-chips">' + chipHtml(p.bet, {max: 3, small: true}) + '</span>' : '') +
         (i === g.dealer ? '<span class="dealer">D</span>' : '');
       $('#seats').appendChild(seat);
@@ -578,17 +780,11 @@
     const toCall = Math.max(0, g.currentBet - hero.bet);
     $('#act-check').classList.toggle('hidden', toCall > 0);
     $('#act-call').classList.toggle('hidden', toCall <= 0);
-    $('#act-call').textContent = toCall > 0 ? '跟注 ' + fmt(Math.min(toCall, hero.stack)) : '跟注';
+    $('#act-call').textContent = toCall > 0 ? '跟注' : '跟注';
     const canAct = g.actor === 0 && g.street !== 'ended' && g.street !== 'showdown' && !hero.folded && !hero.allIn;
     ['act-fold', 'act-check', 'act-call', 'act-raise'].forEach((id) => { $('#' + id).disabled = !canAct; });
-    $('#raise-slider').disabled = !canAct;
-    const minTo = g.minRaiseTo();
-    const maxTo = hero.bet + hero.stack;
-    $('#raise-slider').min = minTo;
-    $('#raise-slider').max = Math.max(minTo, maxTo);
-    if (Number($('#raise-slider').value) < minTo || Number($('#raise-slider').value) > maxTo) $('#raise-slider').value = minTo;
-    $('#raise-amount').textContent = fmt(Number($('#raise-slider').value));
-    $('#act-raise').textContent = minTo >= maxTo ? '全下' : '加注';
+    if (!canAct) { selectedChips = []; raiseTarget = null; }
+    renderTray();
   }
   function scheduleAi() {
     if (!game || game.street === 'ended' || game.street === 'showdown') return;
@@ -602,22 +798,45 @@
   }
   function doAct(action) {
     if (!game || game.actor !== 0) return;
+    const g = game, hero = g.players[0];
+    const toCall = Math.max(0, g.currentBet - hero.bet);
+    const total = selectedTotal();
+    let change = 0;
     if (action === 'fold') unlockAch('first_fold');
     if (action === 'check') unlockAch('first_check');
-    if (action === 'call') unlockAch('first_call');
-    if (action === 'raise') unlockAch('first_raise');
-    if (action === 'raise') {
-      const amount = Number($('#raise-slider').value);
-      game.act({ type: 'raise', amount });
-    } else {
-      game.act({ type: action });
+    if (action === 'call') {
+      if (total < toCall) return;
+      change = total - toCall;
+      unlockAch('first_call');
     }
+    if (action === 'raise') {
+      const target = raiseTarget || (hero.bet + total);
+      if (target <= g.currentBet || target < g.minRaiseTo()) return;
+      const need = target - hero.bet;
+      if (total < need) return;
+      change = total - need;
+      unlockAch('first_raise');
+      clearSelected();
+      g.act({ type: 'raise', amount: target });
+      if (change > 0) animateChips({ seat: 0, amount: change, kind: 'change' });
+      render();
+      return;
+    }
+    if (action === 'call') {
+      clearSelected();
+      g.act({ type: 'call' });
+      if (change > 0) animateChips({ seat: 0, amount: change, kind: 'change' });
+      render();
+      return;
+    }
+    clearSelected();
+    g.act({ type: action });
+    render();
   }
   $('#act-fold').onclick = () => doAct('fold');
   $('#act-check').onclick = () => doAct('check');
   $('#act-call').onclick = () => doAct('call');
   $('#act-raise').onclick = () => doAct('raise');
-  $('#raise-slider').oninput = () => { $('#raise-amount').textContent = fmt($('#raise-slider').value); };
   $('#set-players').onchange = refreshSetup;
   $('#set-chips').oninput = refreshSetup;
   $('#start-game').onclick = startGame;
