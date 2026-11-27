@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/template.css">
+<title>__TITLE__ · KittenPuppy4Ever</title>
+</head>
+<body data-project="__PID__">
+<main class="page">
+  <section class="section">
+    <div class="section-head">
+      <h2>__TITLE__</h2>
+      <span class="hint">通用 CRUD 视图 · 由内核模板生成</span>
+      <div class="actions">
+        <button class="btn soft sm" id="refresh" type="button">刷新</button>
+        <button class="btn primary sm" id="add" type="button">新增</button>
+      </div>
+    </div>
+    <div class="toolbar" style="margin-bottom:10px">
+      <input id="q" class="input" placeholder="搜索条目…" style="min-width:220px">
+      <span class="spacer"></span>
+      <span class="chip" id="count">—</span>
+      <span class="chip" id="rev">rev —</span>
+    </div>
+    <div id="list" class="list"></div>
+    <div class="sm-msg" id="msg"></div>
+  </section>
+</main>
+<script src="/static/sdk.js"></script>
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+  class AutoProjectView extends KittenProjectView {
+    constructor(root) {
+      super(root);
+      this._q = "";
+    }
+    items() {
+      const s = this.state || {};
+      return Array.isArray(s.items) ? s.items : [];
+    }
+    render() {
+      const q = this._q.trim().toLowerCase();
+      const items = this.items().filter((it) => {
+        if (!q) return true;
+        try { return JSON.stringify(it).toLowerCase().includes(q); } catch (e) { return false; }
+      });
+      $("#count").textContent = items.length + " / " + this.items().length + " 条";
+      $("#rev").textContent = "rev " + (this.rev || 0);
+      $("#list").innerHTML = items.length ? items.map((it, i) => {
+        const key = String(it.id || it.key || "");
+        const title = String(it.title || it.name || it.text || "条目 " + (i + 1));
+        const sub = String(it.at || it.createdAt || it.created || "");
+        return '<div class="row"><span class="k">' + this.esc((key || "").slice(0, 8)) + "</span>" +
+          '<span class="grow"><div class="t">' + this.esc(title) + "</div>" +
+          '<div class="s">' + this.esc(sub) + "</div></span>" +
+          '<button class="btn soft sm" data-del="' + this.esc(key) + '">删除</button></div>';
+      }).join("") : '<div class="empty">还没有条目，点右上角“新增”。</div>';
+      $("#list").querySelectorAll("[data-del]").forEach((b) => {
+        b.onclick = () => this.removeItem(b.dataset.del);
+      });
+    }
+    async addItem() {
+      const title = prompt("新条目标题：");
+      if (!title || !title.trim()) return;
+      try {
+        await this.action("append", {item: {title: title.trim(), at: new Date().toISOString()}});
+        this.render();
+      } catch (e) { $("#msg").textContent = "新增失败：" + e.message; }
+    }
+    async removeItem(key) {
+      if (!key || !confirm("删除这个条目？")) return;
+      try {
+        await this.action("remove", {id: key});
+        this.render();
+      } catch (e) { $("#msg").textContent = "删除失败：" + e.message; }
+    }
+  }
+  const view = new AutoProjectView(document.body);
+  $("#add").onclick = () => view.addItem();
+  $("#refresh").onclick = () => view.refresh().then(() => view.render()).catch((e) => { $("#msg").textContent = e.message; });
+  $("#q").addEventListener("input", (e) => { view._q = e.target.value || ""; view.render(); });
+})();
+</script>
+</body>
+</html>

@@ -32,6 +32,36 @@ def now_iso():
     return datetime.now(TZ).isoformat(timespec="seconds")
 
 
+def item_key_of(item, key=None):
+    """通用主键：显式 key、id、key 字段；也兼容项目自定义 item_key。"""
+    if key is not None:
+        return str(key(item))
+    if isinstance(item, dict):
+        return str(item.get("id") or item.get("key") or "")
+    return ""
+
+
+def merge_items_by_key(old_items, incoming_items, key=None):
+    """按主键求并集：旧快照不会删掉服务端条目，后到的同 id 覆盖旧值。"""
+    by_key = {}
+    for it in old_items or []:
+        k = item_key_of(it, key)
+        if k:
+            by_key[k] = it
+    for it in incoming_items or []:
+        k = item_key_of(it, key)
+        if k:
+            by_key[k] = it
+    return list(by_key.values())
+
+
+def find_item_by_key(data, item_key, field="items", key=None):
+    for it in (data or {}).get(field) or []:
+        if item_key_of(it, key) == item_key:
+            return it
+    return None
+
+
 def _clip(obj, limit=400):
     """审计日志里截断过大的 payload，避免 doc.json 膨胀。"""
     try:

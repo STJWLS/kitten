@@ -4,7 +4,7 @@ import hashlib
 import secrets
 from datetime import datetime
 
-from kernel.project import JsonDocProject, TZ, now_iso
+from kernel.project import JsonDocProject, TZ, now_iso, merge_items_by_key, find_item_by_key
 from kernel.protocol import ProjectError
 from kernel.notifications import notify
 
@@ -38,22 +38,15 @@ class Project(JsonDocProject):
         return str(item.get("id") or "")
 
     def merge(self, old, incoming, payload):
-        by = {self.item_key(x): x for x in (old.get("bottles") or []) if self.item_key(x)}
-        for x in (incoming.get("bottles") or []):
-            if self.item_key(x):
-                by[self.item_key(x)] = x
         out = dict(incoming)
-        out["bottles"] = list(by.values())
+        out["bottles"] = merge_items_by_key(old.get("bottles"), incoming.get("bottles"), self.item_key)
         layouts = dict(old.get("layouts") or {})
         layouts.update(incoming.get("layouts") or {})
         out["layouts"] = layouts
         return out
 
     def _find(self, data, bid):
-        for b in data.get("bottles") or []:
-            if self.item_key(b) == bid:
-                return b
-        return None
+        return find_item_by_key(data, bid, "bottles", self.item_key)
 
     def present(self, data, user=None):
         """收信人开启前看不到正文；写信人始终能看到自己写的。"""

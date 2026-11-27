@@ -63,6 +63,16 @@ MIME = {
 }
 
 PID_RE = re.compile(r"^/api/p/([a-zA-Z0-9_-]+)(?:/(state|action))?$")
+
+def _load_auto_view_html():
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "auto-view.html")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+    except Exception:
+        return "<!doctype html><meta charset='utf-8'><h1>__TITLE__</h1><p>auto view template missing</p>"
+
+AUTO_VIEW_HTML = _load_auto_view_html()
 VIEW_RE = re.compile(r"^/p/([a-zA-Z0-9_-]+)(/.*)?$")
 ASSET_RE = re.compile(r'(src|href)="((?:\.\./)?assets/[^"?]+\.(?:js|css|png))"')
 
@@ -3303,6 +3313,12 @@ class Handler(BaseHTTPRequestHandler):
         return "local:" + ip
 
     # ---------------- GET ----------------
+    def _dispatch_module_api(self, parsed, method):
+        api = self.registry.match_api(parsed.path)
+        if not api:
+            return False
+        return api.handle(self, method, parsed.path, parsed)
+
     def _route_get(self):
         parsed = urlparse(self.path)
         path = parsed.path
@@ -3331,6 +3347,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._serve_file(os.path.join(self.server.static_dir, "login.html"))
         if path.startswith("/static/"):
             return self._serve_static(self.server.static_dir, path[len("/static/"):])
+
+        if self._dispatch_module_api(parsed, "GET"):
+            return
 
         if path == "/api/health":
             return self._json(ok(projects=len(self.registry.projects),
@@ -3465,16 +3484,6 @@ class Handler(BaseHTTPRequestHandler):
             if not name or name not in self.auth.users:
                 raise ProjectError("not_found", "用户不存在", 404)
             return self._json(ok(user=name, theme=self._theme_for(name)))
-
-        if path == "/api/schedule/admin/events":
-            user = self._require_user()
-            if not self.auth.is_super(user):
-                raise ProjectError("forbidden", "仅 superadmin 可查看日程调试", 403)
-            self._sched_seed_courses()
-            data = self._sched_load()
-            events = list(data.get("events") or [])
-            events.sort(key=lambda e: (e.get("date") or "", e.get("startMin") or 0))
-            return self._json(ok(events=events, users=self._sched_people(), me=user))
 
         if path == "/api/schedule/courses":
             user = self._require_user()
@@ -3730,9 +3739,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(ok(session=None, dev_mode=self.auth.dev_mode))
             return self._json(ok(session=self.auth.profile(user), dev_mode=self.auth.dev_mode))
 
-        if path.startswith("/mock/api/"):
-            return self._serve_mock("GET")
-
         # ---- 新协议 ----
         m = PID_RE.match(path)
         if m:
@@ -3834,6 +3840,9 @@ class Handler(BaseHTTPRequestHandler):
     def _route_post(self):
         parsed = urlparse(self.path)
         path = parsed.path
+
+        if self._dispatch_module_api(parsed, "POST"):
+            return
 
         if path == "/api/messages/send":
             user = self._require_user()
@@ -4232,48 +4241,6 @@ class Handler(BaseHTTPRequestHandler):
             self._save_theme(user, "#ec9fbe", "pinkfdu")
             return self._json(ok(session=self.auth.profile(user)))
 
-        if path == "/api/schedule/admin/events":
-            user = self._require_user()
-            if not self.auth.is_super(user):
-                raise ProjectError("forbidden", "仅 superadmin 可修改日程调试", 403)
-            body = self._read_json()
-            data = self._sched_load()
-            eid = str(body.get("id") or "")
-            old = next((e for e in data.get("events") or [] if str(e.get("id")) == eid), None) if eid else None
-            ev = self._sched_payload(body, old)
-            creator = str(body.get("creator") or (old.get("creator") if old else user))
-            ev["creator"] = creator if creator in self.auth.users else user
-            ev["mentions"] = list(body.get("mentions") or (old.get("mentions") if old else [])) or [ev["creator"]]
-            now = time.time()
-            ev["updated_at"] = now
-            ev["created_at"] = (old or {}).get("created_at") or now
-            for participant in ev.get("participants") or []:
-                conflict = self._sched_conflict(data, ev, participant)
-                if conflict:
-                    raise ProjectError("conflict", "%s 在该时段已有日程「%s」" % (participant, conflict.get("title") or ""), 409)
-            if old:
-                data["events"] = [ev if str(e.get("id")) == eid else e for e in data.get("events") or []]
-            else:
-                data.setdefault("events", []).append(ev)
-            with SCHEDULE_LOCK:
-                self._sched_save(data)
-            return self._json(ok(event=ev))
-
-        if path == "/api/schedule/admin/events/delete":
-            user = self._require_user()
-            if not self.auth.is_super(user):
-                raise ProjectError("forbidden", "仅 superadmin 可删除日程", 403)
-            body = self._read_json()
-            eid = str(body.get("id") or "")
-            data = self._sched_load()
-            old = next((e for e in data.get("events") or [] if str(e.get("id")) == eid), None)
-            if old and old.get("source") == "course":
-                data.setdefault("deleted_course_ids", []).append(eid)
-            data["events"] = [e for e in data.get("events") or [] if str(e.get("id")) != eid]
-            with SCHEDULE_LOCK:
-                self._sched_save(data)
-            return self._json(ok(deleted=eid))
-
         if path == "/api/schedule/events":
             user = self._require_user()
             body = self._read_json()
@@ -4647,9 +4614,6 @@ class Handler(BaseHTTPRequestHandler):
                 reminders._mail_subject(item, 60), reminders._mail_body(item, 60))
             return self._json({"ok": okv, "msg": msg})
 
-        if path.startswith("/mock/api/"):
-            return self._serve_mock("POST")
-
         m = PID_RE.match(path)
         if not m or m.group(2) != "action":
             self._not_found()
@@ -4965,6 +4929,10 @@ class Handler(BaseHTTPRequestHandler):
         self._send(html.encode("utf-8"), 200, "text/html; charset=utf-8", gzip_ok=True)
 
     # ---------------- Mock（进程内 ASGI，不再用 8768） ----------------
+    def _sched_save_locked(self, data):
+        with SCHEDULE_LOCK:
+            self._sched_save(data)
+
     def _serve_mock(self, method):
         try:
             n = int(self.headers.get("Content-Length") or 0)

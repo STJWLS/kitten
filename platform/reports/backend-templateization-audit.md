@@ -338,3 +338,49 @@ smoke_test.py                新增：custom API 健康检查
 ```
 
 这样“新增一个应用”才真正只需要增加一个 module 目录，而不是修改内核。
+
+## 7. 修复进展（2026-11-27）
+
+已完成的第一批：
+
+1. **自动视图补齐**
+   - 新增 `static/auto-view.html`；
+   - `server._serve_auto_view` 从文件加载模板，不再引用未定义的 `AUTO_VIEW_HTML`；
+   - `scratchpad` 从 custom view 切为 `view.kind=auto`，并删除旧的 `web/index.html`；
+   - 自动视图使用 `static/sdk.js` 的 `KittenProjectView`，CRUD 实测通过。
+
+2. **module-local API 框架**
+   - 新增 `kernel/module_api.py`；
+   - `Registry` 自动加载 `projects/<id>/api.py` 的 `PREFIXES` + `handle`；
+   - `server` 先匹配 module API，再走旧路由；
+   - 已迁移：
+     - `/mock/api/*` → `projects/mock/api.py`
+     - `/api/schedule/admin/*` → `projects/schedule-debug/api.py`
+
+3. **共享 keyed merge helper**
+   - `kernel/project.py` 新增：
+     - `item_key_of`
+     - `merge_items_by_key`
+     - `find_item_by_key`
+   - bottle / schedule / wishpool 删除各自重复的 merge/_find 代码。
+
+4. **行为契约测试**
+   - 新增 `tools/check_contracts.py`；
+   - 实例化所有 10 个 module，在临时目录中验证 `state`、`append`、`remove`、rev、动作集合；
+   - 当前 10/10 通过，不写平台真实数据。
+
+5. **能力词表**
+   - `upstream`、`remind` 作为平台扩展能力登记到 `EXTENSION_CAPABILITIES`；
+   - `check_modules.py` 当前为 10 PASS / 0 WARN / 0 FAIL。
+
+6. **SDK 采用起点**
+   - 自动视图已使用 `KittenProjectView`；
+   - 其余 custom view 的 SDK 迁移仍未完成。
+
+### 仍未完成
+
+- `ai`、`schedule` 的专用路由仍在 `kernel/server.py`；
+- `wishpool` 前端仍走 legacy `/api/state`；
+- 10 个 custom view 尚未统一 SDK；
+- `KeyedJsonDocProject` 只抽了 helper，尚未抽成 manifest base；
+- 地图/造院的数据边界还没统一。

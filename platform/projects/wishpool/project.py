@@ -8,7 +8,7 @@
 """
 
 from kernel.bases.coin import CoinProject
-from kernel.project import now_iso
+from kernel.project import now_iso, merge_items_by_key, find_item_by_key
 from kernel.protocol import ProjectError
 from kernel.notifications import notify
 
@@ -24,22 +24,12 @@ class Project(CoinProject):
         return str(item.get("id") or "")
 
     def merge(self, old, incoming, payload):
-        by_id = {}
-        for it in old.get("items") or []:
-            if self.item_key(it):
-                by_id[self.item_key(it)] = it
-        for it in incoming.get("items") or []:
-            if self.item_key(it):
-                by_id[self.item_key(it)] = it
         merged = dict(incoming)
-        merged["items"] = list(by_id.values())
+        merged["items"] = merge_items_by_key(old.get("items"), incoming.get("items"), self.item_key)
         return merged
 
     def _find(self, data, wid):
-        for it in data.get("items") or []:
-            if self.item_key(it) == wid:
-                return it
-        return None
+        return find_item_by_key(data, wid, "items", self.item_key)
 
     def _stat(self, data, status):
         stats = dict(data.get("stats") or {})

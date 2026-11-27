@@ -6,10 +6,14 @@
   "icon": "📝",
   "desc": "临时便签：随手记录与整理文本条目。",
   "base": "json-doc",
-  "capabilities": ["state", "action", "audit", "crud"],
+  "capabilities": [
+    "state",
+    "action",
+    "audit",
+    "crud"
+  ],
   "view": {
-    "kind": "custom",
-    "dir": "web"
+    "kind": "auto"
   },
   "path": "/scratchpad/",
   "tags": [

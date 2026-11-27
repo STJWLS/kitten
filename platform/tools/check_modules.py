@@ -40,6 +40,8 @@ TOOL_VERSION = 2
 
 VIEW_KINDS = ("auto", "custom", "legacy")
 ACL_KEYS = ("read", "write")
+# 平台级扩展能力：不进入 base 默认词表，但允许 module 声明（不是内核强校验项）。
+EXTENSION_CAPABILITIES = ("upstream", "remind")
 
 MANIFEST_KNOWN_KEYS = {
     "id", "parent", "order", "title", "icon", "desc",
@@ -341,7 +343,7 @@ class BasesContext:
         chain = self.chains.get(name)
         if not chain:
             return None
-        allowed = []
+        allowed = list(EXTENSION_CAPABILITIES)
         for member in chain:
             caps = self.files.get(member, {}).get("capabilities")
             if isinstance(caps, list):

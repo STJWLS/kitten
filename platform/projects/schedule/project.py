@@ -6,7 +6,7 @@
   2) 自定义动作 —— toggle_done 不在基类动作集里，只属于本项目
 """
 
-from kernel.project import JsonDocProject
+from kernel.project import JsonDocProject, merge_items_by_key
 from kernel.protocol import ProjectError
 
 
@@ -20,15 +20,8 @@ class Project(JsonDocProject):
         return str(item.get("key") or item.get("id") or "")
 
     def merge(self, old, incoming, payload):
-        by_key = {}
-        for it in old.get("items") or []:
-            if self.item_key(it):
-                by_key[self.item_key(it)] = it
-        for it in incoming.get("items") or []:
-            if self.item_key(it):
-                by_key[self.item_key(it)] = it
         merged = dict(incoming)
-        merged["items"] = list(by_key.values())
+        merged["items"] = merge_items_by_key(old.get("items"), incoming.get("items"), self.item_key)
         return merged
 
     def on_action(self, action, payload, data):

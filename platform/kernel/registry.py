@@ -20,6 +20,7 @@ import json
 import os
 
 from .bases.coin import CoinProject
+from .module_api import ModuleAPI
 from .project import AbstractProject, JsonDocProject
 
 BASES = {
@@ -46,6 +47,7 @@ class Registry:
         self.engine = engine
         self.projects = {}
         self.order = []
+        self.apis = []
         self.errors = []
         self._load()
 
@@ -112,8 +114,22 @@ class Registry:
                     "role": None, "data_dir": data_dir, "engine": self.engine,
                 })
                 self.order.append(spec["id"])
+                api_path = os.path.join(entry.path, "api.py")
+                if os.path.isfile(api_path):
+                    api_mod = self._import(spec["id"] + "-api", api_path)
+                    prefixes = getattr(api_mod, "PREFIXES", None)
+                    handler = getattr(api_mod, "handle", None)
+                    if not isinstance(prefixes, (list, tuple)) or not prefixes or not callable(handler):
+                        raise ValueError("api.py 必须声明非空 PREFIXES 列表和 handle(handler, method, path, parsed)")
+                    self.apis.append(ModuleAPI(spec["id"], prefixes, handler))
             except Exception as e:  # 单个项目坏掉不影响整棵树
                 self.errors.append("%s: %s" % (entry.name, e))
+
+    def match_api(self, path: str):
+        for api in self.apis:
+            if api.matches(path):
+                return api
+        return None
 
     # ---------------- 树 ----------------
     def get(self, pid: str):
