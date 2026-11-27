@@ -145,6 +145,11 @@
   .bet-tray-head b { color:#ffe7a2; font-size:14px; font-variant-numeric:tabular-nums; }
   .bet-tray-head .change { color:#9fe1b8; }
   .bet-tray-head .need { color:#e7a19a; }
+  .raise-presets { display:flex; gap:4px; margin-left:auto; }
+  .raise-presets button { font-size:9px; padding:2px 6px; border-radius:7px; border:1px solid rgba(231,210,168,.25);
+    background:rgba(255,255,255,.04); color:#d5e3d7; cursor:pointer; }
+  .raise-presets button:hover:not(:disabled) { border-color:#e7c77d; color:#ffe7a2; }
+  .raise-presets button:disabled { opacity:.35; cursor:not-allowed; }
   .bet-tray { display:flex; align-items:center; gap:7px; flex-wrap:wrap; min-height:52px; margin-top:4px; }
   .tray-chip { position:relative; display:flex; flex-direction:column; align-items:center; gap:1px; padding:2px 4px 1px; border-radius:9px;
     border:1px solid rgba(231,210,168,.18); background:rgba(255,255,255,.035); cursor:pointer; user-select:none; }
@@ -256,6 +261,7 @@
     .bet-tray { gap:4px; min-height:44px; }
     .tray-chip .chip { width:30px; height:30px; font-size:8px; }
     .tray-chip { padding:1px 2px; }
+    .raise-presets button { font-size:8px; padding:1px 4px; }
     .tray-chip .cnt { font-size:7px; }
   }
 </style>
@@ -334,6 +340,11 @@
               <span>选筹码下注</span>
               <span>已选 <b id="selected-total">0</b></span>
               <span id="bet-hint"></span>
+              <span class="raise-presets" id="raise-presets">
+                <button type="button" data-target="min" disabled>最小</button>
+                <button type="button" data-target="half" disabled>半池</button>
+                <button type="button" data-target="pot" disabled>一池</button>
+              </span>
             </div>
             <div class="bet-tray" id="bet-tray"></div>
           </div>
@@ -625,6 +636,45 @@
     if (i >= 0) { selectedChips.splice(i, 1); render(); }
   }
   function clearSelected() { selectedChips = []; }
+  function presetTarget(kind) {
+    if (!game) return 0;
+    const g = game, hero = g.players[0];
+    const maxTo = hero.bet + hero.stack;
+    const pot = g.pot + g.players.reduce((s, p) => s + p.bet, 0);
+    let target;
+    if (kind === "min") target = g.minRaiseTo();
+    else if (kind === "half") target = g.currentBet + Math.max(g.minRaise, Math.round(pot * 0.5 / 10) * 10);
+    else target = g.currentBet + Math.max(g.minRaise, Math.round(pot / 10) * 10);
+    return Math.min(maxTo, Math.max(g.minRaiseTo(), Math.round(target / 10) * 10));
+  }
+  function pickChipsForNeed(need) {
+    need = Math.round(Number(need || 0) / 10) * 10;
+    if (need <= 0) return null;
+    const units = need / 10;
+    const hero = game.players[0];
+    const parts = chipBreakdown(hero.stack);
+    const dp = Array(units + 1).fill(null);
+    dp[0] = [];
+    for (const c of parts) {
+      for (let k = 0; k < c.n; k++) {
+        const v = c.v / 10;
+        for (let s = units; s >= v; s--) {
+          if (!dp[s] && dp[s - v]) dp[s] = dp[s - v].concat([c.v]);
+        }
+      }
+    }
+    return dp[units] ? dp[units].slice() : null;
+  }
+  function applyPreset(kind) {
+    if (!game || game.actor !== 0) return;
+    const hero = game.players[0];
+    const target = presetTarget(kind);
+    const need = target - hero.bet;
+    const chips = pickChipsForNeed(need);
+    if (!chips || target <= game.currentBet) return;
+    selectedChips = chips.slice();
+    render();
+  }
   function renderTray() {
     const tray = document.getElementById("bet-tray");
     if (!tray || !game) return;
@@ -656,7 +706,24 @@
       });
       const clr = document.getElementById("clear-chips");
       if (clr) clr.onclick = () => { clearSelected(); render(); };
+      document.querySelectorAll("#raise-presets button").forEach((b) => {
+        const target = presetTarget(b.dataset.target);
+        const chips = canAct ? pickChipsForNeed(target - hero.bet) : null;
+        const legal = !!(canAct && chips && target > g.currentBet && target >= minTo && target <= maxTo);
+        b.disabled = !legal;
+        b.title = legal ? "自动选取正好 " + fmt(target - hero.bet) + " 筹码" : "现有筹码无法精确凑出该目标";
+        b.onclick = () => applyPreset(b.dataset.target);
+      });
     }
+    // 预设按钮始终保留；不能行动或无法用现有筹码精确凑出时变灰。
+    document.querySelectorAll("#raise-presets button").forEach((b) => {
+      const target = presetTarget(b.dataset.target);
+      const chips = canAct ? pickChipsForNeed(target - hero.bet) : null;
+      const legal = !!(canAct && chips && target > g.currentBet && target >= minTo && target <= maxTo);
+      b.disabled = !legal;
+      b.title = legal ? "自动选取正好 " + fmt(target - hero.bet) + " 筹码" : "现有筹码无法精确凑出该目标";
+      b.onclick = () => applyPreset(b.dataset.target);
+    });
     document.getElementById("selected-total").textContent = fmt(total);
     const hint = document.getElementById("bet-hint");
     const target = hero.bet + total;
