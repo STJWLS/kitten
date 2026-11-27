@@ -1963,8 +1963,9 @@ function renderProject(node) {
   frame.classList.remove("on");
   $("#loading").style.display = "flex";
   const view = node.view || {};
-  let src = "/p/" + encodeURIComponent(node.id) + "/";
-  if (view.kind === "legacy" && view.url) src = view.url + (view.url.indexOf("?") >= 0 ? "&" : "?") + "embed=1";
+  // 每次进入模块都带一个时间戳，避免 iframe 复用旧页面缓存。
+  let src = "/p/" + encodeURIComponent(node.id) + "/?v=" + Date.now();
+  if (view.kind === "legacy" && view.url) src = view.url + (view.url.indexOf("?") >= 0 ? "&" : "?") + "embed=1&v=" + Date.now();
   frame.onload = () => {
     $("#loading").style.display = "none";
     requestAnimationFrame(() => frame.classList.add("on"));

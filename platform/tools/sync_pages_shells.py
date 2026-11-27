@@ -53,7 +53,7 @@ SHELL = """<!DOCTYPE html>
     .then(function (d) {
       if (!d || !d.url) throw new Error("entry.json 未配置 url");
       var base = d.url.replace(/\\/+$/, "");
-      var target = base + path + (path.indexOf("?") >= 0 ? "&" : "?") + "kp_frame=1";
+      var target = base + path + (path.indexOf("?") >= 0 ? "&" : "?") + "kp_frame=1&v=" + Date.now();
       f.src = target;
       f.onload = function () { loaded = true; msg.classList.add("hidden"); };
       setTimeout(function () {

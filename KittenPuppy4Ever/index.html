@@ -28,7 +28,7 @@
     : "/";
   if (path.charAt(0) !== "/") path = "/" + path;
   var f = document.getElementById("frame");
-  var target = BASE + path + (path.indexOf("?") >= 0 ? "&" : "?") + "kp_frame=1";
+  var target = BASE + path + (path.indexOf("?") >= 0 ? "&" : "?") + "kp_frame=1&v=" + Date.now();
   f.src = target;  // 在解析期赋值：避免动态 iframe 加载失败
   var loaded = false;
   f.onload = function () {
