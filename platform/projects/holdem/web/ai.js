@@ -338,5 +338,9 @@
     return { type: "check" };
   }
 
-  window.HoldemAI = { decide, equity, ITERATIONS, DEPTH, preflopStrength, postflopStrength };
+  function debugRange(view, opponentSeat) {
+    const state = rangeState(view);
+    return matrixFor(state, view, opponentSeat).map((row) => row.slice());
+  }
+  window.HoldemAI = { decide, equity, ITERATIONS, DEPTH, preflopStrength, postflopStrength, debugRange };
 })();
