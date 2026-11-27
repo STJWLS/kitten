@@ -17,6 +17,14 @@ def handle(handler, method, path, parsed):
         if not handler._can_access(user, "wishpool"):
             raise ProjectError("forbidden", "没有许愿池访问权限", 403)
         state = compat.read_state(handler.engine)
+        # 愿望/余额的权威数据来自项目 doc；兼容层只补充 schedule 投影与旧 t。
+        project = handler.registry.get("wishpool")
+        if project is not None:
+            _rev, data = project.state(user)
+            if isinstance(data, dict):
+                for key in ("wishes", "coins", "wish_notified"):
+                    if key in data:
+                        state[key] = data[key]
         handler._json(state, etag='W/"store-%d"' % handler.engine.state_version())
         return True
 

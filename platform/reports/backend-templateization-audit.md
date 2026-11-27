@@ -509,3 +509,15 @@ smoke_test.py                新增：custom API 健康检查
 - `MODULE_SPEC.md` 新增数据边界章节。
 
 这不会改变页面行为，但把“静态数据、客户端状态、旧 store、模块树”从隐式约定变成可校验的 manifest 契约。
+
+## 15. 第九批修复（2026-11-27）
+
+- `/api/wishpool/state` 现在以 project doc 作为 `wishes / coins / wish_notified` 的权威来源；
+- legacy 兼容层只补充 `events / venues / t` 等 schedule 投影；
+- wishpool 页面实测 200，无 JS 错误。
+
+剩余：
+
+- `/api/wishpool/save` 仍使用 legacy 合并语义（尚未拆成 kp/1 patch/action）；
+- custom view SDK 统一；
+- map / courtyard 仍是显式 static/client 数据边界。
