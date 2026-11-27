@@ -68,7 +68,8 @@
     return view.maxRaiseTo > view.currentBet && view.maxRaiseTo >= view.minRaiseTo;
   }
   function raiseTo(view, fraction) {
-    const target = Math.max(view.minRaiseTo, view.currentBet + Math.max(view.minRaise, Math.round(view.pot * fraction)));
+    let target = Math.max(view.minRaiseTo, view.currentBet + Math.max(view.minRaise, Math.round(view.pot * fraction)));
+    target = Math.round(target / 10) * 10;
     return Math.min(view.maxRaiseTo, target);
   }
   function actRaise(view, fraction) {
