@@ -455,3 +455,28 @@ smoke_test.py                新增：custom API 健康检查
 - custom view SDK 统一
 - map / courtyard 数据边界
 - `/api/llm/*` 仍在 `kernel/server.py`
+
+## 12. 第六批修复（2026-11-27）
+
+- `/api/llm/*` 全部 GET/POST 路由已迁到 `projects/ai/api.py`：
+  - `/api/llm/models`
+  - `/api/llm/status`
+  - `/api/llm/admin`
+  - `/api/llm/admin/mineru`
+  - `/api/llm/admin/mineru/check`
+  - `/api/llm/me`
+  - `/api/llm/test`
+  - `/api/llm/chat`
+- `kernel/server.py` 中不再有 `/api/ai/`、`/api/llm/`、`/api/files/` 专用分支；
+- 实测 200：
+  - `/api/llm/status`
+  - `/api/llm/models`
+  - `/api/llm/admin`
+  - `/api/ai/sessions`
+  - `/api/files`
+
+剩余：
+
+- `wishpool` 前端 legacy `/api/state`
+- custom view SDK 统一
+- map / courtyard 数据边界

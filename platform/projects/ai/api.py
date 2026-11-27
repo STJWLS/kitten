@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, quote, urlparse
 from kernel.project import TZ
 from kernel.protocol import ProjectError, ok
 
-PREFIXES = ["/api/ai/", "/api/files"]
+PREFIXES = ["/api/ai/", "/api/files", "/api/llm/"]
 
 
 def handle(handler, method, path, parsed):
@@ -315,5 +315,333 @@ def handle(handler, method, path, parsed):
                     item["id"] = handler._ai_session_id("")
                 saved.append(handler._ai_session_public(handler._ai_session_save(user, item), full=True))
             return handler._json(ok(imported=len(saved), mode=mode, sessions=saved))
+
+    if method == "GET":
+        if path == "/api/llm/models":
+            user = handler._require_user()
+            q = parse_qs(urlparse(handler.path).query)
+            body = {k: (v[0] if v else "") for k, v in q.items()}
+            cfg = handler._llm_load()
+            g = cfg.get("global") or {}
+            provider_id = str(body.get("provider_id") or body.get("provider") or "")
+            p = next((x for x in handler._llm_providers(g) if x.get("id") == provider_id), None) if provider_id else None
+            if p:
+                base, key, provider = p.get("base_url") or "", (p.get("keys") or [""])[0], p.get("provider") or ""
+            else:
+                eff = handler._llm_effective(user)
+                if not eff:
+                    raise ProjectError("bad_request", "尚未配置 AI 服务", 400)
+                base, key, provider = eff.get("base_url") or "", eff.get("api_key") or "", eff.get("provider") or ""
+            base = str(base).strip().rstrip("/")
+            if not base:
+                raise ProjectError("bad_request", "Base URL 为空", 400)
+            headers = {"Authorization": "Bearer " + key} if key else {}
+            if provider == "dsh":
+                url = base + "/api/models"
+            elif base.endswith("/models"):
+                url = base
+            else:
+                url = base + "/models"
+            status, data = handler._llm_http(url, headers)
+            if status == 0 and provider == "dsh":
+                status, data = handler._llm_http(base + "/v1/models", headers)
+            ids = []
+            if isinstance(data, dict):
+                items = data.get("data") if isinstance(data.get("data"), list) else data.get("models")
+                for it in items or []:
+                    if isinstance(it, str):
+                        ids.append(it)
+                    elif isinstance(it, dict):
+                        mid = it.get("id") or it.get("name") or it.get("model")
+                        if mid:
+                            ids.append(str(mid))
+            seen = []
+            for x in ids:
+                if x not in seen:
+                    seen.append(x)
+            return handler._json(ok(models=seen, provider=provider, provider_id=(p or {}).get("id") or "",
+                                 status=status, context_window=(p or {}).get("context_window") or 0))
+
+        if path == "/api/llm/status":
+            user = handler._require_user()
+            cfg = handler._llm_load()
+            g = cfg.get("global") or {}
+            me = (cfg.get("users") or {}).get(user) or {"mode": "server"}
+            eff = handler._llm_effective(user)
+            ps = handler._llm_providers(g)
+            active = handler._llm_active_provider(g)
+            return handler._json(ok(
+                server=handler._llm_public(g, "server"),
+                me={"mode": me.get("mode") or "server", **handler._llm_public(me, me.get("mode") or "server")},
+                effective=handler._llm_public(eff, eff.get("source") if eff else None),
+                providers=[handler._llm_provider_public(p, p.get("id") == (active or {}).get("id")) for p in ps],
+                message=("未配置服务端 AI，请联系管理员" if not ps else ""),
+            ))
+
+        if path == "/api/llm/admin":
+            user = handler._require_user()
+            if not handler.auth.is_admin(user):
+                raise ProjectError("forbidden", "仅管理员可查看全局 AI 配置", 403)
+            cfg = handler._llm_load()
+            g = cfg.get("global") or {}
+            active = handler._llm_active_provider(g)
+            return handler._json(ok(global_=handler._llm_public(g, "server"),
+                                 providers=[handler._llm_provider_public(p, p.get("id") == (active or {}).get("id")) for p in handler._llm_providers(g)],
+                                 mineru=handler._mineru_public(),
+                                 kinds=["deepseek", "openai", "anthropic", "openrouter", "moonshot",
+                                        "zhipu", "qwen", "groq", "mistral", "ollama", "dsh", "local", "custom"]))
+
+    if method == "POST":
+        if path == "/api/llm/admin/mineru":
+            user = handler._require_user()
+            if not handler.auth.is_admin(user):
+                raise ProjectError("forbidden", "仅管理员可设置 MinerU", 403)
+            body = handler._read_json()
+            handler._mineru_save(token=body.get("token"), clear=bool(body.get("clear")))
+            return handler._json(ok(mineru=handler._mineru_public()))
+
+        if path == "/api/llm/admin/mineru/check":
+            user = handler._require_user()
+            if not handler.auth.is_admin(user):
+                raise ProjectError("forbidden", "仅管理员可检查 MinerU", 403)
+            body = handler._read_json()
+            return handler._json(ok(check=handler._mineru_check(body.get("token"))))
+
+        if path == "/api/llm/admin":
+            user = handler._require_user()
+            if not handler.auth.is_admin(user):
+                raise ProjectError("forbidden", "仅管理员可设置全局 AI", 403)
+            body = handler._read_json()
+            cfg = handler._llm_load()
+            old_g = cfg.get("global") or {}
+            old_ps = {p.get("id"): p for p in handler._llm_providers(old_g)}
+            if isinstance(body.get("providers"), list):
+                out, first = [], None
+                for idx, p in enumerate(body.get("providers") or []):
+                    if not isinstance(p, dict):
+                        continue
+                    base = str(p.get("base_url") or "").strip()[:500]
+                    if not base:
+                        continue
+                    provider = str(p.get("provider") or "").strip()[:40] or handler._llm_detect(base)
+                    pid = str(p.get("id") or provider or ("p%d" % idx)).strip()[:60]
+                    oldp = old_ps.get(pid) or {}
+                    keys = handler._llm_keys(oldp.get("keys"))
+                    text = p.get("keys_text")
+                    if text is not None:
+                        text = str(text).strip()
+                        if text in ("__CLEAR__", "CLEAR"):
+                            keys = []
+                        elif text:
+                            keys = handler._llm_keys(text.splitlines())
+                    elif isinstance(p.get("keys"), list):
+                        keys = handler._llm_keys(p.get("keys"))
+                    item = {"id": pid, "name": str(p.get("name") or pid)[:80],
+                            "provider": provider, "base_url": base,
+                            "model": str(p.get("model") or "").strip()[:120],
+                            "context_window": int(p.get("context_window") or 0),
+                            "keys": keys, "enabled": bool(p.get("enabled", True))}
+                    out.append(item)
+                    if p.get("active"):
+                        first = item
+                if not out:
+                    raise ProjectError("bad_request", "至少配置一个可用的服务商", 400)
+                first = first or out[0]
+                clean = {"provider": first["provider"], "base_url": first["base_url"],
+                         "api_key": (first["keys"] or [""])[0], "model": first["model"],
+                         "context_window": first["context_window"],
+                         "enabled": first["enabled"]}
+                cfg["global"] = {**clean, "providers": out, "active_provider": first["id"],
+                                 "effort": str(body.get("effort") or old_g.get("effort") or "medium")[:20]}
+            else:
+                clean = handler._llm_clean(body)
+                if body.get("api_key") is None and old_g.get("api_key"):
+                    clean["api_key"] = old_g["api_key"]
+                if str(body.get("api_key") or "").strip() in ("__CLEAR__", "CLEAR"):
+                    clean["api_key"] = ""
+                cfg["global"] = clean
+            handler._llm_save(cfg)
+            g = cfg.get("global") or {}
+            active = handler._llm_active_provider(g)
+            return handler._json(ok(global_=handler._llm_public(g, "server"),
+                                 providers=[handler._llm_provider_public(p, p.get("id") == (active or {}).get("id")) for p in handler._llm_providers(g)]))
+
+        if path == "/api/llm/me":
+            user = handler._require_user()
+            body = handler._read_json()
+            cfg = handler._llm_load()
+            users = cfg.setdefault("users", {})
+            cur = users.get(user) or {}
+            mode = str(body.get("mode") or cur.get("mode") or "server")
+            if mode not in ("server", "override"):
+                raise ProjectError("bad_request", "模式不合法", 400)
+            clean = handler._llm_clean(body)
+            if not body.get("api_key") and cur.get("api_key"):
+                clean["api_key"] = cur["api_key"]
+            if str(body.get("api_key") or "").strip() in ("__CLEAR__", "CLEAR"):
+                clean["api_key"] = ""
+            clean["mode"] = mode
+            if mode == "server":
+                g = cfg.get("global") or {}
+                if not (g.get("base_url") and g.get("enabled", True)):
+                    raise ProjectError("bad_request", "服务端尚未配置 AI，请联系管理员", 400)
+            users[user] = clean
+            handler._llm_save(cfg)
+            return handler._json(ok(me={"mode": mode, **handler._llm_public(clean, mode)}))
+
+        if path == "/api/llm/test":
+            user = handler._require_user()
+            body = handler._read_json()
+            cfg = handler._llm_effective(user)
+            if body.get("scope") == "global":
+                if not handler.auth.is_admin(user):
+                    raise ProjectError("forbidden", "仅管理员可测试全局配置", 403)
+                cfg = handler._llm_load().get("global") or {}
+            if not cfg or not cfg.get("base_url"):
+                raise ProjectError("bad_request", "尚未配置 AI 服务", 400)
+            base = cfg["base_url"].rstrip("/")
+            provider = cfg.get("provider") or handler._llm_detect(base)
+            if provider == "dsh":
+                status, data = handler._llm_http(base + "/api/health", {"Authorization": "Bearer " + (cfg.get("api_key") or "")})
+                return handler._json(ok(reachable=status in (200, 401), status=status,
+                                     message=("本机 DSH 可达" if status in (200, 401) else "本机 DSH 不可达"),
+                                     data=data))
+            url = base if base.endswith("/models") else base + "/models"
+            headers = {"Authorization": "Bearer " + cfg.get("api_key", "")} if cfg.get("api_key") else {}
+            status, data = handler._llm_http(url, headers)
+            return handler._json(ok(reachable=200 <= status < 300, status=status, provider=provider, data=data))
+
+        if path == "/api/llm/models":
+            user = handler._require_user()
+            body = {}
+            if handler.command == "POST":
+                body = handler._read_json()
+            else:
+                q = parse_qs(urlparse(handler.path).query)
+                body = {k: (v[0] if v else "") for k, v in q.items()}
+            cfg = handler._llm_load()
+            g = cfg.get("global") or {}
+            provider_id = str(body.get("provider_id") or body.get("provider") or "")
+            p = next((x for x in handler._llm_providers(g) if x.get("id") == provider_id), None) if provider_id else None
+            if p:
+                base, key, provider = p.get("base_url") or "", (p.get("keys") or [""])[0], p.get("provider") or ""
+            else:
+                eff = handler._llm_effective(user)
+                if not eff:
+                    raise ProjectError("bad_request", "尚未配置 AI 服务", 400)
+                base, key, provider = eff.get("base_url") or "", eff.get("api_key") or "", eff.get("provider") or ""
+            base = str(body.get("base_url") or base).strip().rstrip("/")
+            key = str(body.get("api_key") or key)
+            provider = str(body.get("provider") or provider or handler._llm_detect(base))
+            if not base:
+                raise ProjectError("bad_request", "Base URL 为空", 400)
+            headers = {"Authorization": "Bearer " + key} if key else {}
+            if provider == "dsh":
+                url = base + "/api/models"
+            elif base.endswith("/models"):
+                url = base
+            else:
+                url = base + "/models"
+            status, data = handler._llm_http(url, headers)
+            if status == 0 and provider == "dsh":
+                status, data = handler._llm_http(base + "/v1/models", headers)
+            ids = []
+            if isinstance(data, dict):
+                items = data.get("data") if isinstance(data.get("data"), list) else data.get("models")
+                for it in items or []:
+                    if isinstance(it, str):
+                        ids.append(it)
+                    elif isinstance(it, dict):
+                        mid = it.get("id") or it.get("name") or it.get("model")
+                        if mid:
+                            ids.append(str(mid))
+            seen = []
+            for x in ids:
+                if x not in seen:
+                    seen.append(x)
+            return handler._json(ok(models=seen, provider=provider, provider_id=(p or {}).get("id") or "",
+                                 status=status, context_window=(p or {}).get("context_window") or 0))
+
+        if path == "/api/llm/chat":
+            user = handler._require_user()
+            body = handler._read_json()
+            provider_id = str(body.get("provider_id") or "")
+            cfg = handler._llm_effective(user, provider_id or None)
+            if not cfg or not cfg.get("base_url"):
+                raise ProjectError("bad_request", "未配置 AI 服务，请联系管理员", 400)
+            messages = body.get("messages") or []
+            if not isinstance(messages, list) or not messages:
+                raise ProjectError("bad_request", "messages 不能为空", 400)
+            module = str(body.get("module") or "")[:40]
+            if module:
+                proj = handler.registry.get(module)
+                if not proj or not handler._can_access(user, module):
+                    raise ProjectError("forbidden", "当前模块不可访问：" + module, 403)
+            dry_run = bool(body.get("dry_run"))
+            file_notes = handler._dsh_file_notes(user, body.get("files") or [])
+            if file_notes:
+                messages = [{"role": "system", "content": "用户上传了以下文件：\n\n" + "\n\n".join(file_notes)}] + messages
+            tool_prompt = handler._ai_tool_prompt(module, user) if module else ""
+            if tool_prompt:
+                messages = [{"role": "system", "content": tool_prompt}] + messages
+            model = str(body.get("model") or cfg.get("model") or "deepseek-chat")[:160]
+            effort = str(body.get("effort") or cfg.get("effort") or "medium")[:20]
+            base = cfg["base_url"].rstrip("/")
+            if base.endswith("/chat/completions"):
+                url = base
+            elif base.endswith("/v1"):
+                url = base + "/chat/completions"
+            else:
+                url = base + "/v1/chat/completions"
+            headers = {"Content-Type": "application/json"}
+            if cfg.get("api_key"):
+                headers["Authorization"] = "Bearer " + cfg["api_key"]
+            tool_results = []
+            reply = ""
+            data = {}
+            for round_no in range(3):
+                payload = {"model": model, "messages": messages, "stream": False}
+                if effort and effort != "medium":
+                    payload["reasoning_effort"] = effort
+                status, data = handler._llm_http(url, headers, payload, timeout=int(body.get("timeout") or 60))
+                if not (200 <= status < 300):
+                    raise ProjectError("upstream_error", "AI 服务返回 %s：%s" % (status, str(data)[:300]), 502)
+                try:
+                    reply = (((data.get("choices") or [{}])[0].get("message") or {}).get("content") or "")
+                except Exception:
+                    reply = ""
+                parsed = None
+                txt = str(reply or "").strip()
+                if txt.startswith("```"):
+                    txt = re.sub(r"^```[a-zA-Z]*\s*", "", txt)
+                    txt = re.sub(r"\s*```$", "", txt)
+                try:
+                    cand = json.loads(txt)
+                    if isinstance(cand, dict) and cand.get("tool"):
+                        parsed = cand
+                except Exception:
+                    parsed = None
+                if not parsed or round_no >= 2:
+                    break
+                name = str(parsed.get("tool") or "")
+                args = parsed.get("args") if isinstance(parsed.get("args"), dict) else {}
+                try:
+                    result = handler._ai_tool_execute(user, module, name, args, dry_run=dry_run)
+                except Exception as e:
+                    result = {"error": str(getattr(e, "message", e))}
+                tool_results.append({"tool": name, "args": args, "result": result})
+                messages.append({"role": "assistant", "content": reply})
+                messages.append({"role": "system", "content": "工具 %s 执行结果：%s" % (name, json.dumps(result, ensure_ascii=False)[:4000])})
+            usage = (data.get("usage") if isinstance(data, dict) else None) or {}
+            def rough_tokens(text):
+                return max(1, int(len(text or "") / 3))
+            pt = usage.get("prompt_tokens") or sum(rough_tokens(m.get("content") if isinstance(m, dict) else "") for m in messages)
+            ct = usage.get("completion_tokens") or rough_tokens(reply)
+            total = usage.get("total_tokens") or (pt + ct)
+            return handler._json(ok(reply=reply, raw=data, provider=cfg.get("provider"), model=model,
+                                 effort=effort, tool_results=tool_results,
+                                 usage={"prompt_tokens": int(pt), "completion_tokens": int(ct),
+                                        "total_tokens": int(total),
+                                        "context_window": int(cfg.get("context_window") or 0)}))
 
     return False
