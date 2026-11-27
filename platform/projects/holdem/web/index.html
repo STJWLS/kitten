@@ -947,7 +947,7 @@
     const n = g.players.length;
     const marginX = 18, marginY = 18;
     const boardH = Math.max(160, document.querySelector('.board-center').getBoundingClientRect().height || 195);
-    const rowMax = Math.max(3, Math.ceil(n / 2));
+    const rowMax = Math.max(3, Math.ceil(n / 2), Math.ceil((n - (n >= 8 && W > 900 ? 2 : 0)) / 2));
     const seatGap = 18;
     // 跑道形桌面两端是圆弧，座位不能按矩形边界贴到左右端角。
     const racetrack = W > 900;
@@ -973,9 +973,16 @@
         "table " + Math.round(W) + "×" + Math.round(H) + " boardH " + Math.round(boardH) + "\n" +
         "scale " + scale.toFixed(3) + " seat " + seatW.toFixed(1) + "×" + (seatH * 1.0).toFixed(1);
     }
-    const topCount = n - Math.ceil(n / 2);
+    // 8 人以上时把两个人的位置分配到牌桌左右两端。
+    const useEnds = n >= 8 && W > 900;
+    const endCount = useEnds ? 2 : 0;
+    const rowTotal = n - endCount;
+    const topCount = Math.ceil(rowTotal / 2);
+    const bottomCount = rowTotal - topCount;
     const topPlayers = g.players.slice(1, 1 + topCount);
-    const bottomAIs = g.players.slice(1 + topCount);
+    const remaining = g.players.slice(1 + topCount);
+    const bottomAIs = remaining.slice(0, Math.max(0, bottomCount - 1));
+    const endPlayers = useEnds ? remaining.slice(bottomAIs.length) : [];
     const mid = Math.floor(bottomAIs.length / 2);
     const bottomPlayers = bottomAIs.slice(0, mid).concat([g.players[0]], bottomAIs.slice(mid));
     const topY = marginY + seatH / 2;
@@ -1009,6 +1016,13 @@
     topPlayers.forEach((p, k) => makeSeat(p, p.seat, xsTop[k], topY));
     const xsBottom = rowXs(bottomPlayers.length);
     bottomPlayers.forEach((p, k) => makeSeat(p, p.seat, xsBottom[k], bottomY));
+    if (endPlayers.length) {
+      const endInset = racetrack ? Math.max(0, R - Math.sqrt(Math.max(0, R * R - Math.pow(seatH / 2, 2)))) : 0;
+      const endY = H / 2;
+      const leftX = marginX + endInset + seatW / 2;
+      const rightX = W - marginX - endInset - seatW / 2;
+      endPlayers.forEach((p, k) => makeSeat(p, p.seat, k === 0 ? leftX : rightX, endY));
+    }
     // 不同浏览器对缩放后实际高度有 1~2px 差异，最后把底排收回桌内并保留边距。
     const tableRect = shell.getBoundingClientRect();
     document.querySelectorAll('#seats .seat').forEach((el) => {
