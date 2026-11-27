@@ -376,6 +376,20 @@
     .hero-panel .bet-tray-head { justify-content:flex-start; }
     .hero-panel .bet-tray { margin-top:4px; }
   }
+
+  /* 手牌与筹码分列；操作条与筹码托盘同处一行 */
+  .hero-panel { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:6px 14px; align-items:center; }
+  .hero-panel .hero-row { grid-column:1/-1; grid-row:1; display:flex; align-items:center; justify-content:space-between; gap:14px; margin:0; width:100%; }
+  .hero-hand, .hero-chips { display:flex; align-items:center; gap:8px; min-width:0; }
+  .hero-chips { margin-left:auto; justify-content:flex-end; text-align:right; }
+  .hero-panel .bet-tray-wrap { grid-column:1/-1; grid-row:2; display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:10px; margin-top:2px; padding-top:4px; }
+  .hero-panel .bet-tray-head { grid-column:1; grid-row:1; justify-content:flex-start; margin:0; padding:0; border:0; }
+  .hero-panel .bet-tray { grid-column:2; grid-row:1; justify-content:flex-end; min-height:0; margin:0; gap:5px; flex-wrap:nowrap; overflow:hidden; }
+  @media (max-width: 900px) {
+    .hero-panel .bet-tray-wrap { display:flex; flex-direction:column; align-items:stretch; }
+    .hero-panel .bet-tray { justify-content:flex-start; flex-wrap:wrap; margin-top:4px; }
+    .hero-chips { margin-left:auto; }
+  }
 </style>
 </head>
 <body data-project="holdem">
@@ -433,11 +447,15 @@
         </div>
         <div class="hero-panel">
           <div class="hero-row">
-            <span class="who" id="hero-name">你</span>
-            <span class="hint" id="hero-stack">筹码 —</span>
-            <span class="hint" id="hero-hole-label">手牌</span>
-            <span id="hero-hole" style="display:flex;gap:4px"></span>
-            <span class="hint" id="hero-hint">等待开局</span>
+            <span class="hero-hand">
+              <span class="who" id="hero-name">你</span>
+              <span class="hint" id="hero-hole-label">手牌</span>
+              <span id="hero-hole" style="display:flex;gap:4px"></span>
+            </span>
+            <span class="hero-chips">
+              <span class="hint" id="hero-stack">筹码 —</span>
+              <span class="hint" id="hero-hint">等待开局</span>
+            </span>
           </div>
           <div class="bet-tray-wrap" id="bet-tray-wrap">
             <div class="bet-tray-head">
