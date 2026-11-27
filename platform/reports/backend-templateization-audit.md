@@ -437,3 +437,21 @@ smoke_test.py                新增：custom API 健康检查
   - `/api/llm/*`（模型配置/测试/对话）
   - `/api/files/*`（加密文件）
   - `/api/bugreport*`、用户/主题等平台级接口
+
+## 11. 第五批修复（2026-11-27）
+
+- `/api/files`、`/api/files/<id>`、`/api/files/upload`、`/api/files/delete`
+  已迁到 `projects/ai/api.py`；
+- 新增 `_files_save_locked`，module API 复用文件索引锁；
+- 实测：
+  - `/api/files` 200
+  - `/api/files/upload` dry_run 200，加密往返 `roundtrip=true`
+  - `/api/files/notfound` 404
+- AI 页面与 AI 接口仍正常。
+
+仍未完成：
+
+- `wishpool` 前端 legacy `/api/state`
+- custom view SDK 统一
+- map / courtyard 数据边界
+- `/api/llm/*` 仍在 `kernel/server.py`

@@ -1,19 +1,108 @@
 # -*- coding: utf-8 -*-
 """AI module-local API：技能、DSH 状态/流、工具、会话。"""
+import base64
+import hashlib
 import json
 import os
 import re
+import secrets
 import time
 from datetime import datetime
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 from kernel.project import TZ
 from kernel.protocol import ProjectError, ok
 
-PREFIXES = ["/api/ai/"]
+PREFIXES = ["/api/ai/", "/api/files"]
 
 
 def handle(handler, method, path, parsed):
+    # 文件服务与 AI 上传/会话共用，先处理 /api/files
+    if method == "GET" and path == "/api/files":
+        user = handler._require_user()
+        idx = handler._files_index()
+        files = [handler._files_public(x) for x in idx.get("files") or [] if x.get("owner") == user]
+        files.sort(key=lambda x: x.get("created") or "", reverse=True)
+        handler._json(ok(files=files))
+        return True
+    fm = re.match(r"^/api/files/([^/]+)$", path)
+    if method == "GET" and fm:
+        user = handler._require_user()
+        fid = fm.group(1)
+        idx = handler._files_index()
+        item = next((x for x in idx.get("files") or [] if x.get("id") == fid and x.get("owner") == user), None)
+        if not item:
+            raise ProjectError("not_found", "文件不存在", 404)
+        path_enc = os.path.join(handler._files_root(), item.get("stored") or "")
+        try:
+            with open(path_enc, "rb") as f:
+                token = f.read()
+            data = handler._files_fernet().decrypt(token)
+        except Exception:
+            raise ProjectError("internal", "文件解密失败", 500)
+        name = item.get("name") or "file"
+        ascii_name = re.sub(r'[^A-Za-z0-9._-]', "_", name)[:80] or "file"
+        disp = "attachment; filename=\"%s\"; filename*=UTF-8''%s" % (ascii_name, quote(name))
+        handler._send(data, 200, item.get("mime") or "application/octet-stream", cache="no-store",
+                      extra={"Content-Disposition": disp})
+        return True
+    if method == "POST" and path == "/api/files/upload":
+        user = handler._require_user()
+        body = handler._read_json()
+        name = os.path.basename(str(body.get("name") or "file")).strip()[:180] or "file"
+        mime = str(body.get("mime") or "application/octet-stream")[:120]
+        raw = str(body.get("data") or "")
+        if "," in raw and raw.lstrip().startswith("data:"):
+            raw = raw.split(",", 1)[1]
+        try:
+            data = base64.b64decode(raw, validate=True)
+        except Exception:
+            raise ProjectError("bad_request", "文件内容不是合法 base64", 400)
+        if not data:
+            raise ProjectError("bad_request", "文件为空", 400)
+        if len(data) > 16 * 1024 * 1024:
+            raise ProjectError("bad_request", "文件不能超过 16MB", 413)
+        if body.get("dry_run"):
+            token = handler._files_fernet().encrypt(data)
+            dec = handler._files_fernet().decrypt(token)
+            handler._json(ok(dry_run=True, file={"name": name, "mime": mime, "size": len(data),
+                                                 "sha256": hashlib.sha256(data).hexdigest(),
+                                                 "encrypted": len(token) > 0, "roundtrip": dec == data}))
+            return True
+        fid = secrets.token_hex(12)
+        safe_user = re.sub(r"[^A-Za-z0-9_.-]", "_", user)[:60] or "user"
+        rel = os.path.join(safe_user, fid + ".bin")
+        full = os.path.join(handler._files_root(), rel)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        token = handler._files_fernet().encrypt(data)
+        with open(full, "wb") as f:
+            f.write(token)
+        item = {"id": fid, "owner": user, "name": name, "mime": mime,
+                "size": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+                "created": datetime.now(TZ).isoformat(timespec="seconds"),
+                "stored": rel, "enc": "fernet"}
+        idx = handler._files_index()
+        idx.setdefault("files", []).append(item)
+        handler._files_save_locked(idx)
+        handler._json(ok(file=handler._files_public(item)))
+        return True
+    if method == "POST" and path == "/api/files/delete":
+        user = handler._require_user()
+        body = handler._read_json()
+        fid = str(body.get("id") or "")
+        idx = handler._files_index()
+        item = next((x for x in idx.get("files") or [] if x.get("id") == fid and x.get("owner") == user), None)
+        if not item:
+            raise ProjectError("not_found", "文件不存在", 404)
+        idx["files"] = [x for x in idx.get("files") or [] if not (x.get("id") == fid and x.get("owner") == user)]
+        handler._files_save_locked(idx)
+        try:
+            os.remove(os.path.join(handler._files_root(), item.get("stored") or ""))
+        except Exception:
+            pass
+        handler._json(ok(deleted=fid))
+        return True
+
     if method == "GET":
         if path == "/api/ai/skills":
             user = handler._require_user()

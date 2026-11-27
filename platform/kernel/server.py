@@ -3485,34 +3485,6 @@ class Handler(BaseHTTPRequestHandler):
                 raise ProjectError("not_found", "用户不存在", 404)
             return self._json(ok(user=name, theme=self._theme_for(name)))
 
-        if path == "/api/files":
-            user = self._require_user()
-            idx = self._files_index()
-            files = [self._files_public(x) for x in idx.get("files") or [] if x.get("owner") == user]
-            files.sort(key=lambda x: x.get("created") or "", reverse=True)
-            return self._json(ok(files=files))
-
-        fm = re.match(r"^/api/files/([^/]+)$", path)
-        if fm:
-            user = self._require_user()
-            fid = fm.group(1)
-            idx = self._files_index()
-            item = next((x for x in idx.get("files") or [] if x.get("id") == fid and x.get("owner") == user), None)
-            if not item:
-                raise ProjectError("not_found", "文件不存在", 404)
-            path_enc = os.path.join(self._files_root(), item.get("stored") or "")
-            try:
-                with open(path_enc, "rb") as f:
-                    token = f.read()
-                data = self._files_fernet().decrypt(token)
-            except Exception:
-                raise ProjectError("internal", "文件解密失败", 500)
-            name = item.get("name") or "file"
-            ascii_name = re.sub(r'[^A-Za-z0-9._-]', "_", name)[:80] or "file"
-            disp = "attachment; filename=\"%s\"; filename*=UTF-8''%s" % (ascii_name, quote(name))
-            return self._send(data, 200, item.get("mime") or "application/octet-stream", cache="no-store",
-                              extra={"Content-Disposition": disp})
-
         if path == "/api/llm/models":
             user = self._require_user()
             q = parse_qs(urlparse(self.path).query)
@@ -3768,87 +3740,6 @@ class Handler(BaseHTTPRequestHandler):
             module = str((body or {}).get("module") or "")[:80]
             self._activity_record(user, kind, module)
             return self._json(ok(recorded=True))
-
-        if path == "/api/files/upload":
-            user = self._require_user()
-            body = self._read_json()
-            name = os.path.basename(str(body.get("name") or "file")).strip()[:180] or "file"
-            mime = str(body.get("mime") or "application/octet-stream")[:120]
-            raw = str(body.get("data") or "")
-            if "," in raw and raw.lstrip().startswith("data:"):
-                raw = raw.split(",", 1)[1]
-            try:
-                data = base64.b64decode(raw, validate=True)
-            except Exception:
-                raise ProjectError("bad_request", "文件内容不是合法 base64", 400)
-            if not data:
-                raise ProjectError("bad_request", "文件为空", 400)
-            if len(data) > 16 * 1024 * 1024:
-                raise ProjectError("bad_request", "文件不能超过 16MB", 413)
-            if body.get("dry_run"):
-                token = self._files_fernet().encrypt(data)
-                dec = self._files_fernet().decrypt(token)
-                return self._json(ok(dry_run=True, file={"name": name, "mime": mime, "size": len(data),
-                                                         "sha256": hashlib.sha256(data).hexdigest(),
-                                                         "encrypted": len(token) > 0, "roundtrip": dec == data}))
-            fid = secrets.token_hex(12)
-            safe_user = re.sub(r"[^A-Za-z0-9_.-]", "_", user)[:60] or "user"
-            rel = os.path.join(safe_user, fid + ".bin")
-            full = os.path.join(self._files_root(), rel)
-            os.makedirs(os.path.dirname(full), exist_ok=True)
-            token = self._files_fernet().encrypt(data)
-            with open(full, "wb") as f:
-                f.write(token)
-            item = {"id": fid, "owner": user, "name": name, "mime": mime,
-                    "size": len(data), "sha256": hashlib.sha256(data).hexdigest(),
-                    "created": datetime.now(TZ).isoformat(timespec="seconds"),
-                    "stored": rel, "enc": "fernet"}
-            with FILES_LOCK:
-                idx = self._files_index()
-                idx.setdefault("files", []).append(item)
-                self._files_save_index(idx)
-            return self._json(ok(file=self._files_public(item)))
-
-        if path == "/api/files/delete":
-            user = self._require_user()
-            body = self._read_json()
-            fid = str(body.get("id") or "")
-            with FILES_LOCK:
-                idx = self._files_index()
-                item = next((x for x in idx.get("files") or [] if x.get("id") == fid and x.get("owner") == user), None)
-                if not item:
-                    raise ProjectError("not_found", "文件不存在", 404)
-                idx["files"] = [x for x in idx.get("files") or [] if not (x.get("id") == fid and x.get("owner") == user)]
-                self._files_save_index(idx)
-            try:
-                os.remove(os.path.join(self._files_root(), item.get("stored") or ""))
-            except Exception:
-                pass
-            return self._json(ok(deleted=fid))
-
-        m = re.match(r"^/api/bugreports/([^/]+)/comments$", path)
-        if m:
-            user = self._require_user()
-            body = self._read_json()
-            text = str(body.get("text") or "").strip()
-            if not text:
-                raise ProjectError("bad_request", "回复内容不能为空", 400)
-            bugs = self._bug_load()
-            bid = unquote(m.group(1))
-            rec = bugs.get(bid)
-            if not rec:
-                raise ProjectError("not_found", "反馈不存在", 404)
-            if rec.get("user") != user and not self.auth.is_admin(user):
-                raise ProjectError("forbidden", "不能回复别人的反馈", 403)
-            comments = list(rec.get("comments") or [])
-            comments.append({"id": "c-%d-%04x" % (int(time.time()), secrets.randbelow(0x10000)),
-                             "user": user, "text": text[:4000], "created": time.time()})
-            rec["comments"] = comments
-            rec["updated"] = time.time()
-            bugs[bid] = rec
-            self._bug_save(bugs)
-            self._bug_append_log(rec)
-            return self._json(ok(comments=comments))
 
         if path == "/api/bugreport":
             user = self._require_user()
@@ -4570,6 +4461,10 @@ class Handler(BaseHTTPRequestHandler):
         self._send(html.encode("utf-8"), 200, "text/html; charset=utf-8", gzip_ok=True)
 
     # ---------------- Mock（进程内 ASGI，不再用 8768） ----------------
+    def _files_save_locked(self, idx):
+        with FILES_LOCK:
+            self._files_save_index(idx)
+
     def _sched_save_locked(self, data):
         with SCHEDULE_LOCK:
             self._sched_save(data)
