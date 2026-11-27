@@ -17,7 +17,7 @@
     background:radial-gradient(ellipse at center, #1f6b4f 0%, #124534 55%, #0a2b21 100%);
     border:10px solid #5b3a22; box-shadow:inset 0 0 60px rgba(0,0,0,.5), 0 18px 40px rgba(0,0,0,.35); }
   .felt-ring { position:absolute; inset:32px; border:2px solid rgba(238,218,170,.25); border-radius:50%; pointer-events:none; }
-  .board-center { position:absolute; left:50%; top:54%; transform:translate(-50%,-50%); width:min(560px,78%); text-align:center; z-index:4; }
+  .board-center { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(560px,78%); text-align:center; z-index:4; }
   .pot-line { display:flex; align-items:flex-end; justify-content:center; gap:10px; color:#f0d597; font-size:13px; letter-spacing:.10em; margin-bottom:9px; }
   .pot-line b { font-size:27px; color:#ffe7a2; font-variant-numeric:tabular-nums; text-shadow:0 2px 10px rgba(0,0,0,.3); }
   .community { display:flex; justify-content:center; gap:9px; min-height:102px; align-items:center; }
@@ -851,6 +851,92 @@
     $('#gameover-text').textContent = info.text;
     $('#gameover-modal').classList.remove('hidden');
   }
+  function resolveSeatLayout() {
+    const table = document.getElementById('table-shell');
+    const board = document.querySelector('.board-center');
+    if (!table || !board) return;
+    const nodes = [...document.querySelectorAll('#seats .seat')];
+    if (!nodes.length) return;
+    const move = (el, dx, dy) => {
+      if (!dx && !dy) return;
+      el.style.left = ((parseFloat(el.style.left) || 0) + dx) + 'px';
+      el.style.top = ((parseFloat(el.style.top) || 0) + dy) + 'px';
+    };
+    const tableRect = table.getBoundingClientRect();
+    const boardRect = board.getBoundingClientRect();
+    const margin = 4, gap = 4;
+    for (let iter = 0; iter < 10; iter++) {
+      let changed = false;
+      // 1) 桌面边界
+      for (const el of nodes) {
+        const r = el.getBoundingClientRect();
+        let dx = 0, dy = 0;
+        if (r.left < tableRect.left + margin) dx = tableRect.left + margin - r.left;
+        if (r.right > tableRect.right - margin) dx = tableRect.right - margin - r.right;
+        if (r.top < tableRect.top + margin) dy = tableRect.top + margin - r.top;
+        if (r.bottom > tableRect.bottom - margin) dy = tableRect.bottom - margin - r.bottom;
+        if (dx || dy) { move(el, dx, dy); changed = true; }
+      }
+      // 2) 公共牌/底池安全区
+      for (const el of nodes) {
+        const r = el.getBoundingClientRect();
+        const ox = Math.min(r.right, boardRect.right) - Math.max(r.left, boardRect.left);
+        const oy = Math.min(r.bottom, boardRect.bottom) - Math.max(r.top, boardRect.top);
+        if (ox <= 0 || oy <= 0) continue;
+        const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
+        const bx = (boardRect.left + boardRect.right) / 2, by = (boardRect.top + boardRect.bottom) / 2;
+        if (ox < oy) move(el, cx < bx ? -(ox + gap) : (ox + gap), 0);
+        else move(el, 0, cy < by ? -(oy + gap) : (oy + gap));
+        changed = true;
+      }
+      // 3) 座位之间
+      for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i].getBoundingClientRect(), b = nodes[j].getBoundingClientRect();
+        const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (ox <= 0 || oy <= 0) continue;
+        const acx = (a.left + a.right) / 2, bcx = (b.left + b.right) / 2;
+        const acy = (a.top + a.bottom) / 2, bcy = (b.top + b.bottom) / 2;
+        const horizontal = ox < oy;
+        const amount = (horizontal ? ox : oy) + gap;
+        if (i === 0) move(nodes[j], horizontal ? (bcx >= acx ? amount : -amount) : (bcy >= acy ? amount : -amount), horizontal ? 0 : 0);
+        else if (j === 0) move(nodes[i], horizontal ? (acx >= bcx ? amount : -amount) : (acy >= bcy ? amount : -amount), 0);
+        else {
+          const half = amount / 2;
+          move(nodes[i], horizontal ? (acx >= bcx ? half : -half) : 0, horizontal ? 0 : (acy >= bcy ? half : -half));
+          move(nodes[j], horizontal ? (bcx >= acx ? half : -half) : 0, horizontal ? 0 : (bcy >= acy ? half : -half));
+        }
+        changed = true;
+      }
+      if (!changed) break;
+    }
+    // 最后再保证所有座位都在桌面内（避免被最后一轮互推挤出边界）。
+    for (const el of nodes) {
+      const r = el.getBoundingClientRect();
+      let dx = 0, dy = 0;
+      if (r.left < tableRect.left + margin) dx = tableRect.left + margin - r.left;
+      if (r.right > tableRect.right - margin) dx = tableRect.right - margin - r.right;
+      if (r.top < tableRect.top + margin) dy = tableRect.top + margin - r.top;
+      if (r.bottom > tableRect.bottom - margin) dy = tableRect.bottom - margin - r.bottom;
+      move(el, dx, dy);
+    }
+  }
+  function clampSeatsToTable() {
+    const table = document.getElementById('table-shell');
+    if (!table) return;
+    const t = table.getBoundingClientRect();
+    const m = 2;
+    document.querySelectorAll('#seats .seat').forEach((el) => {
+      const r = el.getBoundingClientRect();
+      let dx = 0, dy = 0;
+      if (r.left < t.left + m) dx = t.left + m - r.left;
+      if (r.right > t.right - m) dx = t.right - m - r.right;
+      if (r.top < t.top + m) dy = t.top + m - r.top;
+      if (r.bottom > t.bottom - m) dy = t.bottom - m - r.bottom;
+      if (dx) el.style.left = ((parseFloat(el.style.left) || 0) + dx) + 'px';
+      if (dy) el.style.top = ((parseFloat(el.style.top) || 0) + dy) + 'px';
+    });
+  }
   function render() {
     if (!game) return;
     const g = game;
@@ -891,6 +977,11 @@
         '<div class="seat-chips">' + chipPileHtml(p.stack) + '</div>' +
         (i === g.dealer ? '<span class="dealer">D</span>' : '');
       $('#seats').appendChild(seat);
+      if (g.players.length >= 8) {
+        const base = g.players.length >= 10 ? 0.80 : 0.88;
+        const mobileScale = W < 700 ? (g.players.length >= 10 ? 0.44 : 0.55) : base;
+        seat.style.transform = 'translate(-50%,-50%) scale(' + mobileScale + ')';
+      }
     });
     // 小屏时左右两侧座位可能压到公共牌；把它们顺到公共牌下方，避免重叠。
     const communityRect = $('#community').getBoundingClientRect();
@@ -916,6 +1007,7 @@
       const shift = Math.min(boardBottom + 4 - rect.top, maxShift);
       if (shift > 0) seat0.style.top = (currentTop + shift) + 'px';
     }
+    resolveSeatLayout();
     const hero = g.players[0];
     $('#hero-name').textContent = hero.name;
     $('#hero-stack').textContent = '筹码 ' + fmt(hero.stack) + ' · 本轮下注 ' + fmt(hero.bet);
@@ -927,6 +1019,7 @@
     ['act-fold', 'act-check', 'act-bet'].forEach((id) => { $('#' + id).disabled = !canAct; });
     if (!canAct) selectedChips = [];
     renderTray();
+    clampSeatsToTable();
   }
   function scheduleAi() {
     if (!game || game.street === 'ended' || game.street === 'showdown') return;
