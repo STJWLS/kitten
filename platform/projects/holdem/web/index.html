@@ -22,7 +22,7 @@
   .pot-line b { font-size:27px; color:#ffe7a2; font-variant-numeric:tabular-nums; text-shadow:0 2px 10px rgba(0,0,0,.3); }
   .community { display:flex; justify-content:center; gap:9px; min-height:102px; align-items:center; }
   .street { color:#cfe0d2; font-size:12px; letter-spacing:.16em; text-transform:uppercase; margin-top:10px; }
-  .seat { position:absolute; width:170px; min-height:128px; padding:10px 11px; border-radius:16px;
+  .seat { position:absolute; width:190px; min-height:128px; padding:10px 11px; border-radius:16px;
     background:rgba(8,22,17,.78); border:1px solid rgba(231,210,168,.25); color:#e8f0e6;
     box-shadow:0 8px 20px rgba(0,0,0,.25); transform:translate(-50%,-50%); transition:border-color .2s, box-shadow .2s; }
   .seat.you { border-color:#e7b96a; box-shadow:0 0 0 1px rgba(231,185,106,.45), 0 8px 20px rgba(0,0,0,.3); }
@@ -284,11 +284,11 @@
   .chip-tip-row .cnt { width:34px; color:#e7d8b6; font-variant-numeric:tabular-nums; }
   .chip-tip-row .val { color:#9eb8a7; font-size:10px; }
   @media (max-width: 900px) {
-    .seat { width:170px; min-height:128px; }
+    .seat { width:190px; min-height:128px; }
     .seat .cards .card { width:34px; height:48px; }
   }
   @media (max-width: 620px) {
-    .seat { width:170px; min-height:128px; padding:10px 11px; }
+    .seat { width:190px; min-height:128px; padding:10px 11px; }
     .seat .nm { font-size:14px; }
     .seat .stk { font-size:20px; }
     .seat .meta { display:block; font-size:11.5px; }
@@ -867,6 +867,8 @@
     game.onAiAction = scheduleAi;
     ACH_STREAK = 0;
     game.start();
+    // 等布局完成再量一次尺寸，避免首帧用未稳定高度把座位画大后立刻缩小。
+    requestAnimationFrame(() => { if (game) render(); });
   }
   function showGameOver(info) {
     if (info.winner === '你') unlockAch('tournament_win');
@@ -917,15 +919,17 @@
     }
     $('#seats').innerHTML = '';
     const shell = $('#table-shell');
-    const W = shell.clientWidth, H = shell.clientHeight;
+    const tableBox = shell.getBoundingClientRect();
+    // 用稳定外框尺寸计算，避免第一次渲染时如果布局尚未完成导致座位先大后小。
+    const W = tableBox.width - 20, H = tableBox.height - 20;
     const n = g.players.length;
     const marginX = 24, marginY = 24;
     const boardH = Math.max(160, document.querySelector('.board-center').getBoundingClientRect().height || 195);
     const rowMax = Math.max(3, Math.ceil(n / 2));
-    const widthScale = (W - marginX * 2 - (rowMax - 1) * 8) / (rowMax * 170);
+    const widthScale = (W - marginX * 2 - (rowMax - 1) * 8) / (rowMax * 190);
     const verticalScale = (H - boardH - marginY * 2 - 16) / (2 * 150);
     const scale = Math.max(0.30, Math.min(0.96, widthScale, verticalScale));
-    const seatW = 170 * scale, seatH = 150 * scale;
+    const seatW = 190 * scale, seatH = 150 * scale;
     const topCount = n - Math.ceil(n / 2);
     const topPlayers = g.players.slice(1, 1 + topCount);
     const bottomAIs = g.players.slice(1 + topCount);
