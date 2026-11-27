@@ -1199,7 +1199,7 @@
       const slotHtml = trackerCardsHtml(shown);
       const remain = 5 - shown.length;
       const probHtml = remain > 0
-        ? '<div class="tracker-prob" style="grid-column:span ' + remain + '">' + pct.toFixed(1) + '%<small>概率</small></div>'
+        ? '<div class="tracker-prob" style="grid-column:span ' + remain + '">' + pct.toFixed(2) + '%<small>概率</small></div>'
         : "";
       return '<div class="tracker-set-row' + (h.cat === currentCat ? " current" : "") + '">' +
         '<div class="tracker-set-name">' + h.name + '</div>' +
