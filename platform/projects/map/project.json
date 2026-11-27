@@ -28,7 +28,7 @@
   ],
   "data": {
     "kind": "static",
-    "source": "schedule.json",
-    "note": "地点地图读取 schedule 的静态投影"
+    "source": "/api/map/data",
+    "note": "通过 map module API 读取静态课程投影"
   }
 }

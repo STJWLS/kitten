@@ -538,3 +538,18 @@ smoke_test.py                新增：custom API 健康检查
 - wishpool 页面 UI 仍使用旧 wishes/coins 字段（但读写已走项目状态/模块适配器）；
 - custom view SDK 统一；
 - map / courtyard 的 static/client 边界。
+
+## 17. 第十一批修复（2026-11-27）
+
+- 新增 `projects/map/api.py`：
+  - `GET /api/map/data`
+- 地图页面不再直接 `fetch("schedule.json")`，改走 map module-local API；
+- map manifest 的 `data.source` 改为 `/api/map/data`；
+- 实测：
+  - `/api/map/data` 200
+  - 地图页面无 JS 错误。
+
+剩余：
+
+- custom view SDK 统一；
+- courtyard 客户端状态仍为 localStorage（数据边界已声明）。
