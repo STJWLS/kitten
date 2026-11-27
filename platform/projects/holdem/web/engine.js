@@ -85,7 +85,7 @@
       this.minRaise = this.bb;
       this.lastAggressor = -1;
       this.handNo = 0;
-      this.onUpdate = null; this.onLog = null; this.onHandLog = null; this.onGameOver = null; this.onAiAction = null;
+      this.onUpdate = null; this.onLog = null; this.onHandLog = null; this.onGameOver = null; this.onAiAction = null; this.onHandResult = null; this.onHandStart = null; this._lastHandResult = null;
       this._over = false;
       for (let i = 0; i < this.playerCount; i++) {
         const diff = i === 0 ? "" : (this.difficulties[i] || "medium");
@@ -114,6 +114,7 @@
       if (live.length < 2) return this.finishTournament();
       this.handNo++;
       this.board = [];
+      this._lastHandResult = null;
       this.deck = shuffle(makeDeck());
       this.pot = 0;
       this.currentBet = 0;
@@ -141,6 +142,7 @@
       this.currentBet = Math.max(...this.players.map((p) => p.bet));
       this.actor = this.nextSeat(bbSeat);
       this.players.forEach((p) => { p.acted = false; });
+      if (this.onHandStart) this.onHandStart({ handNo: this.handNo, dealer: this.dealer, sbSeat, bbSeat, humanStartStack: this.players[0].stack });
       this.updateAndRun();
     }
     postBlind(seat, amount, label) {
@@ -284,8 +286,17 @@
       this.pot = 0;
       this.street = "ended";
       this.actor = -1;
+      const human = this.players[0];
+      const result = {
+        winners: [winner.seat], showdown: false, pot: amount,
+        board: this.board.map((c) => ({ ...c })),
+        humanHand: null, humanFolded: human.folded, humanAllIn: human.allIn,
+        humanBlind: human.seat === (this.dealer + 1) % this.playerCount ? "sb" : human.seat === (this.dealer + 2) % this.playerCount ? "bb" : "",
+        humanStack: human.stack, players: this.players.map((p) => ({ seat: p.seat, stack: p.stack, folded: p.folded, allIn: p.allIn })),
+      };
+      this._lastHandResult = result;
       this.update();
-      this.endHand(winner.name + " 赢得 " + amount);
+      this.endHand(winner.name + " 赢得 " + amount, result);
     }
     showdown() {
       this.players.forEach((p) => { this.pot += p.bet; p.bet = 0; });
@@ -318,9 +329,20 @@
       this.pot = 0;
       this.update();
       const winners = this.players.filter((p, i) => payouts[i] > 0);
-      this.endHand(winners.length ? winners.map((p) => p.name).join("、") + " 赢得摊牌" : "无人赢得底池");
+      const human = this.players[0];
+      const result = {
+        winners: winners.map((p) => p.seat), showdown: true, pot: payouts.reduce((s, x) => s + x, 0),
+        board: this.board.map((c) => ({ ...c })),
+        humanHand: human.hand || null, humanFolded: human.folded, humanAllIn: human.allIn,
+        humanBlind: human.seat === (this.dealer + 1) % this.playerCount ? "sb" : human.seat === (this.dealer + 2) % this.playerCount ? "bb" : "",
+        humanStack: human.stack, players: this.players.map((p) => ({ seat: p.seat, stack: p.stack, folded: p.folded, allIn: p.allIn })),
+      };
+      this._lastHandResult = result;
+      this.endHand(winners.length ? winners.map((p) => p.name).join("、") + " 赢得摊牌" : "无人赢得底池", result);
     }
-    endHand(text) {
+    endHand(text, result) {
+      this._lastHandResult = result || this._lastHandResult;
+      if (this._lastHandResult && this.onHandResult) this.onHandResult(this._lastHandResult);
       const busted = this.players.filter((p) => p.stack <= 0);
       if (busted.length) return this.finishTournament(busted);
       this.update();

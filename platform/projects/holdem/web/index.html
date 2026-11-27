@@ -91,6 +91,73 @@
     .community .card { width:27px; height:39px; font-size:11px; }
     .setup-grid, .ai-list { grid-template-columns:1fr; }
   }
+
+  /* viewport-fit: no page scrolling; only internal log / achievement list scrolls */
+  html, body { height: 100%; overflow: hidden; }
+  body { margin: 0; }
+  .page { max-width: none; width: 100%; height: 100dvh; min-height: 0; padding: 8px 14px 10px; display: flex; flex-direction: column; overflow: hidden; }
+  .holdem-head { flex: 0 0 auto; margin-bottom: 6px; }
+  #setup-view.section, #game-view.section { flex: 1; min-height: 0; padding: 0; border: 0; box-shadow: none; background: transparent; overflow: hidden; }
+  #setup-view { display: flex; align-items: center; justify-content: center; overflow: auto; }
+  #game-view { display: flex; flex-direction: column; }
+  .holdem-layout { flex: 1; min-height: 0; height: 100%; align-items: stretch; }
+  .holdem-layout > div:first-child { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+  .table-shell { flex: 1; min-height: 0; height: auto; }
+  .hero-panel { flex: 0 0 auto; margin-top: 8px; }
+  .log-panel { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+  #log { flex: 1; height: auto; min-height: 0; }
+  .setup-card { max-height: calc(100dvh - 110px); overflow: auto; }
+  .ach-btn { border: 1px solid rgba(231,185,106,.45); background: rgba(8,22,17,.65); color: #ffe7a2; border-radius: 999px; padding: 5px 10px; cursor: pointer; font: inherit; font-size: 11px; }
+  .ach-btn:hover { background: rgba(35,62,48,.9); }
+  .ach-modal .setup-card { width: min(760px, 92vw); max-height: calc(100dvh - 80px); }
+  .ach-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+  .ach-head h2 { margin:0; font:700 20px "Songti SC",serif; color:#ffe7a2; }
+  .ach-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+  .ach-item { display:flex; gap:8px; align-items:flex-start; padding:7px 8px; border-radius:9px; border:1px solid rgba(231,210,168,.14); background:rgba(255,255,255,.035); }
+  .ach-item .ico { font-size:18px; line-height:1; }
+  .ach-item .tt { font-size:11px; font-weight:700; color:#f2e8d3; }
+  .ach-item .dd { font-size:10px; color:#9eb8a7; line-height:1.45; margin-top:1px; }
+  .ach-item .tier { margin-left:auto; font-size:8.5px; color:#c7a96a; white-space:nowrap; }
+  .ach-item.locked { opacity:.42; filter:grayscale(1); }
+  #ach-toast { position:fixed; right:18px; top:18px; z-index:300; padding:10px 13px; border-radius:12px; background:#fbf6ea; color:#3a3028; border:1px solid #e7c77d; box-shadow:0 10px 30px rgba(0,0,0,.25); opacity:0; transform:translateY(-8px); transition:opacity .2s, transform .2s; pointer-events:none; max-width:300px; }
+  #ach-toast.show { opacity:1; transform:translateY(0); }
+  #ach-toast b { display:block; font-size:12px; color:#9e2a22; }
+  #ach-toast span { display:block; font-size:10px; color:#7a6448; margin-top:2px; }
+  @media (max-height: 720px) {
+    .holdem-head .sub { display:none; }
+    .holdem-head h2 { font-size:20px; }
+    .hero-panel { padding:8px 10px; margin-top:6px; }
+    .controls { margin-top:6px; }
+  }
+  @media (max-width: 900px) {
+    .holdem-layout { grid-template-columns:1fr; grid-template-rows:minmax(0,1fr) 128px; }
+    .holdem-layout > div:first-child { height: auto; min-height: 0; }
+    .log-panel { height: 128px; flex: 0 0 128px; order: 2; }
+    #log { height: auto; }
+    .table-shell { min-height: 0; }
+    .seat { width: 110px; min-height: 82px; }
+    .seat .cards .card { width: 27px; height: 39px; }
+    .ach-list { grid-template-columns:1fr; }
+  }
+  @media (max-width: 620px) {
+    .page { padding: 4px 6px 6px; }
+    .holdem-head { margin-bottom: 3px; }
+    .table-shell { min-height: 0; padding: 6px; border-width: 5px; }
+    .seat { width: 88px; min-height: 70px; padding: 4px; }
+    .seat .nm { font-size:9px; }
+    .seat .stk { font-size:11px; }
+    .seat .meta { display:none; }
+    .seat .cards .card { width:20px; height:29px; font-size:8px; }
+    .board-center { width: 92%; }
+    .community .card { width:24px; height:35px; font-size:10px; }
+    .hero-panel { font-size:10px; }
+    .hero-row .hint { font-size:9px; }
+    .controls .range { min-width:70px; }
+    .controls .btn { font-size:10px; padding:5px 7px; }
+    .holdem-layout { grid-template-rows:minmax(0,1fr) 92px; }
+    .log-panel { height: 92px; flex-basis:92px; }
+    .setup-card { padding:12px; }
+  }
 </style>
 </head>
 <body data-project="holdem">
@@ -100,7 +167,10 @@
       <h2>德州扑克</h2>
       <div class="sub">无限注 · 6–10 人 · AI 只能看到自己的手牌与公共牌</div>
     </div>
-    <div class="sub" id="table-summary">选择一个牌桌开始</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="sub" id="table-summary">选择一个牌桌开始</div>
+      <button class="ach-btn" id="ach-btn" type="button">🏆 <span id="ach-count">0 / 0</span></button>
+    </div>
   </div>
 
   <section class="section hidden" id="setup-view">
@@ -168,6 +238,14 @@
     </div>
   </section>
 
+  <div class="modal hidden" id="ach-modal">
+    <div class="setup-card ach-modal-card">
+      <div class="ach-head"><h2>德州扑克 · 成就</h2><button class="btn btn-poker" id="ach-close" type="button">关闭</button></div>
+      <div class="ach-list" id="ach-list"></div>
+    </div>
+  </div>
+  <div id="ach-toast"><b id="ach-toast-title"></b><span id="ach-toast-desc"></span></div>
+
   <div class="modal hidden" id="gameover-modal">
     <div class="setup-card">
       <h2 class="gameover" id="gameover-title">牌局结束</h2>
@@ -187,6 +265,100 @@
   const $ = (s) => document.querySelector(s);
   let game = null;
   let AI_DELAY = 650;
+  let ACHIEVEMENTS = [];
+  let ACH_STATE = {};
+  let ACH_PENDING = [];
+  let ACH_HELL_IN_HAND = false;
+  let ACH_STREAK = 0;
+  let ACH_HAND_START_STACK = 0;
+  const ACH_TIER = { easy: "简单", medium: "中等", hard: "困难", hell: "极限" };
+  const ACH_KEY = () => "kp_achievements_" + (localStorage.getItem("kp_login_user") || "guest");
+  function loadAchState() {
+    try { ACH_STATE = JSON.parse(localStorage.getItem(ACH_KEY()) || "{}") || {}; } catch (e) { ACH_STATE = {}; }
+  }
+  function saveAchState() {
+    try { localStorage.setItem(ACH_KEY(), JSON.stringify(ACH_STATE)); } catch (e) {}
+  }
+  function escHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  function renderAch() {
+    const done = ACHIEVEMENTS.filter((a) => ACH_STATE[a.id]).length;
+    const count = document.getElementById("ach-count");
+    if (count) count.textContent = done + " / " + ACHIEVEMENTS.length;
+    const list = document.getElementById("ach-list");
+    if (!list) return;
+    list.innerHTML = ACHIEVEMENTS.map((a) => {
+      const on = !!ACH_STATE[a.id];
+      return '<div class="ach-item' + (on ? "" : " locked") + '"><span class="ico">' + escHtml(a.icon || "🏆") + '</span>' +
+        '<span><span class="tt">' + escHtml(a.title) + '</span><span class="dd">' + escHtml(a.desc || "") + '</span></span>' +
+        '<span class="tier">' + escHtml(ACH_TIER[a.tier] || "") + '</span></div>';
+    }).join("") || '<div class="dd">成就加载中…</div>';
+  }
+  function achToast(def) {
+    if (window.parent !== window) return; // shell handles the Steam toast
+    const el = document.getElementById("ach-toast");
+    if (!el) return;
+    document.getElementById("ach-toast-title").textContent = "成就解锁 · " + def.title;
+    document.getElementById("ach-toast-desc").textContent = def.desc || "";
+    el.classList.add("show");
+    clearTimeout(achToast._t);
+    achToast._t = setTimeout(() => el.classList.remove("show"), 3200);
+  }
+  function unlockAch(id) {
+    if (!id) return;
+    if (!ACHIEVEMENTS.length) { if (!ACH_PENDING.includes(id)) ACH_PENDING.push(id); return; }
+    const def = ACHIEVEMENTS.find((a) => a.id === id);
+    if (!def || ACH_STATE[id]) return;
+    ACH_STATE[id] = new Date().toISOString();
+    saveAchState();
+    renderAch();
+    achToast(def);
+    try {
+      if (window.parent !== window) {
+        window.parent.postMessage({ kpAchievement: { game: "holdem", id: def.id, title: def.title, desc: def.desc, icon: def.icon } }, "*");
+      }
+    } catch (e) {}
+  }
+  async function loadAchievements() {
+    loadAchState();
+    try {
+      const r = await fetch("/api/p/holdem/state", {cache: "no-store"});
+      const j = await r.json();
+      const arr = j && j.manifest && j.manifest.ui && j.manifest.ui.achievements;
+      ACHIEVEMENTS = Array.isArray(arr) ? arr : [];
+    } catch (e) { ACHIEVEMENTS = []; }
+    ACH_PENDING.forEach((id) => unlockAch(id));
+    ACH_PENDING = [];
+    renderAch();
+  }
+  const ACH_CATEGORY = { "一对": "pair", "两对": "two_pair", "三条": "trips", "顺子": "straight", "同花": "flush", "葫芦": "full_house", "四条": "quads", "同花顺": "straight_flush" };
+  function onHandStart(info) {
+    ACH_HAND_START_STACK = Number(info.humanStartStack) || 0;
+    ACH_HELL_IN_HAND = !!(game && game.players.some((p) => p.difficulty === "hell"));
+    unlockAch("first_hand");
+  }
+  function onHandResult(r) {
+    if (!r) return;
+    const human = game && game.players[0];
+    const won = Array.isArray(r.winners) && r.winners.includes(0);
+    if (r.showdown && !r.humanFolded) {
+      unlockAch("first_showdown");
+      if (r.humanHand && r.humanHand.name && ACH_CATEGORY[r.humanHand.name]) unlockAch(ACH_CATEGORY[r.humanHand.name]);
+    }
+    if (!r.humanFolded) unlockAch("no_fold");
+    if (won) {
+      unlockAch("first_win");
+      ACH_STREAK += 1;
+      if (ACH_STREAK >= 3) unlockAch("three_streak");
+      if (!r.showdown) unlockAch("win_no_showdown");
+      if (r.humanBlind === "sb" || r.humanBlind === "bb") unlockAch("blind_win");
+      if (r.humanAllIn) unlockAch("all_in_win");
+      if (Number(r.pot) >= 500) unlockAch("big_pot");
+      if (ACH_HAND_START_STACK > 0 && ACH_HAND_START_STACK < 100) unlockAch("comeback");
+      if (ACH_HELL_IN_HAND) unlockAch("hell_slayer");
+    } else {
+      ACH_STREAK = 0;
+    }
+  }
   function cardHtml(card, cls) {
     if (!card) return '<span class="card empty ' + (cls || '') + '"></span>';
     const red = card.s === 'h' || card.s === 'd';
@@ -262,11 +434,15 @@
     game.onUpdate = render;
     game.onLog = (text, cls) => log(text, cls);
     game.onHandLog = (text) => logHand(text);
+    game.onHandStart = onHandStart;
+    game.onHandResult = onHandResult;
     game.onGameOver = (info) => showGameOver(info);
     game.onAiAction = scheduleAi;
+    ACH_STREAK = 0;
     game.start();
   }
   function showGameOver(info) {
+    if (info.winner === '你') unlockAch('tournament_win');
     $('#gameover-title').textContent = info.winner === '你' ? '你赢了' : '牌局结束';
     $('#gameover-text').textContent = info.text;
     $('#gameover-modal').classList.remove('hidden');
@@ -334,6 +510,10 @@
   }
   function doAct(action) {
     if (!game || game.actor !== 0) return;
+    if (action === 'fold') unlockAch('first_fold');
+    if (action === 'check') unlockAch('first_check');
+    if (action === 'call') unlockAch('first_call');
+    if (action === 'raise') unlockAch('first_raise');
     if (action === 'raise') {
       const amount = Number($('#raise-slider').value);
       game.act({ type: 'raise', amount });
@@ -352,7 +532,10 @@
   $('#gameover-again').onclick = startGame;
   $('#gameover-close').onclick = () => { $('#gameover-modal').classList.add('hidden'); $('#game-view').classList.add('hidden'); $('#setup-view').classList.remove('hidden'); refreshSetup(); };
   window.addEventListener('resize', () => { if (game) render(); });
-  window.__holdem = { get game() { return game; }, startGame };
+  window.__holdem = { get game() { return game; }, startGame, loadAchievements };
+  document.getElementById('ach-btn').onclick = () => { renderAch(); document.getElementById('ach-modal').classList.remove('hidden'); };
+  document.getElementById('ach-close').onclick = () => document.getElementById('ach-modal').classList.add('hidden');
+  loadAchievements();
   refreshSetup();
   $('#setup-view').classList.remove('hidden');
 })();

@@ -6,19 +6,206 @@
   "icon": "♠️",
   "desc": "无限注德州扑克：6-10 人牌桌，四种 AI 难度，AI 只能看到自己的手牌和公共牌。",
   "base": "json-doc",
-  "capabilities": ["state"],
+  "capabilities": [
+    "state"
+  ],
   "acl": {
-    "read": ["kitten", "puppy"],
-    "write": ["kitten", "puppy"]
+    "read": [
+      "kitten",
+      "puppy"
+    ],
+    "write": [
+      "kitten",
+      "puppy"
+    ]
   },
   "hidden": true,
-  "view": {"kind": "custom", "dir": "web"},
+  "view": {
+    "kind": "custom",
+    "dir": "web"
+  },
   "path": "/games/holdem/",
   "ui": {
     "template": "#module.game",
-    "theme": {"accent": "#1f6b4f"}
+    "theme": {
+      "accent": "#1f6b4f"
+    },
+    "achievements": [
+      {
+        "id": "first_hand",
+        "title": "初次入局",
+        "desc": "完成第一手牌",
+        "icon": "♠️",
+        "tier": "easy"
+      },
+      {
+        "id": "first_check",
+        "title": "稳如老狗",
+        "desc": "第一次过牌",
+        "icon": "🐢",
+        "tier": "easy"
+      },
+      {
+        "id": "first_call",
+        "title": "跟到底",
+        "desc": "第一次跟注",
+        "icon": "📞",
+        "tier": "easy"
+      },
+      {
+        "id": "first_raise",
+        "title": "加点压力",
+        "desc": "第一次加注",
+        "icon": "⬆️",
+        "tier": "easy"
+      },
+      {
+        "id": "first_fold",
+        "title": "及时止损",
+        "desc": "第一次弃牌",
+        "icon": "🗑️",
+        "tier": "easy"
+      },
+      {
+        "id": "first_showdown",
+        "title": "亮牌时刻",
+        "desc": "第一次进入摊牌",
+        "icon": "👁️",
+        "tier": "easy"
+      },
+      {
+        "id": "first_win",
+        "title": "开胡",
+        "desc": "赢下第一手牌",
+        "icon": "🎉",
+        "tier": "easy"
+      },
+      {
+        "id": "win_no_showdown",
+        "title": "不战而胜",
+        "desc": "无摊牌赢下底池",
+        "icon": "🕶️",
+        "tier": "medium"
+      },
+      {
+        "id": "pair",
+        "title": "一对",
+        "desc": "摊牌拿到一对",
+        "icon": "🃏",
+        "tier": "easy"
+      },
+      {
+        "id": "two_pair",
+        "title": "两对",
+        "desc": "摊牌拿到两对",
+        "icon": "🀄",
+        "tier": "medium"
+      },
+      {
+        "id": "trips",
+        "title": "三条",
+        "desc": "摊牌拿到三条",
+        "icon": "3️⃣",
+        "tier": "medium"
+      },
+      {
+        "id": "straight",
+        "title": "顺子",
+        "desc": "摊牌拿到顺子",
+        "icon": "📏",
+        "tier": "medium"
+      },
+      {
+        "id": "flush",
+        "title": "同花",
+        "desc": "摊牌拿到同花",
+        "icon": "🌊",
+        "tier": "hard"
+      },
+      {
+        "id": "full_house",
+        "title": "葫芦",
+        "desc": "摊牌拿到葫芦",
+        "icon": "🏺",
+        "tier": "hard"
+      },
+      {
+        "id": "quads",
+        "title": "四条",
+        "desc": "摊牌拿到四条",
+        "icon": "🧱",
+        "tier": "hard"
+      },
+      {
+        "id": "straight_flush",
+        "title": "同花顺",
+        "desc": "摊牌拿到同花顺",
+        "icon": "🌈",
+        "tier": "hell"
+      },
+      {
+        "id": "all_in_win",
+        "title": "全下取胜",
+        "desc": "全下后赢下底池",
+        "icon": "💥",
+        "tier": "medium"
+      },
+      {
+        "id": "big_pot",
+        "title": "大底池",
+        "desc": "单手赢下 500+ 筹码",
+        "icon": "💰",
+        "tier": "hard"
+      },
+      {
+        "id": "three_streak",
+        "title": "三连胜",
+        "desc": "连续赢下三手",
+        "icon": "🔥",
+        "tier": "hard"
+      },
+      {
+        "id": "no_fold",
+        "title": "不退让",
+        "desc": "完整一手从未弃牌",
+        "icon": "🛡️",
+        "tier": "medium"
+      },
+      {
+        "id": "blind_win",
+        "title": "盲注位赢",
+        "desc": "小盲或大盲位赢下底池",
+        "icon": "🎯",
+        "tier": "medium"
+      },
+      {
+        "id": "hell_slayer",
+        "title": "地狱难度",
+        "desc": "赢下含地狱 AI 的一手",
+        "icon": "😈",
+        "tier": "hell"
+      },
+      {
+        "id": "comeback",
+        "title": "绝地反击",
+        "desc": "筹码低于 100 后赢下一手",
+        "icon": "🪄",
+        "tier": "hell"
+      },
+      {
+        "id": "tournament_win",
+        "title": "最后赢家",
+        "desc": "牌局结束时筹码第一",
+        "icon": "🏆",
+        "tier": "hell"
+      }
+    ]
   },
-  "tags": ["游戏", "扑克", "桌面"],
+  "tags": [
+    "游戏",
+    "扑克",
+    "桌面"
+  ],
   "data": {
     "kind": "client",
     "storage": "memory",
