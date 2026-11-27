@@ -3,23 +3,30 @@
  * 输入只有 Game.aiView(seat)：自己的手牌、公共牌、底池、公开下注、公开行动历史、人数。
  * 绝不接收其他玩家的手牌或牌堆；equity 用未知牌随机模拟，属于合法信息。
  *
+ * 每个 AI 对每个对手维护一个 13×13 上三角手牌概率矩阵（91 个 rank-pair 类别）：
+ *   - 初始按剩余牌组合数作为先验；
+ *   - 根据对手公开行动做贝叶斯更新；
+ *   - 用范围概率抽样对手手牌，并影响自己的下注策略。
+ *
  * 难度对应“思考深度”：
- *   easy   depth 0：随机对手范围，不做行动历史修正
- *   medium depth 1：翻前行动范围
- *   hard   depth 2：翻前 + 翻后行动范围、加注历史、筹码深度
- *   hell   depth 3：更窄的范围、更深的加注历史和 SPR 修正
+ *   easy   depth 0：随机对手范围，维护矩阵但不使用历史范围
+ *   medium depth 1：使用翻前范围矩阵
+ *   hard   depth 2：加入翻后范围、加注历史、筹码深度
+ *   hell   depth 3：更窄的范围、更强的历史修正与更多模拟
  */
 (function () {
   const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
-  const VALUES = { "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "J": 11, "Q": 12, "K": 13, "A": 14 };
+  const RANK_INDEX = {};
+  RANKS.forEach((r, i) => { RANK_INDEX[r] = i; });
+  const RANK_VALUE = RANKS.map((_, i) => i + 2);
   const SUITS = ["s", "h", "d", "c"];
   const ITERATIONS = { easy: 16, medium: 120, hard: 480, hell: 1600 };
   const DEPTH = { easy: 0, medium: 1, hard: 2, hell: 3 };
-  const RANGE_ATTEMPTS = { easy: 1, medium: 4, hard: 7, hell: 10 };
+  const RANGE_STATE = new Map();
 
   function makeDeck() {
     const out = [];
-    for (const s of SUITS) for (const r of RANKS) out.push({ r, v: VALUES[r], s });
+    for (const s of SUITS) for (const r of RANKS) out.push({ r, v: RANK_VALUE[RANK_INDEX[r]], s });
     return out;
   }
   function key(c) { return c.r + c.s; }
@@ -32,7 +39,6 @@
   }
   const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
-  // 起手牌强度 0~1，用于按公开行动筛对手范围。
   function preflopStrength(hole) {
     if (!hole || hole.length !== 2) return 0;
     const hi = Math.max(hole[0].v, hole[1].v);
@@ -48,7 +54,6 @@
     return clamp(s, 0, 1);
   }
 
-  // 翻后牌力 0~1：成牌等级 + 同花/顺子听牌。
   function postflopStrength(hole, board) {
     if (!hole || hole.length !== 2) return 0;
     if (!board || board.length < 3) return preflopStrength(hole);
@@ -64,85 +69,181 @@
     return clamp(s, 0, 1);
   }
 
-  function opponentThresholds(view, opp, depth) {
-    let pre = 0, post = 0;
-    if (!view.history || depth <= 0) return { pre, post };
-    const acts = view.history.filter((h) => h.seat === opp.seat);
-    if (depth >= 1) {
-      if (acts.some((h) => h.street === "preflop" && h.type === "raise")) pre = 0.62;
-      else if (acts.some((h) => h.street === "preflop" && h.type === "call")) pre = 0.42;
-      else if (acts.some((h) => h.street === "preflop" && h.type === "check")) pre = 0.30;
+  function classHole(i, j, suited) {
+    const hi = Math.max(i, j), lo = Math.min(i, j);
+    if (hi === lo) return [{ r: RANKS[hi], v: RANK_VALUE[hi], s: "s" }, { r: RANKS[hi], v: RANK_VALUE[hi], s: "h" }];
+    return [{ r: RANKS[hi], v: RANK_VALUE[hi], s: "s" }, { r: RANKS[lo], v: RANK_VALUE[lo], s: suited ? "s" : "h" }];
+  }
+  // 矩阵格子的代表手牌强度：不区分具体花色组合，取 suited/offsuit 平均。
+  function classStrength(i, j, board) {
+    if (i === j) {
+      const pair = classHole(i, i, false);
+      return (!board || board.length < 3) ? preflopStrength(pair) : postflopStrength(pair, board);
     }
-    if (depth >= 2) {
-      if (acts.some((h) => h.street !== "preflop" && h.type === "raise")) post = Math.max(post, 0.36);
-      else if (acts.some((h) => h.street !== "preflop" && h.type === "call")) post = Math.max(post, 0.16);
-      else if (acts.some((h) => h.street !== "preflop" && h.type === "check")) post = Math.max(post, 0.05);
+    const suited = classHole(i, j, true);
+    const off = classHole(i, j, false);
+    if (!board || board.length < 3) {
+      return (preflopStrength(suited) + preflopStrength(off)) / 2;
     }
-    if (depth >= 3) { pre = Math.min(0.90, pre + 0.04); post = Math.min(0.90, post + 0.05); }
-    return { pre, post };
+    return (postflopStrength(suited, board) + postflopStrength(off, board)) / 2;
   }
 
-  function takePair(deck, i, j) {
-    const hole = [deck[i], deck[j]];
-    const idx = [i, j].sort((a, b) => b - a);
-    idx.forEach((k) => deck.splice(k, 1));
-    return hole;
-  }
-
-  // 按对手公开行动范围抽两张牌，而非无条件随机。
-  function drawOpponentHole(deck, view, opp, depth) {
-    if (!deck || deck.length < 2) return [];
-    if (depth <= 0) return takePair(deck, 0, 1);
-    const t = opponentThresholds(view, opp, depth);
-    if (!t.pre && !t.post) return takePair(deck, 0, 1);
-    const attempts = RANGE_ATTEMPTS[view.difficulty] || 4;
-    let fallback = [0, 1];
-    for (let a = 0; a < attempts; a++) {
-      const i = Math.floor(Math.random() * deck.length);
-      let j = Math.floor(Math.random() * (deck.length - 1));
-      if (j >= i) j++;
-      const hole = [deck[i], deck[j]];
-      if (a === 0) fallback = [i, j];
-      if (preflopStrength(hole) >= t.pre && (view.board.length < 3 || postflopStrength(hole, view.board) >= t.post)) {
-        return takePair(deck, i, j);
+  function makePriorMatrix(view) {
+    const counts = new Array(13).fill(0);
+    view.hole.concat(view.board).forEach((c) => {
+      const idx = RANK_INDEX[c.r];
+      if (idx !== undefined) counts[idx] += 1;
+    });
+    const matrix = Array.from({ length: 13 }, () => new Array(13).fill(0));
+    let total = 0;
+    for (let i = 0; i < 13; i++) {
+      for (let j = i; j < 13; j++) {
+        const ci = Math.max(0, 4 - counts[i]);
+        const cj = Math.max(0, 4 - counts[j]);
+        const combos = i === j ? ci * (ci - 1) / 2 : ci * cj;
+        matrix[i][j] = combos;
+        total += combos;
       }
     }
-    return takePair(deck, fallback[0], fallback[1]);
-  }
-
-  function exactRiverEquity(view, depth) {
-    const known = new Set(view.hole.concat(view.board).map(key));
-    const deck = makeDeck().filter((c) => !known.has(key(c)));
-    const mine = Holdem.bestHand(view.hole.concat(view.board));
-    const opp = view.players.find((p) => p.seat !== view.seat && !p.folded);
-    if (!opp) return 0.5;
-    const t = depth > 0 ? opponentThresholds(view, opp, depth) : { pre: 0, post: 0 };
-    let score = 0, total = 0;
-    for (let i = 0; i < deck.length - 1; i++) for (let j = i + 1; j < deck.length; j++) {
-      const hole = [deck[i], deck[j]];
-      if (t.pre && preflopStrength(hole) < t.pre) continue;
-      if (t.post && postflopStrength(hole, view.board) < t.post) continue;
-      const other = Holdem.bestHand(hole.concat(view.board));
-      const cmp = Holdem.compareRank(mine, other);
-      total++;
-      if (cmp > 0) score += 1;
-      else if (cmp === 0) score += 0.5;
+    if (!total) {
+      for (let i = 0; i < 13; i++) for (let j = i; j < 13; j++) matrix[i][j] = 1;
+      total = 91;
     }
-    return total ? score / total : 0.5;
+    for (let i = 0; i < 13; i++) for (let j = i; j < 13; j++) matrix[i][j] /= total;
+    return matrix;
   }
 
-  function equity(view, iterations, depth) {
+  function normalizeMatrix(matrix) {
+    let total = 0;
+    for (let i = 0; i < 13; i++) for (let j = i; j < 13; j++) total += matrix[i][j];
+    if (!total) return matrix;
+    for (let i = 0; i < 13; i++) for (let j = i; j < 13; j++) matrix[i][j] /= total;
+    return matrix;
+  }
+
+  function actionLikelihood(type, strength, depth) {
+    const sharp = 1 + depth * 0.18;
+    if (type === "raise") return 0.04 + 0.96 * Math.pow(strength, sharp);
+    if (type === "call") return 0.12 + 0.88 * strength;
+    if (type === "check") return 0.90 - 0.45 * strength;
+    if (type === "fold") return Math.max(0.02, 1 - strength);
+    return 1;
+  }
+
+  function updateMatrix(matrix, action, view, depth) {
+    const board = action.street === "preflop" ? [] : view.board;
+    for (let i = 0; i < 13; i++) {
+      for (let j = i; j < 13; j++) {
+        if (matrix[i][j] <= 0) continue;
+        const s = classStrength(i, j, board);
+        matrix[i][j] *= actionLikelihood(action.type, s, depth);
+      }
+    }
+    return normalizeMatrix(matrix);
+  }
+
+  function rangeState(view) {
+    const key = view.gameId + ":" + view.handNo + ":" + view.seat;
+    let state = RANGE_STATE.get(key);
+    if (!state) {
+      state = { matrices: view.players.map(() => null), last: 0, depth: DEPTH[view.difficulty] || 0 };
+      RANGE_STATE.set(key, state);
+      if (RANGE_STATE.size > 120) RANGE_STATE.delete(RANGE_STATE.keys().next().value);
+    }
+    const depth = DEPTH[view.difficulty] || 0;
+    for (let k = state.last; k < view.history.length; k++) {
+      const a = view.history[k];
+      if (!a || a.seat === view.seat || a.type === "blind") continue;
+      if (!state.matrices[a.seat]) state.matrices[a.seat] = makePriorMatrix(view);
+      updateMatrix(state.matrices[a.seat], a, view, depth);
+    }
+    state.last = view.history.length;
+    return state;
+  }
+
+  function matrixFor(state, view, seat) {
+    return state.matrices[seat] || (state.matrices[seat] = makePriorMatrix(view));
+  }
+
+  function matrixMean(matrix, view) {
+    let total = 0, sum = 0;
+    for (let i = 0; i < 13; i++) {
+      for (let j = i; j < 13; j++) {
+        const p = matrix[i][j];
+        if (p <= 0) continue;
+        total += p;
+        sum += p * classStrength(i, j, view.board);
+      }
+    }
+    return total ? sum / total : 0;
+  }
+
+  function buildCells(matrix) {
+    const cells = [];
+    for (let i = 0; i < 13; i++) {
+      for (let j = i; j < 13; j++) {
+        if (matrix[i][j] > 0) cells.push({ i, j, p: matrix[i][j] });
+      }
+    }
+    return cells;
+  }
+
+  function takeRandom(deck) {
+    return [deck.pop(), deck.pop()];
+  }
+
+  // 按范围矩阵抽对手两张牌；找不到对应 rank 的可用牌时退回随机。
+  function sampleRangeHole(deck, cells) {
+    if (!cells || !cells.length) return takeRandom(deck);
+    const total = cells.reduce((s, c) => s + c.p, 0);
+    for (let attempt = 0; attempt < 14; attempt++) {
+      let r = Math.random() * total, chosen = cells[cells.length - 1];
+      for (const c of cells) { r -= c.p; if (r <= 0) { chosen = c; break; } }
+      const need = chosen.i === chosen.j ? 2 : 1;
+      const idxHi = [], idxLo = [];
+      deck.forEach((c, idx) => {
+        const ri = RANK_INDEX[c.r];
+        if (ri === chosen.i) idxHi.push(idx);
+        if (ri === chosen.j) idxLo.push(idx);
+      });
+      let indices = [];
+      if (chosen.i === chosen.j) {
+        if (idxHi.length >= 2) indices = [idxHi[Math.floor(Math.random() * idxHi.length)], idxHi[Math.floor(Math.random() * idxHi.length)]];
+      } else if (idxHi.length && idxLo.length) {
+        indices = [idxHi[Math.floor(Math.random() * idxHi.length)], idxLo[Math.floor(Math.random() * idxLo.length)]];
+      }
+      indices = [...new Set(indices)];
+      if (indices.length === 2) {
+        const hole = indices.map((ix) => deck[ix]);
+        indices.sort((a, b) => b - a).forEach((ix) => deck.splice(ix, 1));
+        return hole;
+      }
+    }
+    return takeRandom(deck);
+  }
+
+  function rangePressure(view, state, depth) {
+    if (depth <= 0) return 0;
+    const opps = view.players.filter((p) => p.seat !== view.seat && !p.folded);
+    if (!opps.length) return 0;
+    let sum = 0;
+    for (const o of opps) sum += matrixMean(matrixFor(state, view, o.seat), view);
+    return sum / opps.length;
+  }
+
+  function equity(view, iterations, depth, state) {
     const known = new Set(view.hole.concat(view.board).map(key));
     const base = makeDeck().filter((c) => !known.has(key(c)));
     const opponents = view.players.filter((p) => p.seat !== view.seat && !p.folded);
-    if (!opponents.length) return 1;
-    const exact = view.board.length === 5 && opponents.length === 1 && iterations >= 400;
-    const sims = exact ? 0 : Math.max(1, iterations);
+    if (!opponents.length) return { equity: 1, rangePressure: 0 };
+    const useRange = depth >= 1;
+    const cells = useRange ? opponents.map((o) => buildCells(matrixFor(state, view, o.seat))) : null;
+    const rangeP = useRange ? rangePressure(view, state, depth) : 0;
     let score = 0;
-    for (let it = 0; it < sims; it++) {
+    for (let it = 0; it < iterations; it++) {
       const deck = base.slice();
       shuffle(deck);
-      const oppHands = opponents.map((opp) => drawOpponentHole(deck, view, opp, depth));
+      const oppHands = opponents.map((o, idx) => useRange ? sampleRangeHole(deck, cells[idx]) : takeRandom(deck));
       const board = view.board.slice();
       while (board.length < 5) board.push(deck.pop());
       const mine = Holdem.bestHand(view.hole.concat(board));
@@ -156,7 +257,7 @@
       if (best === mine && !tie) score += 1;
       else if (tie && Holdem.compareRank(mine, best) === 0) score += 0.5;
     }
-    return exact ? exactRiverEquity(view, depth) : score / sims;
+    return { equity: score / Math.max(1, iterations), rangePressure: rangeP };
   }
 
   function canRaise(view) {
@@ -175,16 +276,17 @@
     if (!view || !view.hole || view.hole.length !== 2) return { type: "check" };
     const diff = view.difficulty || "medium";
     const depth = DEPTH[diff] || 0;
+    const iters = ITERATIONS[diff] || ITERATIONS.medium;
+    const state = rangeState(view);
+    const ev = equity(view, iters, depth, state);
+    const eq = ev.equity;
+    const rangeP = ev.rangePressure;
     const toCall = view.toCall || 0;
     const pot = Math.max(view.pot, view.bb);
     const potOdds = toCall > 0 ? toCall / (pot + toCall) : 0;
-    const iters = ITERATIONS[diff] || ITERATIONS.medium;
-    const eq = equity(view, iters, depth);
     const opponents = Math.max(1, view.players.filter((p) => p.seat !== view.seat && !p.folded).length);
-    // 多人底池里 raw equity 天生接近 1/(人数+1)，用“相对平均胜率”判断牌力。
     const rel = eq * (opponents + 1);
     const canBet = canRaise(view);
-    const canCheck = toCall === 0;
     const stack = Math.max(0, view.stack || 0);
     const spr = stack / Math.max(1, pot);
     const raises = view.raisesThisStreet || 0;
@@ -197,17 +299,16 @@
       hell:   { fold: 0.70, raise: 1.10, bluff: 0.06, call: 0.02 },
     }[diff] || { fold: 0.50, raise: 1.38, bluff: 0.08, call: 0.10 };
 
-    // 加注历史越重，门槛越高、频率越低；避免 AI 自己把底池无限滚大。
-    const raiseThreshold = profile.raise + Math.min(0.42, raises * 0.09);
-    const raiseChance = Math.max(0.16, 0.72 - raises * 0.14 - (depth >= 2 ? 0.04 : 0));
+    // 对手范围越强，越谨慎；加注历史越重，越少继续加注。
+    const raiseThreshold = profile.raise + Math.min(0.42, raises * 0.09) + rangeP * 0.22;
+    const raiseChance = Math.max(0.12, 0.72 - raises * 0.14 - (depth >= 2 ? 0.04 : 0) - rangeP * 0.18);
+    const foldLine = profile.fold + rangeP * 0.10;
 
-    // 只有牌力明显低于平均、且不够底池赔率时才弃牌，避免多人桌无脑弃牌。
-    if (toCall > 0 && !allInCall && rel < profile.fold && eq < Math.max(0.10, potOdds - profile.call)) {
+    if (toCall > 0 && !allInCall && rel < foldLine && eq < Math.max(0.10, potOdds - profile.call)) {
       if (diff === "easy" && Math.random() < 0.30) return { type: "call" };
       return { type: "fold" };
     }
 
-    // 加注：结合 SPR、剩余筹码、加注历史决定尺度与是否值得继续做大。
     if (canBet && rel > raiseThreshold && Math.random() < raiseChance) {
       // 已经面对很大的跟注额时，边际牌优先跟注，保留筹码。
       if (toCall >= stack * 0.65 && stack > 0) {
@@ -223,13 +324,12 @@
 
     if (toCall > 0) {
       if (allInCall) return { type: "call" };
-      if (rel >= profile.fold || eq >= potOdds - profile.call) return { type: "call" };
-      if (Math.random() < profile.bluff) return { type: "call" };
+      if (rel >= foldLine || eq >= potOdds - profile.call) return { type: "call" };
+      if (Math.random() < Math.max(0.02, profile.bluff - rangeP * 0.03)) return { type: "call" };
       return { type: "fold" };
     }
 
-    // 无人下注时，强牌或少量诈唬下注。
-    if (canBet && (rel > profile.raise * 0.92 || Math.random() < profile.bluff)) {
+    if (canBet && (rel > raiseThreshold * 0.92 || Math.random() < Math.max(0.02, profile.bluff - rangeP * 0.03))) {
       let fraction = diff === "hell" ? 0.55 : 0.42;
       if (spr < 1.2) fraction = 1.0;
       if (shortStack) fraction = Math.min(fraction, 0.65);

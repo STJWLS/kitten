@@ -4,7 +4,7 @@
   "order": 2,
   "title": "德州扑克",
   "icon": "♠️",
-  "desc": "无限注德州扑克：6-10 人牌桌，四种 AI 难度，AI 只能看到自己的手牌和公共牌。",
+  "desc": "德州扑克：6-10 人牌桌，可选无限注/底池限注/固定限注，四种 AI 难度；AI 只读取自己的手牌、公共牌和公开行动信息。",
   "base": "json-doc",
   "capabilities": [
     "state"
@@ -19,7 +19,6 @@
       "puppy"
     ]
   },
-  "hidden": true,
   "view": {
     "kind": "custom",
     "dir": "web"

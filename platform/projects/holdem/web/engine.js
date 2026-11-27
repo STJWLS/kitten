@@ -66,8 +66,10 @@
     return best;
   }
 
+  let GAME_SERIAL = 0;
   class Game {
     constructor(opts) {
+      this.gameId = 'h' + (++GAME_SERIAL);
       this.playerCount = Math.max(6, Math.min(10, Number(opts.players) || 6));
       this.totalChips = Math.max(600, Number(opts.totalChips) || 6000);
       this.startingStack = Math.max(100, Math.floor((Number(opts.startingStack) || Math.floor(this.totalChips / this.playerCount)) / 10) * 10);
@@ -210,6 +212,8 @@
       const p = this.players[seat];
       if (!p) return null;
       return {
+        gameId: this.gameId,
+        handNo: this.handNo,
         seat,
         difficulty: p.difficulty,
         hole: p.hole.map((c) => ({ ...c })),
