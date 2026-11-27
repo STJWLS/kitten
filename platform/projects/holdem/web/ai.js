@@ -83,34 +83,35 @@
     const potOdds = toCall > 0 ? toCall / (pot + toCall) : 0;
     const iters = ITERATIONS[diff] || ITERATIONS.medium;
     const eq = equity(view, iters);
+    const opponents = Math.max(1, view.players.filter((p) => p.seat !== view.seat && !p.folded).length);
+    // 多人底池里 raw equity 天生接近 1/(人数+1)，用“相对平均胜率”判断牌力。
+    const rel = eq * (opponents + 1);
     const canBet = canRaise(view);
     const canCheck = toCall === 0;
-    const aggression = diff === "hell" ? 1.18 : diff === "hard" ? 1.04 : diff === "medium" ? 0.9 : 0.7;
-    const foldLine = diff === "easy" ? 0.24 : diff === "medium" ? 0.34 : diff === "hard" ? 0.38 : 0.40;
-    const raiseLine = diff === "hell" ? 0.56 : diff === "hard" ? 0.63 : diff === "medium" ? 0.68 : 0.78;
+    const profile = {
+      easy:   { fold: 0.36, raise: 1.62, bluff: 0.10, call: 0.18 },
+      medium: { fold: 0.50, raise: 1.38, bluff: 0.08, call: 0.10 },
+      hard:   { fold: 0.62, raise: 1.22, bluff: 0.07, call: 0.05 },
+      hell:   { fold: 0.70, raise: 1.10, bluff: 0.06, call: 0.02 },
+    }[diff] || { fold: 0.50, raise: 1.38, bluff: 0.08, call: 0.10 };
 
-    // 弱牌：面对下注时按难度和底池赔率弃牌。
-    if (toCall > 0 && eq < Math.max(foldLine, potOdds * 0.92)) {
-      if (diff === "easy" && Math.random() < 0.18) return canCheck ? { type: "check" } : { type: "call" };
+    // 只有牌力明显低于平均、且不够底池赔率时才弃牌，避免多人桌无脑弃牌。
+    if (toCall > 0 && rel < profile.fold && eq < Math.max(0.10, potOdds - profile.call)) {
+      if (diff === "easy" && Math.random() < 0.30) return { type: "call" };
       return { type: "fold" };
     }
-    // 强牌：主动做大底池；地狱难度更愿意在翻牌后加压。
-    if (canBet && eq > raiseLine * (1 - Math.min(0.12, aggression * 0.04))) {
-      if (Math.random() < (diff === "easy" ? 0.45 : diff === "medium" ? 0.7 : 0.86)) {
-        return actRaise(view, diff === "easy" ? 0.35 : diff === "medium" ? 0.55 : 0.72);
-      }
+    // 相对平均胜率明显更高时主动做大底池。
+    if (canBet && rel > profile.raise && Math.random() < 0.72) {
+      return actRaise(view, diff === "easy" ? 0.30 : diff === "medium" ? 0.50 : 0.68);
     }
-    // 中等牌：赔率合适就跟，否则过牌/弃牌。
     if (toCall > 0) {
-      if (eq + (diff === "easy" ? -0.03 : 0.02) >= potOdds) {
-        return { type: "call" };
-      }
-      if (diff === "easy" && Math.random() < 0.25) return { type: "call" };
+      if (rel >= profile.fold || eq >= potOdds - profile.call) return { type: "call" };
+      if (Math.random() < profile.bluff) return { type: "call" };
       return { type: "fold" };
     }
-    // 有位置/强牌的半诈唬。
-    if (canBet && diff !== "easy" && Math.random() < (diff === "hell" ? 0.22 : diff === "hard" ? 0.12 : 0.06)) {
-      return actRaise(view, diff === "hell" ? 0.6 : 0.45);
+    // 无人下注时，强牌或少量诈唬下注。
+    if (canBet && (rel > profile.raise * 0.92 || Math.random() < profile.bluff)) {
+      return actRaise(view, diff === "hell" ? 0.55 : 0.42);
     }
     return { type: "check" };
   }
