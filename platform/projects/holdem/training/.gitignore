@@ -1,0 +1,6 @@
+data/
+out/
+out64/
+out91/
+__pycache__/
+*.pyc

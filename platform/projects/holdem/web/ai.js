@@ -186,7 +186,13 @@
     }
     return f;
   }
-  function makePriorMatrix(view) {
+  function makePriorMatrix(view, targetSeat) {
+    if (targetSeat !== undefined && window.HoldemRangePrior) {
+      try {
+        const p = window.HoldemRangePrior.prior(view, targetSeat);
+        if (p && p.length === COMBOS.length) return p;
+      } catch (e) {}
+    }
     const matrix = new Float64Array(COMBOS.length);
     const known = new Set(view.hole.concat(view.board).map(key));
     let total = 0;
@@ -262,7 +268,7 @@
       // 简单 AI 只保留先验；中等只用翻前信息；困难/地狱才使用翻后行动。
       if (depth <= 0) continue;
       if (depth === 1 && a.street !== "preflop") continue;
-      if (!state.matrices[a.seat]) state.matrices[a.seat] = makePriorMatrix(view);
+      if (!state.matrices[a.seat]) state.matrices[a.seat] = makePriorMatrix(view, a.seat);
       updateMatrix(state.matrices[a.seat], a, view, depth);
     }
     state.last = view.history.length;
@@ -270,7 +276,7 @@
   }
 
   function matrixFor(state, view, seat) {
-    return state.matrices[seat] || (state.matrices[seat] = makePriorMatrix(view));
+    return state.matrices[seat] || (state.matrices[seat] = makePriorMatrix(view, seat));
   }
 
   function matrixMean(matrix, view) {
