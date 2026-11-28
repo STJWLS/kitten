@@ -3,16 +3,16 @@
  * 输入只有 Game.aiView(seat)：自己的手牌、公共牌、底池、公开下注、公开行动历史、人数。
  * 绝不接收其他玩家的手牌或牌堆；equity 用未知牌随机模拟，属于合法信息。
  *
- * 每个 AI 对每个对手维护一个 13×13 上三角手牌概率矩阵（91 个 rank-pair 类别）：
- *   - 初始按剩余牌组合数作为先验；
- *   - 根据对手公开行动做贝叶斯更新；
- *   - 用范围概率抽样对手手牌，并影响自己的下注策略。
+ * 每个 AI 对每个对手维护 52×52 上三角的具体两张牌组合概率矩阵：
+ *   - 有效格子 C(52,2)=1326；
+ *   - 每格是 P(对手恰好持有这两张牌 | 已知牌 + 公开行动)；
+ *   - 花色、blocker、同花听牌都进入更新和抽样。
  *
  * 难度对应“思考深度”：
- *   easy   depth 0：随机对手范围，维护矩阵但不使用历史范围
+ *   easy   depth 0：维护矩阵，但使用随机对手范围
  *   medium depth 1：使用翻前范围矩阵
  *   hard   depth 2：加入翻后范围、加注历史、筹码深度
- *   hell   depth 3：更窄的范围、更强的历史修正与更多模拟
+ *   hell   depth 3：更强历史修正、更多模拟
  */
 (function () {
   const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
@@ -38,6 +38,18 @@
     return a;
   }
   const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+
+  // 52×52 上三角：只保存具体两张牌的有效组合。
+  const CARD_DECK = makeDeck();
+  const COMBOS = [];
+  const COMBO_BY_KEY = new Map();
+  for (let i = 0; i < CARD_DECK.length; i++) {
+    for (let j = i + 1; j < CARD_DECK.length; j++) {
+      const combo = { a: CARD_DECK[i], b: CARD_DECK[j], k: COMBOS.length };
+      COMBOS.push(combo);
+      COMBO_BY_KEY.set(key(combo.a) + "|" + key(combo.b), combo.k);
+    }
+  }
 
   function preflopStrength(hole) {
     if (!hole || hole.length !== 2) return 0;
@@ -69,58 +81,6 @@
     return clamp(s, 0, 1);
   }
 
-  function classHole(i, j, suited) {
-    const hi = Math.max(i, j), lo = Math.min(i, j);
-    if (hi === lo) return [{ r: RANKS[hi], v: RANK_VALUE[hi], s: "s" }, { r: RANKS[hi], v: RANK_VALUE[hi], s: "h" }];
-    return [{ r: RANKS[hi], v: RANK_VALUE[hi], s: "s" }, { r: RANKS[lo], v: RANK_VALUE[lo], s: suited ? "s" : "h" }];
-  }
-  // 矩阵格子的代表手牌强度：不区分具体花色组合，取 suited/offsuit 平均。
-  function classStrength(i, j, board) {
-    if (i === j) {
-      const pair = classHole(i, i, false);
-      return (!board || board.length < 3) ? preflopStrength(pair) : postflopStrength(pair, board);
-    }
-    const suited = classHole(i, j, true);
-    const off = classHole(i, j, false);
-    if (!board || board.length < 3) {
-      return (preflopStrength(suited) + preflopStrength(off)) / 2;
-    }
-    return (postflopStrength(suited, board) + postflopStrength(off, board)) / 2;
-  }
-
-  function makePriorMatrix(view) {
-    const counts = new Array(13).fill(0);
-    view.hole.concat(view.board).forEach((c) => {
-      const idx = RANK_INDEX[c.r];
-      if (idx !== undefined) counts[idx] += 1;
-    });
-    const matrix = Array.from({ length: 13 }, () => new Array(13).fill(0));
-    let total = 0;
-    for (let i = 0; i < 13; i++) {
-      for (let j = i; j < 13; j++) {
-        const ci = Math.max(0, 4 - counts[i]);
-        const cj = Math.max(0, 4 - counts[j]);
-        const combos = i === j ? ci * (ci - 1) / 2 : ci * cj;
-        matrix[i][j] = combos;
-        total += combos;
-      }
-    }
-    if (!total) {
-      for (let i = 0; i < 13; i++) for (let j = i; j < 13; j++) matrix[i][j] = 1;
-      total = 91;
-    }
-    for (let i = 0; i < 13; i++) for (let j = i; j < 13; j++) matrix[i][j] /= total;
-    return matrix;
-  }
-
-  function normalizeMatrix(matrix) {
-    let total = 0;
-    for (let i = 0; i < 13; i++) for (let j = i; j < 13; j++) total += matrix[i][j];
-    if (!total) return matrix;
-    for (let i = 0; i < 13; i++) for (let j = i; j < 13; j++) matrix[i][j] /= total;
-    return matrix;
-  }
-
   function actionLikelihood(type, strength, depth) {
     const sharp = 1 + depth * 0.18;
     if (type === "raise") return 0.04 + 0.96 * Math.pow(strength, sharp);
@@ -130,24 +90,48 @@
     return 1;
   }
 
+  function makePriorMatrix(view) {
+    const matrix = new Float64Array(COMBOS.length);
+    const known = new Set(view.hole.concat(view.board).map(key));
+    let total = 0;
+    for (const c of COMBOS) {
+      if (known.has(key(c.a)) || known.has(key(c.b))) continue;
+      matrix[c.k] = 1;
+      total += 1;
+    }
+    if (!total) {
+      matrix.fill(1);
+      total = COMBOS.length;
+    }
+    for (let i = 0; i < matrix.length; i++) matrix[i] /= total;
+    return matrix;
+  }
+
+  function normalizeMatrix(matrix) {
+    let total = 0;
+    for (let i = 0; i < matrix.length; i++) total += matrix[i];
+    if (!total) return matrix;
+    for (let i = 0; i < matrix.length; i++) matrix[i] /= total;
+    return matrix;
+  }
+
   function updateMatrix(matrix, action, view, depth) {
     const board = action.street === "preflop" ? [] : view.board;
-    for (let i = 0; i < 13; i++) {
-      for (let j = i; j < 13; j++) {
-        if (matrix[i][j] <= 0) continue;
-        const s = classStrength(i, j, board);
-        matrix[i][j] *= actionLikelihood(action.type, s, depth);
-      }
+    for (const c of COMBOS) {
+      const p = matrix[c.k];
+      if (p <= 0) continue;
+      const s = board.length >= 3 ? postflopStrength([c.a, c.b], board) : preflopStrength([c.a, c.b]);
+      matrix[c.k] = p * actionLikelihood(action.type, s, depth);
     }
     return normalizeMatrix(matrix);
   }
 
   function rangeState(view) {
-    const key = view.gameId + ":" + view.handNo + ":" + view.seat;
-    let state = RANGE_STATE.get(key);
+    const stateKey = view.gameId + ":" + view.handNo + ":" + view.seat;
+    let state = RANGE_STATE.get(stateKey);
     if (!state) {
-      state = { matrices: view.players.map(() => null), last: 0, depth: DEPTH[view.difficulty] || 0 };
-      RANGE_STATE.set(key, state);
+      state = { matrices: view.players.map(() => null), last: 0 };
+      RANGE_STATE.set(stateKey, state);
       if (RANGE_STATE.size > 120) RANGE_STATE.delete(RANGE_STATE.keys().next().value);
     }
     const depth = DEPTH[view.difficulty] || 0;
@@ -166,24 +150,21 @@
   }
 
   function matrixMean(matrix, view) {
+    const board = view.board && view.board.length >= 3 ? view.board : null;
     let total = 0, sum = 0;
-    for (let i = 0; i < 13; i++) {
-      for (let j = i; j < 13; j++) {
-        const p = matrix[i][j];
-        if (p <= 0) continue;
-        total += p;
-        sum += p * classStrength(i, j, view.board);
-      }
+    for (const c of COMBOS) {
+      const p = matrix[c.k];
+      if (p <= 0) continue;
+      total += p;
+      sum += p * (board ? postflopStrength([c.a, c.b], board) : preflopStrength([c.a, c.b]));
     }
     return total ? sum / total : 0;
   }
 
   function buildCells(matrix) {
     const cells = [];
-    for (let i = 0; i < 13; i++) {
-      for (let j = i; j < 13; j++) {
-        if (matrix[i][j] > 0) cells.push({ i, j, p: matrix[i][j] });
-      }
+    for (const c of COMBOS) {
+      if (matrix[c.k] > 0) cells.push({ k: c.k, a: c.a, b: c.b, p: matrix[c.k] });
     }
     return cells;
   }
@@ -192,32 +173,18 @@
     return [deck.pop(), deck.pop()];
   }
 
-  // 按范围矩阵抽对手两张牌；找不到对应 rank 的可用牌时退回随机。
   function sampleRangeHole(deck, cells) {
     if (!cells || !cells.length) return takeRandom(deck);
     const total = cells.reduce((s, c) => s + c.p, 0);
-    for (let attempt = 0; attempt < 14; attempt++) {
+    for (let attempt = 0; attempt < 18; attempt++) {
       let r = Math.random() * total, chosen = cells[cells.length - 1];
       for (const c of cells) { r -= c.p; if (r <= 0) { chosen = c; break; } }
-      const need = chosen.i === chosen.j ? 2 : 1;
-      const idxHi = [], idxLo = [];
-      deck.forEach((c, idx) => {
-        const ri = RANK_INDEX[c.r];
-        if (ri === chosen.i) idxHi.push(idx);
-        if (ri === chosen.j) idxLo.push(idx);
-      });
-      let indices = [];
-      if (chosen.i === chosen.j) {
-        if (idxHi.length >= 2) indices = [idxHi[Math.floor(Math.random() * idxHi.length)], idxHi[Math.floor(Math.random() * idxHi.length)]];
-      } else if (idxHi.length && idxLo.length) {
-        indices = [idxHi[Math.floor(Math.random() * idxHi.length)], idxLo[Math.floor(Math.random() * idxLo.length)]];
-      }
-      indices = [...new Set(indices)];
-      if (indices.length === 2) {
-        const hole = indices.map((ix) => deck[ix]);
-        indices.sort((a, b) => b - a).forEach((ix) => deck.splice(ix, 1));
-        return hole;
-      }
+      const ia = deck.findIndex((c) => key(c) === key(chosen.a));
+      const ib = deck.findIndex((c) => key(c) === key(chosen.b));
+      if (ia < 0 || ib < 0 || ia === ib) continue;
+      const a = deck[ia], b = deck[ib];
+      [ia, ib].sort((x, y) => y - x).forEach((idx) => deck.splice(idx, 1));
+      return [a, b];
     }
     return takeRandom(deck);
   }
@@ -299,7 +266,6 @@
       hell:   { fold: 0.70, raise: 1.10, bluff: 0.06, call: 0.02 },
     }[diff] || { fold: 0.50, raise: 1.38, bluff: 0.08, call: 0.10 };
 
-    // 对手范围越强，越谨慎；加注历史越重，越少继续加注。
     const raiseThreshold = profile.raise + Math.min(0.42, raises * 0.09) + rangeP * 0.22;
     const raiseChance = Math.max(0.12, 0.72 - raises * 0.14 - (depth >= 2 ? 0.04 : 0) - rangeP * 0.18);
     const foldLine = profile.fold + rangeP * 0.10;
@@ -310,7 +276,6 @@
     }
 
     if (canBet && rel > raiseThreshold && Math.random() < raiseChance) {
-      // 已经面对很大的跟注额时，边际牌优先跟注，保留筹码。
       if (toCall >= stack * 0.65 && stack > 0) {
         if (rel < raiseThreshold + 0.30) return { type: "call" };
       }
@@ -338,9 +303,27 @@
     return { type: "check" };
   }
 
+  // 给可视化/调试用：把 1326 个具体组合聚合回 13×13 rank-pair 矩阵。
   function debugRange(view, opponentSeat) {
     const state = rangeState(view);
-    return matrixFor(state, view, opponentSeat).map((row) => row.slice());
+    const matrix = matrixFor(state, view, opponentSeat);
+    const out = Array.from({ length: 13 }, () => new Array(13).fill(0));
+    for (const c of COMBOS) {
+      const p = matrix[c.k];
+      if (p <= 0) continue;
+      const i = RANK_INDEX[c.a.r], j = RANK_INDEX[c.b.r];
+      const lo = Math.min(i, j), hi = Math.max(i, j);
+      out[lo][hi] += p;
+    }
+    return out;
   }
-  window.HoldemAI = { decide, equity, ITERATIONS, DEPTH, preflopStrength, postflopStrength, debugRange };
+  function debugRange52(view, opponentSeat) {
+    const state = rangeState(view);
+    return Array.from(matrixFor(state, view, opponentSeat));
+  }
+
+  window.HoldemAI = {
+    decide, equity, ITERATIONS, DEPTH, preflopStrength, postflopStrength,
+    debugRange, debugRange52, COMBO_COUNT: COMBOS.length,
+  };
 })();
