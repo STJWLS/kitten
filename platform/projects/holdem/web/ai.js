@@ -24,6 +24,7 @@
   const DEPTH = { easy: 0, medium: 1, hard: 2, hell: 3 };
   const RANGE_STATE = new Map();
   const STRENGTH_CACHE = new Map();
+  const LEARNING_STATE = new Map();
 
   function makeDeck() {
     const out = [];
@@ -109,6 +110,59 @@
     return 1;
   }
 
+  function learningState(view) {
+    const k = view.gameId + ":" + view.seat;
+    let st = LEARNING_STATE.get(k);
+    if (!st) {
+      st = { global: {}, byOpp: {}, lastHand: 0 };
+      LEARNING_STATE.set(k, st);
+      if (LEARNING_STATE.size > 80) LEARNING_STATE.delete(LEARNING_STATE.keys().next().value);
+    }
+    return st;
+  }
+  function learnBucket(strength) {
+    return Math.max(0, Math.min(9, Math.floor(strength * 10)));
+  }
+  function learnKey(street, action, bucket, facing, raises) {
+    return street + "|" + action + "|" + bucket + "|" + facing + "|" + Math.min(2, raises || 0);
+  }
+  function learnInc(table, key, action) {
+    if (!table[key]) table[key] = { fold: 0, check: 0, call: 0, raise: 0, total: 0 };
+    table[key][action] = (table[key][action] || 0) + 1;
+    table[key].total += 1;
+  }
+  // 轻量在线训练：只使用摊牌后公开的手牌，学习“手牌强度 → 行动”的似然。
+  function processShowdown(view, learn) {
+    const sd = view.lastShowdown;
+    if (!sd || !sd.hands || sd.handNo === learn.lastHand) return;
+    for (const h of sd.hands) {
+      if (!h.hole || h.hole.length !== 2) continue;
+      const oppTable = learn.byOpp[h.seat] || (learn.byOpp[h.seat] = {});
+      for (const a of sd.history || []) {
+        if (a.seat !== h.seat || a.type === "blind" || a.type === "fold") continue;
+        const street = a.street === "preflop" ? "pre" : "post";
+        const board = street === "pre" ? [] : (sd.board || []).slice(0, a.boardLength || 0);
+        const strength = street === "pre" ? preflopStrength(h.hole) : postflopStrength(h.hole, board);
+        const bucket = learnBucket(strength);
+        const facing = (a.toCallBefore || 0) > 0 ? 1 : 0;
+        const key = learnKey(street, a.type, bucket, facing, a.raisesBefore || 0);
+        learnInc(learn.global, key, a.type);
+        learnInc(oppTable, key, a.type);
+      }
+    }
+    learn.lastHand = sd.handNo;
+  }
+  function learnedProb(table, street, action, strength, facing, raises, depth) {
+    if (!table || depth < 1) return null;
+    const bucket = learnBucket(strength);
+    const key = learnKey(street, action, bucket, facing, raises || 0);
+    const row = table[key];
+    if (!row || row.total < 6) return null;
+    const alpha = 0.8;
+    const p = ((row[action] || 0) + alpha) / (row.total + 4 * alpha);
+    const trust = Math.min(0.70, row.total / 70);
+    return { p, trust, samples: row.total };
+  }
   function actionContextFactor(action, view, depth) {
     if (depth < 2) return 1;
     let f = 1;
@@ -161,10 +215,32 @@
     const board = action.street === "preflop" ? [] : view.board;
     const table = strengthTable(board);
     const context = actionContextFactor(action, view, depth);
+    const learn = learningState(view);
+    const street = action.street === "preflop" ? "pre" : "post";
+    const facing = (action.toCallBefore || 0) > 0 ? 1 : 0;
+    const raises = action.raisesBefore || 0;
+    const oppTable = depth >= 3 ? (learn.byOpp[action.seat] || null) : null;
+    const globalTable = learn.global;
     for (const c of COMBOS) {
       const p = matrix[c.k];
       if (p <= 0) continue;
-      matrix[c.k] = p * actionLikelihood(action.type, table[c.k], depth) * context;
+      let like = actionLikelihood(action.type, table[c.k], depth);
+      if (depth >= 1) {
+        const g = learnedProb(globalTable, street, action.type, table[c.k], facing, raises, depth);
+        const l = oppTable ? learnedProb(oppTable, street, action.type, table[c.k], facing, raises, depth) : null;
+        let use = g;
+        if (l) {
+          const w = Math.min(0.60, l.samples / 30);
+          const base = g || { p: 0.25, trust: 0 };
+          use = {
+            p: l.p * w + base.p * (1 - w),
+            trust: Math.max(l.trust, base.trust),
+            samples: (l.samples || 0) + (base.samples || 0),
+          };
+        }
+        if (use) like = like * (1 - use.trust * 0.58) + use.p * (use.trust * 0.58);
+      }
+      matrix[c.k] = p * like * context;
     }
     return normalizeMatrix(matrix);
   }
@@ -178,6 +254,8 @@
       if (RANGE_STATE.size > 120) RANGE_STATE.delete(RANGE_STATE.keys().next().value);
     }
     const depth = DEPTH[view.difficulty] || 0;
+    const learn = learningState(view);
+    processShowdown(view, learn);
     for (let k = state.last; k < view.history.length; k++) {
       const a = view.history[k];
       if (!a || a.seat === view.seat || a.type === "blind") continue;

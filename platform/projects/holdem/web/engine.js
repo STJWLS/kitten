@@ -94,6 +94,7 @@
       this.lastAggressor = -1;
       this.handNo = 0;
       this.history = [];
+      this.lastShowdown = null;
       this.onUpdate = null; this.onLog = null; this.onHandLog = null; this.onGameOver = null; this.onAiAction = null; this.onHandResult = null; this.onHandStart = null; this.onChipMove = null; this.onRoundEnd = null; this._lastHandResult = null;
       this._over = false;
       for (let i = 0; i < this.playerCount; i++) {
@@ -117,7 +118,7 @@
     }
     log(text, cls) { if (this.onLog) this.onLog(text, cls); }
     recordAction(seat, type, amount, meta) {
-      const entry = Object.assign({ seat, type, amount: Number(amount) || 0, street: this.street }, meta || {});
+      const entry = Object.assign({ seat, type, amount: Number(amount) || 0, street: this.street, boardLength: this.board.length }, meta || {});
       this.history.push(entry);
       if (this.players[seat]) this.players[seat].lastAction = type;
     }
@@ -227,6 +228,7 @@
         history: this.history.map((h) => ({ ...h })),
         raisesThisStreet: this.history.filter((h) => h.street === this.street && h.type === "raise").length,
         lastAggressor: this.lastAggressor,
+        lastShowdown: this.lastShowdown,
         minRaiseTo: Math.min(this.minRaiseTo(), this.maxRaiseTo(seat)),
         maxRaiseTo: this.maxRaiseTo(seat),
         betRule: this.betRule,
@@ -339,6 +341,7 @@
     }
     awardUncontested(winner) {
       if (!winner) return;
+      this.lastShowdown = null;
       const amount = this.pot + this.players.reduce((s, p) => s + p.bet, 0);
       this.players.forEach((p) => { this.pot += p.bet; p.bet = 0; });
       winner.stack += this.pot;
@@ -361,6 +364,12 @@
     showdown() {
       this.players.forEach((p) => { this.pot += p.bet; p.bet = 0; });
       this.street = "showdown";
+      this.lastShowdown = {
+        handNo: this.handNo,
+        board: this.board.map((c) => ({ ...c })),
+        hands: this.players.filter((p) => !p.folded).map((p) => ({ seat: p.seat, hole: p.hole.map((c) => ({ ...c })) })),
+        history: this.history.map((h) => ({ ...h })),
+      };
       this.actor = -1;
       this.players.forEach((p) => {
         if (!p.folded) p.hand = bestHand(p.hole.concat(this.board));
