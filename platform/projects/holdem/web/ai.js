@@ -23,6 +23,7 @@
   const ITERATIONS = { easy: 16, medium: 120, hard: 480, hell: 1600 };
   const DEPTH = { easy: 0, medium: 1, hard: 2, hell: 3 };
   const RANGE_STATE = new Map();
+  const STRENGTH_CACHE = new Map();
 
   function makeDeck() {
     const out = [];
@@ -81,6 +82,24 @@
     return clamp(s, 0, 1);
   }
 
+  function boardKey(board) {
+    return board && board.length ? board.map(key).sort().join("|") : "preflop";
+  }
+  // 同一公共牌下 1326 个组合的强度只计算一次，后续行动更新直接查表。
+  function strengthTable(board) {
+    const bk = boardKey(board);
+    let table = STRENGTH_CACHE.get(bk);
+    if (table) return table;
+    table = new Float32Array(COMBOS.length);
+    for (const c of COMBOS) {
+      table[c.k] = board && board.length >= 3
+        ? postflopStrength([c.a, c.b], board)
+        : preflopStrength([c.a, c.b]);
+    }
+    STRENGTH_CACHE.set(bk, table);
+    if (STRENGTH_CACHE.size > 128) STRENGTH_CACHE.delete(STRENGTH_CACHE.keys().next().value);
+    return table;
+  }
   function actionLikelihood(type, strength, depth) {
     const sharp = 1 + depth * 0.18;
     if (type === "raise") return 0.04 + 0.96 * Math.pow(strength, sharp);
@@ -117,11 +136,11 @@
 
   function updateMatrix(matrix, action, view, depth) {
     const board = action.street === "preflop" ? [] : view.board;
+    const table = strengthTable(board);
     for (const c of COMBOS) {
       const p = matrix[c.k];
       if (p <= 0) continue;
-      const s = board.length >= 3 ? postflopStrength([c.a, c.b], board) : preflopStrength([c.a, c.b]);
-      matrix[c.k] = p * actionLikelihood(action.type, s, depth);
+      matrix[c.k] = p * actionLikelihood(action.type, table[c.k], depth);
     }
     return normalizeMatrix(matrix);
   }
@@ -150,13 +169,13 @@
   }
 
   function matrixMean(matrix, view) {
-    const board = view.board && view.board.length >= 3 ? view.board : null;
+    const table = strengthTable(view.board && view.board.length >= 3 ? view.board : []);
     let total = 0, sum = 0;
     for (const c of COMBOS) {
       const p = matrix[c.k];
       if (p <= 0) continue;
       total += p;
-      sum += p * (board ? postflopStrength([c.a, c.b], board) : preflopStrength([c.a, c.b]));
+      sum += p * table[c.k];
     }
     return total ? sum / total : 0;
   }
@@ -324,6 +343,6 @@
 
   window.HoldemAI = {
     decide, equity, ITERATIONS, DEPTH, preflopStrength, postflopStrength,
-    debugRange, debugRange52, COMBO_COUNT: COMBOS.length,
+    debugRange, debugRange52, COMBO_COUNT: COMBOS.length, strengthTable,
   };
 })();
