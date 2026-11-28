@@ -116,8 +116,8 @@
       this.startHand();
     }
     log(text, cls) { if (this.onLog) this.onLog(text, cls); }
-    recordAction(seat, type, amount) {
-      const entry = { seat, type, amount: Number(amount) || 0, street: this.street };
+    recordAction(seat, type, amount, meta) {
+      const entry = Object.assign({ seat, type, amount: Number(amount) || 0, street: this.street }, meta || {});
       this.history.push(entry);
       if (this.players[seat]) this.players[seat].lastAction = type;
     }
@@ -247,15 +247,20 @@
       if (!p || p.folded || p.allIn || p.isHuman === false && !action) return false;
       const type = action && action.type;
       const toCall = Math.max(0, this.currentBet - p.bet);
+      const context = {
+        potBefore: this.totalPot(),
+        toCallBefore: toCall,
+        raisesBefore: this.history.filter((h) => h.street === this.street && h.type === "raise").length,
+      };
       if (type === "fold") {
         if (toCall === 0) return false;
         p.folded = true; p.acted = true;
-        this.recordAction(i, "fold", 0);
+        this.recordAction(i, "fold", 0, context);
         this.log(p.name + " 弃牌");
       } else if (type === "check") {
         if (toCall > 0) return false;
         p.acted = true;
-        this.recordAction(i, "check", 0);
+        this.recordAction(i, "check", 0, context);
         this.log(p.name + " 过牌");
       } else if (type === "call") {
         if (toCall <= 0) return false;
@@ -264,7 +269,7 @@
         if (p.stack === 0) p.allIn = true;
         p.acted = true;
         if (pay && this.onChipMove) this.onChipMove({ seat: i, amount: pay, kind: "bet" });
-        this.recordAction(i, "call", pay);
+        this.recordAction(i, "call", pay, context);
         this.log(p.name + " 跟注 " + pay);
       } else if (type === "raise") {
         let amount = Number(action.amount);
@@ -284,7 +289,7 @@
         this.lastAggressor = i;
         this.players.forEach((x, k) => { if (k !== i && !x.folded && !x.allIn) x.acted = false; });
         p.acted = true;
-        this.recordAction(i, "raise", amount);
+        this.recordAction(i, "raise", amount, context);
         this.log(p.name + " " + (p.allIn ? "全下 " : "加注到 ") + amount);
       } else return false;
       this.update();

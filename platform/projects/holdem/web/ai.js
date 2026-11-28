@@ -101,7 +101,7 @@
     return table;
   }
   function actionLikelihood(type, strength, depth) {
-    const sharp = 1 + depth * 0.18;
+    const sharp = 1 + depth * 0.24;
     if (type === "raise") return 0.04 + 0.96 * Math.pow(strength, sharp);
     if (type === "call") return 0.12 + 0.88 * strength;
     if (type === "check") return 0.90 - 0.45 * strength;
@@ -109,6 +109,29 @@
     return 1;
   }
 
+  function actionContextFactor(action, view, depth) {
+    if (depth < 2) return 1;
+    let f = 1;
+    const pot = Math.max(1, Number(action.potBefore) || view.pot || view.bb);
+    const size = Math.max(0, Number(action.amount) || 0);
+    if (action.type === "raise") {
+      const ratio = size / pot;
+      f *= clamp(0.62 + 0.72 * Math.min(ratio, 2.2), 0.50, 2.10);
+    } else if (action.type === "call") {
+      const ratio = size / pot;
+      f *= clamp(0.82 + 0.42 * Math.min(ratio, 2.0), 0.72, 1.55);
+    }
+    if (depth >= 3) {
+      const n = view.players.length || 6;
+      const rel = (action.seat - view.dealer + n) % n;
+      const late = rel >= Math.ceil(n / 2);
+      if (action.type === "raise" && !late) f *= 1.10;
+      if (action.type === "call" && late) f *= 0.95;
+      if ((action.raisesBefore || 0) >= 1 && action.type === "raise") f *= 1.14;
+      if ((action.raisesBefore || 0) >= 2 && action.type === "call") f *= 0.95;
+    }
+    return f;
+  }
   function makePriorMatrix(view) {
     const matrix = new Float64Array(COMBOS.length);
     const known = new Set(view.hole.concat(view.board).map(key));
@@ -137,10 +160,11 @@
   function updateMatrix(matrix, action, view, depth) {
     const board = action.street === "preflop" ? [] : view.board;
     const table = strengthTable(board);
+    const context = actionContextFactor(action, view, depth);
     for (const c of COMBOS) {
       const p = matrix[c.k];
       if (p <= 0) continue;
-      matrix[c.k] = p * actionLikelihood(action.type, table[c.k], depth);
+      matrix[c.k] = p * actionLikelihood(action.type, table[c.k], depth) * context;
     }
     return normalizeMatrix(matrix);
   }
@@ -157,6 +181,9 @@
     for (let k = state.last; k < view.history.length; k++) {
       const a = view.history[k];
       if (!a || a.seat === view.seat || a.type === "blind") continue;
+      // 简单 AI 只保留先验；中等只用翻前信息；困难/地狱才使用翻后行动。
+      if (depth <= 0) continue;
+      if (depth === 1 && a.street !== "preflop") continue;
       if (!state.matrices[a.seat]) state.matrices[a.seat] = makePriorMatrix(view);
       updateMatrix(state.matrices[a.seat], a, view, depth);
     }
@@ -341,8 +368,33 @@
     return Array.from(matrixFor(state, view, opponentSeat));
   }
 
+  function comboIndexOf(cardA, cardB) {
+    const ka = key(cardA), kb = key(cardB);
+    const k = COMBO_BY_KEY.get(ka + "|" + kb);
+    return k === undefined ? COMBO_BY_KEY.get(kb + "|" + ka) : k;
+  }
+  function debugComboRank(view, opponentSeat, cardA, cardB) {
+    const state = rangeState(view);
+    const matrix = matrixFor(state, view, opponentSeat);
+    const k = comboIndexOf(cardA, cardB);
+    if (k === undefined) return { probability: 0, rank: matrix.length, percentile: 0 };
+    const p = matrix[k];
+    let above = 0;
+    for (let i = 0; i < matrix.length; i++) if (matrix[i] > p) above++;
+    return { probability: p, rank: above + 1, percentile: 1 - above / (matrix.length - 1) };
+  }
+  function debugComboProb(view, opponentSeat, cardA, cardB) {
+    const state = rangeState(view);
+    const matrix = matrixFor(state, view, opponentSeat);
+    const ka = key(cardA), kb = key(cardB);
+    const k = COMBO_BY_KEY.get(ka + "|" + kb) !== undefined
+      ? COMBO_BY_KEY.get(ka + "|" + kb)
+      : COMBO_BY_KEY.get(kb + "|" + ka);
+    return k === undefined ? 0 : matrix[k];
+  }
+
   window.HoldemAI = {
     decide, equity, ITERATIONS, DEPTH, preflopStrength, postflopStrength,
-    debugRange, debugRange52, COMBO_COUNT: COMBOS.length, strengthTable,
+    debugRange, debugRange52, debugComboProb, debugComboRank, COMBO_COUNT: COMBOS.length, strengthTable,
   };
 })();
