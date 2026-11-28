@@ -169,7 +169,7 @@ def main():
     train_ds = RowDataset(train_rows, args.label_mode); val_ds = RowDataset(val_rows, args.label_mode)
     out_dim = RANK_PAIR_COUNT if args.label_mode == "rankpair" else COMBO_COUNT
     input_dim = train_ds.x.shape[1]
-    print("input_dim", input_dim, "output", COMBO_COUNT)
+    print("input_dim", input_dim, "output", out_dim, "label_mode", args.label_mode)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = RangeNet(input_dim, hidden=args.hidden, out_dim=out_dim).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
@@ -199,7 +199,7 @@ def main():
         print(f"epoch {epoch}: train {tr_loss:.4f} val {va_loss:.4f} top1 {top1/max(1,vn):.4f} top5 {top5/max(1,vn):.4f}")
         if va_loss < best:
             best = va_loss
-            torch.save({"state_dict": model.state_dict(), "input_dim": input_dim, "combo_count": COMBO_COUNT}, os.path.join(args.out, "range_model.pt"))
+            torch.save({"state_dict": model.state_dict(), "input_dim": input_dim, "combo_count": out_dim, "label_mode": args.label_mode}, os.path.join(args.out, "range_model.pt"))
     # export best / final weights
     model.load_state_dict(torch.load(os.path.join(args.out, "range_model.pt"), map_location="cpu")["state_dict"])
     sd = {k: v.detach().cpu().numpy() for k, v in model.state_dict().items()}
